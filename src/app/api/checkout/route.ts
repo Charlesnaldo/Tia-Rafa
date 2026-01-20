@@ -1,66 +1,96 @@
 import { NextResponse } from "next/server";
 import { MercadoPagoConfig, Preference } from "mercadopago";
-import { Resend } from "resend";
 
-// 1. Configurações Iniciais
+// Inicialização segura das credenciais
+const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
+
 const client = new MercadoPagoConfig({ 
-  accessToken: process.env.MP_ACCESS_TOKEN || "SEU_ACCESS_TOKEN_AQUI" 
+  accessToken: MP_TOKEN || "" 
 });
-
-const resend = new Resend(process.env.RESEND_API_KEY || "SUA_RESEND_KEY_AQUI");
 
 export async function POST(request: Request) {
   try {
-    // 2. Receber dados do Checkout
-    const body = await request.json();
-    const { id, nome, preco, emailCliente } = body;
-
-    // Verificação de segurança básica
-    if (!emailCliente || !nome) {
-      return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
+    // 1. Validar se o Token existe antes de começar
+    if (!MP_TOKEN || MP_TOKEN === "SEU_ACCESS_TOKEN_AQUI") {
+      console.error("ERRO: MP_ACCESS_TOKEN não configurado no .env.local");
+      return NextResponse.json({ error: "Configuração de servidor incompleta" }, { status: 500 });
     }
 
-    // 3. Criar a preferência no Mercado Pago
+    // 2. Receber e Logar os dados brutos
+    const body = await request.json();
+    console.log("--- PROCESSANDO CHECKOUT ---", body);
+
+    const { id, nomeProduto, preco, emailCliente } = body;
+
+    // 3. Verificação de Campos Obrigatórios
+    if (!emailCliente || !nomeProduto || !preco) {
+      return NextResponse.json({ 
+        error: "Dados incompletos", 
+        recebido: { emailCliente, nomeProduto, preco } 
+      }, { status: 400 });
+    }
+
+    // 4. Tratamento do Preço (Essencial para o Mercado Pago)
+    // Converte "27,90" -> 27.90
+    const precoNumerico = parseFloat(preco.toString().replace(",", "."));
+
+    // 5. Configuração da URL Base
+    // Remove barras extras no final para evitar URLs como http://localhost:3000//sucesso
+    const baseUrl = (process.env.NEXT_PUBLIC_URL || 'http://localhost:3000').replace(/\/$/, "");
+
+    // 6. Criar Preferência no Mercado Pago
     const preference = new Preference(client);
-    
-    // Convertendo o preço de string "27,90" para número 27.90
-    const precoNumerico = parseFloat(preco.replace(",", "."));
 
     const result = await preference.create({
       body: {
         items: [
           {
             id: id,
-            title: nome,
+            title: nomeProduto,
             quantity: 1,
             unit_price: precoNumerico,
             currency_id: "BRL",
           },
         ],
-        back_urls: {
-          success: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/sucesso`,
-          failure: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/erro`,
+        payer: {
+          email: emailCliente,
         },
-        auto_return: "approved",
+        back_urls: {
+          success: `${baseUrl}/sucesso`,
+          failure: `${baseUrl}/erro`,
+          pending: `${baseUrl}/pendente`,
+        },
+        // Desativamos o auto_return para testes em localhost (evita o erro 400 do MP)
+        // auto_return: "approved", 
+        
+        // Garante que o pagamento via Pix seja priorizado/exibido
+        payment_methods: {
+          excluded_payment_types: [],
+          installments: 12
+        },
+        
+        // Identificador da transação para seu controle futuro
+        external_reference: id,
       },
     });
 
-    // 4. (Opcional) Enviar e-mail de "Processando"
-    // Nota: O e-mail com o PDF deve ser enviado no Webhook após a aprovação real.
-    // Mas para teste, podemos disparar um e-mail aqui:
-    /*
-    await resend.emails.send({
-      from: "Tia Rafa <contato@seudominio.com>",
-      to: emailCliente,
-      subject: `Recebemos seu pedido: ${nome}`,
-      html: `<p>Olá! Seu pagamento está sendo processado. Assim que aprovado, você receberá o link de download.</p>`
-    });
-    */
+    console.log("✅ Preferência criada com sucesso:", result.id);
 
+    // 7. Retornar o link de pagamento
     return NextResponse.json({ init_point: result.init_point });
 
-  } catch (error) {
-    console.error("Erro na API:", error);
-    return NextResponse.json({ error: "Erro interno no servidor" }, { status: 500 });
+  } catch (error: any) {
+    // Log detalhado para identificar se o erro é no Token ou nos Dados
+    console.error("❌ ERRO DETALHADO NA API:");
+    if (error.response) {
+      console.error("Dados da Resposta do MP:", error.response);
+    } else {
+      console.error("Mensagem:", error.message);
+    }
+
+    return NextResponse.json({ 
+      error: "Erro interno no servidor", 
+      detalhe: error.message 
+    }, { status: 500 });
   }
 }

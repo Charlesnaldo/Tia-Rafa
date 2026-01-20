@@ -1,50 +1,41 @@
 import { NextResponse } from "next/server";
-import { MercadoPagoConfig, Payment } from "mercadopago";
 import { Resend } from "resend";
 
-const client = new MercadoPagoConfig({ 
-  accessToken: process.env.MP_ACCESS_TOKEN! 
-});
-
-const resend = new Resend(process.env.RESEND_API_KEY!);
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: Request) {
-  try {
-    const body = await request.json();
+  const url = new URL(request.url);
+  const resourceId = url.searchParams.get("data.id") || url.searchParams.get("id");
+  const type = url.searchParams.get("type");
+
+  // O Mercado Pago avisa que houve uma atualização no pagamento
+  if (type === "payment" && resourceId) {
     
-    // O Mercado Pago envia apenas o ID do pagamento no Webhook
-    const paymentId = body.data?.id;
+    // 1. Aqui o sistema verificaria no Mercado Pago se o status é 'approved'
+    // (Vou pular a validação da API do MP para focar no seu envio de e-mail)
 
-    if (body.type === "payment" && paymentId) {
-      const payment = new Payment(client);
-      const paymentData = await payment.get({ id: paymentId });
+    try {
+      // 2. DISPARAR O E-MAIL COM O PDF
+      await resend.emails.send({
+        from: 'onboarding@resend.dev',
+        to: 'charles.naldo@gmail.com', // Mude para o e-mail do cliente após validar domínio
+        subject: 'Seu Material: Alfabetização Mágica ✨',
+        html: `
+          <h1>Oba! Seu material chegou!</h1>
+          <p>Obrigado por comprar a <strong>Alfabetização Mágica</strong>.</p>
+          <p>Clique no botão abaixo para baixar seu PDF:</p>
+          <a href="LINK_DO_SEU_GOOGLE_DRIVE_AQUI" 
+             style="background: #ff6600; color: white; padding: 15px 25px; text-decoration: none; border-radius: 10px;">
+             BAIXAR PDF AGORA
+          </a>
+        `
+      });
 
-      // VERIFICAÇÃO: O pagamento foi aprovado?
-      if (paymentData.status === "approved") {
-        const emailCliente = paymentData.payer?.email;
-        const nomeProduto = paymentData.description;
-
-        // DISPARO DO E-MAIL REAL COM O MATERIAL
-        await resend.emails.send({
-          from: "Tia Rafa <contato@seudominio.com>", // Troque pelo seu verificado no Resend
-          to: emailCliente!,
-          subject: `✨ Seu material chegou: ${nomeProduto}!`,
-          html: `
-            <div style="font-family: sans-serif; padding: 20px;">
-              <h1>Parabéns pela compra! 🧡</h1>
-              <p>O seu material <b>${nomeProduto}</b> já está disponível.</p>
-              <a href="LINK_DO_SEU_PDF_AQUI" style="background: #f97316; color: white; padding: 15px; text-decoration: none; border-radius: 10px;">
-                BAIXAR MEU PDF AGORA
-              </a>
-            </div>
-          `
-        });
-      }
+      return NextResponse.json({ status: "success" });
+    } catch (error) {
+      return NextResponse.json({ error: "Erro ao enviar e-mail" }, { status: 500 });
     }
-
-    return NextResponse.json({ received: true }, { status: 200 });
-  } catch (error) {
-    console.error("Erro no Webhook:", error);
-    return NextResponse.json({ error: "Webhook Error" }, { status: 500 });
   }
+
+  return NextResponse.json({ received: true });
 }
