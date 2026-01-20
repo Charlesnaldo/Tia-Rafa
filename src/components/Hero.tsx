@@ -50,7 +50,7 @@ export default function Hero() {
           </div>
 
           {/* Título de Impacto */}
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black leading-[1.1] tracking-tighter text-gray-900 mb-10">
+          <h1 className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-esmerald-900 to-orange-400 text-5xl md:text-7xl lg:text-8xl font-black leading-[1.1] tracking-tighter text-gray-900 mb-10">
             Educar com <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400">
               Amor e Cor

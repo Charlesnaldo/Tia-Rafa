@@ -1,6 +1,9 @@
 "use client";
 
-import { ShoppingCart, FileText } from "lucide-react";
+import { ShoppingCart, FileText, SearchX } from "lucide-react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react"; // Adicionado para evitar erro de build
 
 const produtos = [
   { id: 1, nome: "Alfabeto Pontilhado", preco: "12,90", cor: "bg-purple-100" },
@@ -11,60 +14,93 @@ const produtos = [
   { id: 6, nome: "Lógica Infantil", preco: "19,90", cor: "bg-yellow-100" },
   { id: 7, nome: "Caligrafia Mágica", preco: "22,00", cor: "bg-indigo-100" },
   { id: 8, nome: "Corpo Humano", preco: "25,00", cor: "bg-red-100" },
-  { id: 9, nome: "Formas Geométricas", preco: "12,00", cor: "bg-orange-100" },
-  { id: 10, nome: "Colorir Animais", preco: "09,90", cor: "bg-green-100" },
-  { id: 11, nome: "Lógica Infantil", preco: "19,90", cor: "bg-yellow-100" },
-  { id: 12, nome: "Caligrafia Mágica", preco: "22,00", cor: "bg-indigo-100" },
-  { id: 13, nome: "Corpo Humano", preco: "25,00", cor: "bg-red-100" },
-  // Adicione mais para testar a segunda linha...
 ];
 
-export default function Catalog() {
+// Componente Interno para lidar com os parâmetros de busca
+function CatalogContent() {
+  const searchParams = useSearchParams();
+  const busca = searchParams.get("busca")?.toLowerCase() || "";
+
+  // AQUI É ONDE DEFINIMOS A VARIÁVEL QUE ESTAVA DANDO ERRO
+  const produtosFiltrados = produtos.filter((item) =>
+    item.nome.toLowerCase().includes(busca)
+  );
+
   return (
     <section id="catalogo" className="py-16 bg-white font-fredoka">
       <div className="max-w-[1600px] mx-auto px-2 md:px-6">
         
-        <div className="text-center mb-10">
-          <h2 className="text-3xl font-black text-gray-900">📦 Nosso Catálogo</h2>
-          <p className="text-gray-500 text-sm mt-2">Escolha seus materiais e receba agora!</p>
+        {/* TÍTULO DINÂMICO */}
+        <div className="text-center mb-12">
+          <h2 className="text-4xl md:text-6xl font-black leading-tight tracking-tighter">
+            {busca ? (
+              <span className="text-gray-900 animate-in fade-in">🔍 Resultados para: {busca}</span>
+            ) : (
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400">
+                Nosso Catálogo Mágico
+              </span>
+            )}
+          </h2>
+          <div className="flex justify-center mt-4">
+            <div className="h-2 w-24 bg-gradient-to-r from-purple-600 to-pink-500 rounded-full animate-pulse" />
+          </div>
         </div>
 
-        {/* Grid Ajustado: 4 colunas no mobile | 8 colunas no desktop */}
-        <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 md:gap-4">
-          {produtos.map((item) => (
-            <div 
-              key={item.id} 
-              className="group bg-white rounded-3xl border border-gray-100 p-2 shadow-sm hover:shadow-md transition-all duration-300"
-            >
-              {/* Espaço da Imagem (Menor para caber 8) */}
-              <div className={`relative aspect-square ${item.cor} rounded-2xl overflow-hidden mb-2`}>
-                <div className="absolute top-1 right-1 bg-white/90 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 shadow-sm">
-                  <FileText size={8} className="text-orange-500" />
-                  <span className="text-[8px] font-black text-gray-600">PDF</span>
+        {/* LISTAGEM DE PRODUTOS */}
+        {produtosFiltrados.length > 0 ? (
+          <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 md:gap-4">
+            {produtosFiltrados.map((item) => (
+              <Link 
+                key={item.id} 
+                href={`/produto/${item.id}`} 
+                className="group relative bg-white rounded-[2rem] border border-gray-100 p-3 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 ease-out overflow-hidden"
+              >
+                {/* Imagem com Hover Zoom */}
+                <div className={`relative aspect-square ${item.cor} rounded-[1.5rem] overflow-hidden mb-3`}>
+                  <div className="w-full h-full flex items-center justify-center text-gray-400 group-hover:scale-110 transition-transform duration-500">
+                    <FileText size={40} className="opacity-20" />
+                  </div>
+                  <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                    <span className="text-[10px] font-black text-purple-600">VER DETALHES</span>
+                  </div>
                 </div>
-              </div>
 
-              {/* Informações Compactas */}
-              <div className="px-1 text-center md:text-left">
-                <h3 className="text-[10px] md:text-xs font-black text-gray-800 leading-tight h-7 line-clamp-2">
-                  {item.nome}
-                </h3>
-                
-                <div className="flex flex-col md:flex-row items-center justify-between mt-2 gap-1">
-                  <span className="text-xs md:text-sm font-black text-purple-600 italic">
-                    R${item.preco}
-                  </span>
-                  
-                  <button className="bg-pink-500 hover:bg-pink-600 text-white p-1.5 rounded-xl transition-all active:scale-90">
-                    <ShoppingCart size={14} />
-                  </button>
+                {/* Info */}
+                <div className="px-1 space-y-1">
+                  <h3 className="text-[11px] md:text-xs font-black text-gray-800 line-clamp-2 h-8 group-hover:text-purple-600 transition-colors">
+                    {item.nome}
+                  </h3>
+                  <div className="flex items-center justify-between pt-1">
+                    <div className="flex flex-col">
+                      <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Apenas</span>
+                      <span className="text-sm md:text-base font-black text-gray-900">R${item.preco}</span>
+                    </div>
+                    <div className="bg-pink-500 text-white p-2.5 rounded-xl transform group-hover:rotate-[360deg] group-hover:scale-110 transition-all duration-500 shadow-lg">
+                      <ShoppingCart size={16} strokeWidth={3} />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
+                <div className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-purple-500 to-pink-500 w-0 group-hover:w-full transition-all duration-500" />
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center py-20 text-gray-400 animate-in fade-in">
+            <SearchX size={48} className="mb-4 opacity-20" />
+            <p className="font-bold">Nenhum material encontrado.</p>
+          </div>
+        )}
       </div>
     </section>
+  );
+}
+
+// O componente principal envolve o conteúdo em Suspense
+// Isso é obrigatório no Next.js ao usar useSearchParams
+export default function Catalog() {
+  return (
+    <Suspense fallback={<div className="text-center py-20">Carregando catálogo...</div>}>
+      <CatalogContent />
+    </Suspense>
   );
 }
