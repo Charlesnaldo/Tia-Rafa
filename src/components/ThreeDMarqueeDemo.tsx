@@ -3,13 +3,13 @@ import { ThreeDMarquee } from "@/components/ui/3d-marquee";
 
 export function ThreeDMarqueeDemo() {
   const images = [
-    "/testimonials/bocadesapo.jpg",
+    "/testimonials/bocadosapo.jpg",
     "/testimonials/leoeaarvore.jpg",
     "/testimonials/aula2.jpg",
     "/testimonials/aula3.jpg",
     "/testimonials/aula4.jpg",
     "/testimonials/aula5.jpg",
-    "/testimonials/bocadesapo.jpg",
+    "/testimonials/bocadosapo.jpg",
     "/testimonials/leoeaarvore.jpg",
     "/testimonials/aula6.jpg",
     "/testimonials/aula3.jpg",
@@ -22,14 +22,14 @@ export function ThreeDMarqueeDemo() {
     "/testimonials/aula5.jpg",
     "/testimonials/aula6.jpg",
     "/testimonials/aula5.jpg",
-    "/testimonials/bocadesapo.jpg",
+    "/testimonials/bocadosapo.jpg",
     "/testimonials/leoeaarvore.jpg",
-    "/testimonials/bocadesapo.jpg",
+    "/testimonials/bocadosapo.jpg",
     "/testimonials/leoeaarvore.jpg",
     "/testimonials/aula5.jpg",
-    "/testimonials/bocadesapo.jpg",
+    "/testimonials/bocadosapo.jpg",
     "/testimonials/leoeaarvore.jpg",
-    "/testimonials/bocadesapo.jpg",
+    "/testimonials/bocadosapo.jpg",
     "/testimonials/leoeaarvore.jpg",
   ];
   return (
