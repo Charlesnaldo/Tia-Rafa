@@ -7,7 +7,14 @@ const client = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN || "",
 });
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization - só cria quando realmente for usar
+let resendInstance: Resend | null = null;
+function getResend() {
+  if (!resendInstance && process.env.RESEND_API_KEY) {
+    resendInstance = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resendInstance;
+}
 
 export async function POST(request: Request) {
   try {
@@ -34,44 +41,50 @@ export async function POST(request: Request) {
 
         if (tipoProduto === 'digital' && produto) {
           // ENVIAR E-MAIL COM O MATERIAL DIGITAL
-          await resend.emails.send({
-            from: 'Tia Rafa <pedidos@seudominio.com>',
-            to: emailCliente,
-            subject: '🎉 Seu material pedagógico chegou!',
-            html: `
-              <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #7c3aed;">Olá! Ficamos felizes com sua compra.</h2>
-                <p>O seu material <strong>${produto.nome}</strong> já está disponível para download.</p>
-                <div style="text-align: center; margin: 30px 0;">
-                  <a href="${produto.downloadUrl || '#'}" style="background: #7c3aed; color: white; padding: 16px 32px; border-radius: 12px; text-decoration: none; display: inline-block; font-weight: bold; font-size: 18px;">BAIXAR MEU MATERIAL</a>
+          const resend = getResend();
+          if (resend) {
+            await resend.emails.send({
+              from: 'Tia Rafa <pedidos@seudominio.com>',
+              to: emailCliente,
+              subject: '🎉 Seu material pedagógico chegou!',
+              html: `
+                <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: #7c3aed;">Olá! Ficamos felizes com sua compra.</h2>
+                  <p>O seu material <strong>${produto.nome}</strong> já está disponível para download.</p>
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${produto.downloadUrl || '#'}" style="background: #7c3aed; color: white; padding: 16px 32px; border-radius: 12px; text-decoration: none; display: inline-block; font-weight: bold; font-size: 18px;">BAIXAR MEU MATERIAL</a>
+                  </div>
+                  <p style="font-size: 14px; color: #666;">Se o botão acima não funcionar, copie e cole este link no seu navegador: ${produto.downloadUrl}</p>
+                  <br/>
+                  <hr style="border: none; border-top: 1px solid #eee;" />
+                  <p style="font-size: 12px; color: #999;">Tia Rafa - Transformando a educação com amor.</p>
                 </div>
-                <p style="font-size: 14px; color: #666;">Se o botão acima não funcionar, copie e cole este link no seu navegador: ${produto.downloadUrl}</p>
-                <br/>
-                <hr style="border: none; border-top: 1px solid #eee;" />
-                <p style="font-size: 12px; color: #999;">Tia Rafa - Transformando a educação com amor.</p>
-              </div>
-            `
-          });
+              `
+            });
+          }
         } else if (tipoProduto === 'fisico') {
           // ENVIAR E-MAIL DE CONFIRMAÇÃO PARA O CLIENTE (FÍSICO)
-          await resend.emails.send({
-            from: 'Tia Rafa <pedidos@seudominio.com>',
-            to: emailCliente,
-            subject: '📦 Seu pedido está sendo preparado!',
-            html: `
-              <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #f97316;">Oba! Seu pedido foi confirmado.</h2>
-                <p>Estamos preparando o seu produto <strong>${paymentData.description}</strong> com muito carinho.</p>
-                <p>Em breve você receberá o código de rastreio por este e-mail.</p>
-                <div style="background: #fff7ed; padding: 20px; border-radius: 12px; border: 1px solid #fed7aa;">
-                  <h4 style="margin-top: 0;">Dados de Entrega:</h4>
-                  <pre style="font-family: inherit; font-size: 14px; margin-bottom: 0;">${JSON.parse(enderecoEntrega || '{}').rua}, ${JSON.parse(enderecoEntrega || '{}').numero}</pre>
+          const resend = getResend();
+          if (resend) {
+            await resend.emails.send({
+              from: 'Tia Rafa <pedidos@seudominio.com>',
+              to: emailCliente,
+              subject: '📦 Seu pedido está sendo preparado!',
+              html: `
+                <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: #f97316;">Oba! Seu pedido foi confirmado.</h2>
+                  <p>Estamos preparando o seu produto <strong>${paymentData.description}</strong> com muito carinho.</p>
+                  <p>Em breve você receberá o código de rastreio por este e-mail.</p>
+                  <div style="background: #fff7ed; padding: 20px; border-radius: 12px; border: 1px solid #fed7aa;">
+                    <h4 style="margin-top: 0;">Dados de Entrega:</h4>
+                    <pre style="font-family: inherit; font-size: 14px; margin-bottom: 0;">${JSON.parse(enderecoEntrega || '{}').rua}, ${JSON.parse(enderecoEntrega || '{}').numero}</pre>
+                  </div>
+                  <br/>
+                  <p style="font-size: 12px; color: #999;">Dúvidas? Entre em contato conosco pelo WhatsApp.</p>
                 </div>
-                <br/>
-                <p style="font-size: 12px; color: #999;">Dúvidas? Entre em contato conosco pelo WhatsApp.</p>
-              </div>
-            `
-          });
+              `
+            });
+          }
 
           // AQUI VOCÊ TAMBÉM PODERIA ENVIAR UM E-MAIL PARA VOCÊ (ADMIN) AVISANDO DA VENDA FÍSICA
         }
