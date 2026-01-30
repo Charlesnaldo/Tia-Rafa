@@ -3,6 +3,9 @@ import { MercadoPagoConfig, Payment } from "mercadopago";
 import { Resend } from "resend";
 import { PRODUTOS_LISTA } from "@/constants/produtos";
 
+// Force dynamic rendering - não gerar estaticamente
+export const dynamic = 'force-dynamic';
+
 const client = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN || "",
 });
