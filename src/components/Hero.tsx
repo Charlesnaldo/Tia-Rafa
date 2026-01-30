@@ -7,7 +7,7 @@ import { Sparkles, ArrowRight, Star } from "lucide-react";
 export default function Hero() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden font-fredoka">
-      
+
       {/* --- IMAGEM DE FUNDO E OVERLAY --- */}
       <div className="absolute inset-0 -z-10">
         <Image
@@ -25,7 +25,7 @@ export default function Hero() {
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-[25%] left-[5%] w-64 h-64 bg-purple-200/40 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-[20%] right-[5%] w-80 h-80 bg-pink-200/40 rounded-full blur-3xl animate-pulse delay-700" />
-        
+
         <div className="absolute top-[30%] right-[10%] text-yellow-400 animate-bounce hidden md:block">
           <Star size={48} fill="currentColor" />
         </div>
@@ -35,9 +35,9 @@ export default function Hero() {
       </div>
 
       {/* --- CONTEÚDO PRINCIPAL --- */}
-      <div className="max-w-7xl mx-auto px-4 pt-32 pb-20 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 pt-12 md:pt-40 pb-20 relative z-10">
         <div className="text-center">
-          
+
           {/* Badge Animada */}
           <div className="inline-flex items-center gap-2 bg-white/60 backdrop-blur-sm border border-purple-100 px-5 py-2.5 rounded-full mb-10 animate-bounce shadow-sm">
             <span className="relative flex h-3 w-3">
@@ -64,8 +64,8 @@ export default function Hero() {
 
           {/* Botões de Ação */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-            <Link 
-              href="#catalogo" 
+            <Link
+              href="#catalogo"
               className="group bg-purple-600 text-white font-black px-12 py-6 rounded-[2.5rem] text-xl shadow-[0_20px_40px_rgba(147,51,234,0.3)] hover:bg-purple-700 hover:-translate-y-1.5 transition-all active:scale-95 flex items-center gap-3"
             >
               Ver Catálogo <ArrowRight className="group-hover:translate-x-2 transition-transform" />

@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import { Fredoka } from "next/font/google"; // Importando a Fredoka
+import { Fredoka } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
+import HeaderMobile from "@/components/HeaderMobile"; // Certifique-se que este arquivo existe
 import Footer from "@/components/Footer";
 
-// Configuração da fonte infantil
 const fredoka = Fredoka({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-fredoka", // Criamos uma variável CSS
+  variable: "--font-fredoka",
 });
 
 export const metadata: Metadata = {
@@ -23,12 +23,22 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-br" className="scroll-smooth">
-      {/* Aplicamos a classe da Fredoka e a fonte sans padrão do Tailwind vira ela */}
       <body className={`${fredoka.className} antialiased flex flex-col min-h-screen bg-white`}>
-        <Header />
+        
+        {/* HEADER DESKTOP: hidden por padrão, block em telas lg (1024px+) */}
+        <div className="hidden lg:block">
+          <Header />
+        </div>
+
+        {/* HEADER MOBILE: block por padrão, hidden em telas lg */}
+        <div className="block lg:hidden">
+          <HeaderMobile />
+        </div>
+
         <main className="flex-grow">
           {children}
         </main>
+
         <Footer />
       </body>
     </html>
