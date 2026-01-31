@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from 'next/dynamic';
-import { Suspense } from 'react';
 
 const DynamicCheckoutClient = dynamic(() => import('./CheckoutClient'), {
   ssr: false,
@@ -10,8 +9,6 @@ const DynamicCheckoutClient = dynamic(() => import('./CheckoutClient'), {
 
 export default function CheckoutWrapper() {
   return (
-    <Suspense fallback={<div>Loading checkout...</div>}>
-      <DynamicCheckoutClient />
-    </Suspense>
+    <DynamicCheckoutClient />
   );
 }
