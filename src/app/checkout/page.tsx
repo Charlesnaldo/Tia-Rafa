@@ -1,7 +1,12 @@
-"use client"; // importante: toda a página será Client Component
+"use client";
 
+import { Suspense } from 'react';
 import CheckoutClient from "./CheckoutClient";
 
 export default function CheckoutPage() {
-  return <CheckoutClient />;
+  return (
+    <Suspense fallback={<div>Loading checkout...</div>}>
+      <CheckoutClient />
+    </Suspense>
+  );
 }
