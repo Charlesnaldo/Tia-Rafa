@@ -5,17 +5,25 @@ import Image from "next/image";
 import { ShoppingCart } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
+// 1. Interface atualizada para ser flexível durante a transição
 interface ProductCardProps {
   id: string;
   nome: string;
   preco: number;
-  imagem: string;
+  imagem?: string;    // Opcional para legado
+  imagens?: string[]; // Array de strings (opcional)
   cor: string;
   tipo: 'digital' | 'fisico';
   tags?: string[];
 }
 
-export default function ProductCard({ id, nome, preco, imagem, cor, tipo, tags }: ProductCardProps) {
+export default function ProductCard({ id, nome, preco, imagem, imagens, cor, tipo, tags }: ProductCardProps) {
+  
+  // 2. Lógica para decidir qual imagem mostrar
+  // Prioriza imagens[0], se não existir, usa imagem, se não, usa um placeholder
+  const imagemPrincipal = (imagens && imagens.length > 0) ? imagens[0] : (imagem || "/img/placeholder.png");
+  const temSegundaImagem = imagens && imagens.length > 1;
+
   return (
     <Link
       href={`/produto/${id}`}
@@ -23,19 +31,33 @@ export default function ProductCard({ id, nome, preco, imagem, cor, tipo, tags }
     >
       {/* Badge Flutuante */}
       <div className={`absolute top-6 right-6 z-10 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${
-        tipo === 'digital' ? 'bg-blue-500 text-white' : 'bg-orange-500 text-white'
+        tipo === 'digital' ? 'bg-blue-500 text-white shadow-blue-200' : 'bg-orange-500 text-white shadow-orange-200'
       }`}>
         {tipo === 'digital' ? 'PDF' : 'Físico'}
       </div>
 
-      {/* Container da Imagem */}
+      {/* Container da Imagem com Efeito de Troca */}
       <div className={`relative aspect-square ${cor} rounded-[2rem] overflow-hidden mb-5 shadow-inner`}>
+        {/* Imagem Principal */}
         <Image
-          src={imagem}
+          src={imagemPrincipal}
           alt={nome}
           fill
-          className="object-cover group-hover:scale-110 transition-transform duration-700 p-2"
+          className={`object-cover transition-all duration-700 p-2 ${
+            temSegundaImagem ? "group-hover:opacity-0 group-hover:scale-110" : "group-hover:scale-110"
+          }`}
         />
+
+        {/* Segunda Imagem (Revelada no Hover) */}
+        {temSegundaImagem && (
+          <Image
+            src={imagens[1]}
+            alt={`${nome} - detalhe`}
+            fill
+            className="object-cover opacity-0 group-hover:opacity-100 transition-all duration-700 scale-105 group-hover:scale-110 p-2"
+          />
+        )}
+
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-500" />
       </div>
 

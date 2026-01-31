@@ -1,6 +1,7 @@
 import { PRODUTOS_LISTA } from "@/constants/produtos";
 import { formatCurrency } from "@/lib/utils";
 import { notFound } from "next/navigation";
+import Galeria from "@/components/Galeria"; // Certifique-se que o caminho está correto
 import Link from "next/link";
 import Image from "next/image";
 import { 
@@ -26,13 +27,17 @@ export default async function ProdutoDetalhes({ params }: { params: Promise<{ id
 
   if (!produto) notFound();
 
+  // Garante que temos um array de strings para a galeria
+  const listaImagens = produto.imagens && produto.imagens.length > 0 
+    ? produto.imagens 
+    : [produto.imagem || "/img/placeholder.png"];
+
   return (
     <main className="min-h-screen bg-[#FAFAFA] font-fredoka text-[#2D3748] pb-20 pt-8 md:pt-32">
       <section className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-start">
         
-        {/* Lado Esquerdo: Preview */}
+        {/* Lado Esquerdo: Preview com Galeria Interativa */}
         <div className="relative">
-          {/* Link Voltar */}
           <Link 
             href="/#catalogo" 
             className="group inline-flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-purple-600 transition-colors mb-8"
@@ -41,20 +46,14 @@ export default async function ProdutoDetalhes({ params }: { params: Promise<{ id
             Voltar para a loja
           </Link>
 
-          <div className={`aspect-[4/5] ${produto.cor} rounded-[32px] overflow-hidden shadow-inner flex items-center justify-center p-8 md:p-12`}>
-            <div className="w-full h-full bg-white shadow-2xl rounded-sm transform rotate-2 hover:rotate-0 transition-transform duration-500 overflow-hidden border-t-[12px] border-purple-200">
-              <Image 
-                src={produto.imagem} 
-                alt={produto.nome} 
-                width={400} 
-                height={500} 
-                className="w-full h-full object-cover opacity-95" 
-                priority
-              />
-            </div>
-          </div>
+          {/* COMPONENTE DE GALERIA SUBSTITUINDO A IMAGEM ESTÁTICA */}
+          <Galeria 
+            imagens={listaImagens} 
+            nome={produto.nome} 
+            cor={produto.cor} 
+          />
           
-          <div className="absolute -bottom-4 -right-2 bg-white p-4 rounded-2xl shadow-xl flex items-center gap-3 border border-gray-50">
+          <div className="absolute top-[85px] -right-2 bg-white p-4 rounded-2xl shadow-xl flex items-center gap-3 border border-gray-50 z-10">
             <div className="bg-yellow-100 p-2 rounded-xl text-yellow-600">
               <Sparkles size={20} />
             </div>
@@ -97,7 +96,6 @@ export default async function ProdutoDetalhes({ params }: { params: Promise<{ id
             {produto.descricao || "Desenvolvido para facilitar o aprendizado de forma lúdica e eficaz, ideal para reforço escolar ou sala de aula."}
           </p>
 
-          {/* Benefícios Rápidos */}
           <div className="grid grid-cols-2 gap-4 mb-10">
             {produto.tipo === 'digital' ? (
               <>
@@ -124,7 +122,6 @@ export default async function ProdutoDetalhes({ params }: { params: Promise<{ id
             )}
           </div>
 
-          {/* Card de Compra */}
           <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-xl shadow-gray-200/50">
             <div className="flex items-baseline gap-2 mb-6">
               <span className="text-gray-400 text-lg font-medium">Investimento:</span>
@@ -145,7 +142,7 @@ export default async function ProdutoDetalhes({ params }: { params: Promise<{ id
         </div>
       </section>
 
-      {/* Seção "Como funciona" */}
+      {/* Seção Como Funciona */}
       <section className="max-w-6xl mx-auto px-6 py-20 border-t border-gray-100 mt-8">
         <div className="flex flex-col items-center mb-16">
           <span className="bg-purple-100 text-purple-600 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-full mb-4 border border-purple-200">
