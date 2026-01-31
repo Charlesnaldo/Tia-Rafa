@@ -65,7 +65,7 @@ export default function CheckoutClient() {
             <h2 className="text-3xl font-black text-gray-900 tracking-tight">Finalizar Pedido</h2>
             <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 flex gap-5 items-center">
               <div className={`w-24 h-24 ${produto.cor} rounded-3xl relative overflow-hidden shrink-0 shadow-inner`}>
-                <Image src={produto.imagem} fill className="object-cover p-2" alt={produto.nome} unoptimized />
+                <Image src={produto.imagem || ""} fill className="object-cover p-2" alt={produto.nome} unoptimized />
               </div>
               <div>
                 <h3 className="font-black text-gray-800 text-lg leading-tight mb-1">{produto.nome}</h3>
