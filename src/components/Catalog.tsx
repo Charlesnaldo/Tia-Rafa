@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { ShoppingCart, FileText, SearchX, Zap } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -8,15 +8,14 @@ import { useSearchParams } from "next/navigation";
 import { PRODUTOS_LISTA } from "@/constants/produtos";
 import { formatCurrency } from "@/lib/utils";
 
-export default function Catalog() {
+// 1. Movemos toda a lógica para um componente interno
+function CatalogContent() {
   const searchParams = useSearchParams();
   const busca = searchParams.get("busca")?.toLowerCase() || "";
   const [categoria, setCategoria] = useState<'todos' | 'digital' | 'fisico'>('todos');
   const [tagAtiva, setTagAtiva] = useState<string>('Tudo');
 
-  // Transforma o objeto em array para podermos filtrar e mapear
   const produtosArray = Object.values(PRODUTOS_LISTA);
-
   const todasTags = ['Tudo', ...Array.from(new Set(produtosArray.flatMap(p => p.tags || [])))];
 
   const produtosFiltrados = produtosArray.filter((produto) => {
@@ -29,7 +28,6 @@ export default function Catalog() {
   return (
     <section id="catalogo" className="py-20 bg-white font-fredoka">
       <div className="max-w-[1600px] mx-auto px-4 md:px-6">
-
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-6xl font-black tracking-tighter mb-8 leading-tight">
             {busca ? (
@@ -62,7 +60,7 @@ export default function Catalog() {
             ))}
           </div>
 
-          {/* Filtros de Tags (Séries/Objetivos) */}
+          {/* Filtros de Tags */}
           <div className="flex flex-wrap justify-center gap-2 max-w-4xl mx-auto">
             {todasTags.map((tag) => (
               <button
@@ -87,7 +85,6 @@ export default function Catalog() {
                 href={`/produto/${produto.id}`}
                 className="group bg-white rounded-[2.5rem] border border-gray-50 p-4 hover:shadow-2xl hover:shadow-purple-100/50 transition-all duration-500 relative flex flex-col h-full"
               >
-                {/* Badge de Tipo */}
                 <div className={`absolute top-6 right-6 z-10 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${produto.tipo === 'digital'
                     ? 'bg-blue-500 text-white shadow-blue-200'
                     : 'bg-orange-500 text-white shadow-orange-200'
@@ -95,7 +92,6 @@ export default function Catalog() {
                   {produto.tipo === 'digital' ? 'PDF' : 'Físico'}
                 </div>
 
-                {/* Imagem do Produto */}
                 <div className={`relative aspect-square ${produto.cor} rounded-[2rem] overflow-hidden mb-5 shadow-inner`}>
                   <Image
                     src={produto.imagem}
@@ -107,7 +103,6 @@ export default function Catalog() {
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-500" />
                 </div>
 
-                {/* Detalhes */}
                 <div className="flex flex-col flex-1">
                   <div className="flex gap-1 mb-2">
                     {produto.tags?.slice(0, 2).map(tag => (
@@ -153,5 +148,19 @@ export default function Catalog() {
         )}
       </div>
     </section>
+  );
+}
+
+// 2. O Export principal agora é o "Boundary" que protege a página
+export default function Catalog() {
+  return (
+    <Suspense fallback={
+      <div className="py-20 text-center flex flex-col items-center justify-center min-h-[400px]">
+        <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-4"></div>
+        <p className="font-fredoka font-bold text-gray-400">Preparando o catálogo...</p>
+      </div>
+    }>
+      <CatalogContent />
+    </Suspense>
   );
 }

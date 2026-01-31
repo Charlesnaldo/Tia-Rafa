@@ -1,10 +1,12 @@
 "use client";
 
+import { Suspense } from "react"; // Adicionado Suspense
 import Image from "next/image";
 import Link from "next/link";
 import { GraduationCap, Heart, Star, BookOpen, ArrowLeft, Sparkles, Award, CheckCircle } from "lucide-react";
 
-export default function SobrePage() {
+// 1. Transformamos o conteúdo em um componente interno
+function SobreContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FFF5F0] via-white to-[#FDF2F8] font-fredoka pb-20">
 
@@ -79,7 +81,6 @@ export default function SobrePage() {
                 </h2>
 
                 <div className="grid gap-6">
-                  {/* Formação 1 */}
                   <div className="group flex gap-5 p-4 rounded-[2rem] hover:bg-purple-50 transition-colors border border-transparent hover:border-purple-100">
                     <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600 shrink-0 shadow-sm group-hover:rotate-6 transition-transform">
                       <GraduationCap size={28} />
@@ -90,7 +91,6 @@ export default function SobrePage() {
                     </div>
                   </div>
 
-                  {/* Formação 2 */}
                   <div className="group flex gap-5 p-4 rounded-[2rem] hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-100">
                     <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 shrink-0 shadow-sm group-hover:rotate-6 transition-transform">
                       <BookOpen size={28} />
@@ -101,7 +101,6 @@ export default function SobrePage() {
                     </div>
                   </div>
 
-                  {/* Formação 3 */}
                   <div className="group flex gap-5 p-4 rounded-[2rem] hover:bg-pink-50 transition-colors border border-transparent hover:border-pink-100">
                     <div className="w-14 h-14 bg-pink-100 rounded-2xl flex items-center justify-center text-pink-600 shrink-0 shadow-sm group-hover:rotate-6 transition-transform">
                       <Star size={28} />
@@ -152,5 +151,18 @@ export default function SobrePage() {
         </div>
       </main>
     </div>
+  );
+}
+
+// 2. Exportamos a página com o Suspense Boundary
+export default function SobrePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin"></div>
+      </div>
+    }>
+      <SobreContent />
+    </Suspense>
   );
 }
