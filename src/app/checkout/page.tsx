@@ -1,6 +1,8 @@
 import { Suspense } from 'react';
 import CheckoutWrapper from './CheckoutWrapper';
 
+export const dynamic = 'force-dynamic'; // Force dynamic rendering for this page
+
 export default function CheckoutPage() {
   return (
     <Suspense fallback={<div>Loading checkout...</div>}>
