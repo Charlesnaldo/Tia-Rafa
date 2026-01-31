@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Star, Quote, CheckCircle } from "lucide-react";
+import Image from "next/image";
 
 const depoimentos = [
   {
@@ -61,14 +62,16 @@ export default function Testimonials() {
               </div>
 
               <p className="text-gray-700 leading-relaxed mb-8 italic">
-                "{item.texto}"
+                &quot;{item.texto}&quot;
               </p>
 
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <img
+                  <Image
                     src={item.foto}
                     alt={item.nome}
+                    width={56}
+                    height={56}
                     className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-sm"
                   />
                   <div className="absolute -bottom-1 -right-1 bg-green-500 text-white rounded-full p-0.5 border-2 border-white">

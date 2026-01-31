@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Sparkles, Search, X, BookOpen, Heart, MessageCircle } from "lucide-react";
@@ -9,15 +9,9 @@ export default function Header() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState(searchParams.get("busca") || "");
-
-  // Atualiza o valor do input se a URL mudar (ex: limpando a busca)
-  useEffect(() => {
-    setSearchValue(searchParams.get("busca") || "");
-  }, [searchParams]);
+  const searchValue = searchParams.get("busca") || "";
 
   const handleSearch = (term: string) => {
-    setSearchValue(term);
     const params = new URLSearchParams(searchParams.toString());
     
     if (term) {

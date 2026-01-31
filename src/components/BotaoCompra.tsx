@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ShoppingCart, Loader2, Download, Package } from "lucide-react";
+import { Loader2, Download, Package } from "lucide-react";
+import { Produto } from "@/constants/produtos";
 
-export default function BotaoCompra({ produto }: { produto: any }) {
+export default function BotaoCompra({ produto }: { produto: Produto }) {
   const [loading, setLoading] = useState(false);
 
   const handleCheckout = async () => {

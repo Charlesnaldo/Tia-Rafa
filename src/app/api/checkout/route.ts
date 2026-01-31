@@ -52,8 +52,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: result.init_point });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("ERRO COMPLETO MP:", error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ error: (error as Error).message }, { status: 400 });
   }
 }

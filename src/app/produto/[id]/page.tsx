@@ -2,7 +2,8 @@ import { PRODUTOS_LISTA } from "@/constants/produtos";
 import { formatCurrency } from "@/lib/utils";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, Download, ShieldCheck, Sparkles, Printer, Star, Package, Zap, Truck } from "lucide-react";
+import Image from "next/image";
+import { ChevronLeft, ShieldCheck, Sparkles, Printer, Star, Package, Zap, Truck } from "lucide-react";
 import BotaoCompra from "@/components/BotaoCompra";
 
 export default async function ProdutoDetalhes({ params }: { params: Promise<{ id: string }> }) {
@@ -25,7 +26,7 @@ export default async function ProdutoDetalhes({ params }: { params: Promise<{ id
         <div className="relative">
           <div className={`aspect-[4/5] ${produto.cor} rounded-[32px] overflow-hidden shadow-inner flex items-center justify-center p-12`}>
             <div className="w-full h-full bg-white shadow-2xl rounded-sm transform rotate-2 hover:rotate-0 transition-transform duration-500 overflow-hidden border-t-[12px] border-purple-200">
-              <img src={produto.imagem} alt={produto.nome} className="w-full h-full object-cover opacity-90" />
+              <Image src={produto.imagem} alt={produto.nome} width={400} height={500} className="w-full h-full object-cover opacity-90" />
             </div>
           </div>
           <div className="absolute -bottom-4 -right-4 bg-white p-4 rounded-2xl shadow-lg flex items-center gap-3">
@@ -114,7 +115,7 @@ export default async function ProdutoDetalhes({ params }: { params: Promise<{ id
             <BotaoCompra produto={produto} />
 
             <div className="mt-6 flex items-center justify-center gap-6 opacity-40 grayscale">
-              <img src="/mercadopago-logo.png" alt="Mercado Pago" className="h-4" />
+              <Image src="/mercadopago-logo.png" alt="Mercado Pago" width={56} height={16} className="h-4" />
               <div className="w-[1px] h-4 bg-gray-400"></div>
               <div className="flex items-center gap-1 text-[10px] font-bold">
                 <ShieldCheck size={12} />
@@ -131,7 +132,7 @@ export default async function ProdutoDetalhes({ params }: { params: Promise<{ id
                   <Star key={i} size={14} fill="#FFD700" className="text-yellow-400" />
                 ))}
               </div>
-              <p className="text-gray-700 font-medium italic mb-3">"{produto.depoimento.texto}"</p>
+              <p className="text-gray-700 font-medium italic mb-3">&quot;{produto.depoimento.texto}&quot;</p>
               <p className="text-sm font-black text-purple-600">— {produto.depoimento.autor}</p>
             </div>
           )}

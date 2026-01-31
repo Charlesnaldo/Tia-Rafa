@@ -121,7 +121,7 @@ export default function SobrePage() {
                 <h2 className="text-sm font-black text-orange-400 uppercase tracking-[0.3em] mb-6">Manifesto de Afeto</h2>
                 <div className="space-y-4 text-gray-600 leading-relaxed text-lg font-medium italic">
                   <p>
-                    "Olá! Eu sou a Rafaela. Acredito que a educação transforma vidas quando é feita com afeto e base científica."
+                    &quot;Olá! Eu sou a Rafaela. Acredito que a educação transforma vidas quando é feita com afeto e base científica.&quot;
                   </p>
                   <p className="not-italic text-base">
                     Com minha experiência em neuropsicopedagogia, crio materiais didáticos que respeitam o tempo de cada criança, estimulando as conexões neurais de forma divertida. Meu objetivo é facilitar a rotina de professores e pais com ferramentas validadas.

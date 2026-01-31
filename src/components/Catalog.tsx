@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState } from "react";
 import { ShoppingCart, FileText, SearchX, Zap } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { PRODUTOS_LISTA } from "@/constants/produtos";
 import { formatCurrency } from "@/lib/utils";
 
-function CatalogContent() {
+export default function Catalog() {
   const searchParams = useSearchParams();
   const busca = searchParams.get("busca")?.toLowerCase() || "";
   const [categoria, setCategoria] = useState<'todos' | 'digital' | 'fisico'>('todos');
@@ -49,7 +50,7 @@ function CatalogContent() {
             ].map((filtro) => (
               <button
                 key={filtro.id}
-                onClick={() => setCategoria(filtro.id as any)}
+                onClick={() => setCategoria(filtro.id as 'todos' | 'digital' | 'fisico')}
                 className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all ${categoria === filtro.id
                     ? 'bg-purple-600 text-white shadow-xl shadow-purple-200 scale-105'
                     : 'bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600'
@@ -96,9 +97,11 @@ function CatalogContent() {
 
                 {/* Imagem do Produto */}
                 <div className={`relative aspect-square ${produto.cor} rounded-[2rem] overflow-hidden mb-5 shadow-inner`}>
-                  <img
+                  <Image
                     src={produto.imagem}
                     alt={produto.nome}
+                    width={400}
+                    height={400}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-500" />
@@ -150,13 +153,5 @@ function CatalogContent() {
         )}
       </div>
     </section>
-  );
-}
-
-export default function Catalog() {
-  return (
-    <Suspense fallback={<div className="text-center py-20">A carregar magia...</div>}>
-      <CatalogContent />
-    </Suspense>
   );
 }
