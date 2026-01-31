@@ -3,13 +3,13 @@
 export type Produto = {
   id: string;
   nome: string;
-  preco: number; // Preço em centavos
+  preco: number; 
   imagem: string;
   cor: string;
   descricao: string;
   tipo: 'digital' | 'fisico';
-  downloadUrl?: string; // Para produtos digitais
-  tags?: string[]; // Ex: ['Alfabetização', '4-6 anos']
+  downloadUrl?: string;
+  tags?: string[];
   estrelas?: number;
   depoimento?: {
     autor: string;
@@ -18,13 +18,13 @@ export type Produto = {
 };
 
 export const PRODUTOS_LISTA: Record<string, Produto> = {
-  "volta-as-aulas": {
-    id: "volta-as-aulas",
-    nome: "Painel Volta às Aulas",
-    preco: 790,
-    imagem: "/perfil.png",
+  "boas-vindas": {
+    id: "boas-vindas",
+    nome: "Painel de Boas Vindas",
+    preco: 190,
+    imagem: "/img/boasvindas2.png",
     cor: "bg-purple-100",
-    descricao: "Um painel mágico para recepcionar os seus alunos com muito carinho e cor!",
+    descricao: "O Painel de Boas-Vindas Infantil foi criado para encantar e espalhar alegria logo na chegada! Com cores vibrantes, alegres e cheias de vida, ele transforma qualquer ambiente em um espaço divertido e acolhedor para as crianças",
     tipo: 'digital',
     downloadUrl: '#',
     tags: ['Educação Infantil', 'Decoração'],
