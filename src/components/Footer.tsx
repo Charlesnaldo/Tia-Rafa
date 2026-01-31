@@ -4,14 +4,14 @@ import { Mail, MessageCircle, Instagram, Youtube, Heart, ArrowRight, ShieldCheck
 export default function Footer() {
   return (
     <footer className="relative bg-white pt-24 pb-12 overflow-hidden border-t border-gray-50">
-      {/* Elementos decorativos de fundo que imitam o Hero */}
+      
       <div 
     className="absolute inset-0 opacity-40 pointer-events-none" 
    style={{ 
           backgroundImage: "url('/fundo-footer.jpg')", 
-          backgroundSize: 'cover',      /* Faz a imagem cobrir toda a área sem distorcer */
-          backgroundPosition: 'center', /* Centraliza a foto */
-          backgroundRepeat: 'no-repeat' /* Impede que a foto se repita */
+          backgroundSize: 'cover',      
+          backgroundPosition: 'center', 
+          backgroundRepeat: 'no-repeat'
         }}
 
         
@@ -22,7 +22,7 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-6 relative z-10 font-fredoka">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 mb-20">
           
-          {/* Coluna 1: Branding & Manifesto */}
+          
           <div className="lg:col-span-4 flex flex-col gap-8">
             <div className="group">
               <Link href="/" className="text-4xl font-black tracking-tighter inline-block transition-transform group-hover:-rotate-2">

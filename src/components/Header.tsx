@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Sparkles, Search, X, BookOpen, Heart, MessageCircle } from "lucide-react";
 
-// 1. Criamos um componente interno para gerenciar a lógica da busca
+
 function HeaderContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -21,7 +21,7 @@ function HeaderContent() {
       params.delete("busca");
     }
     
-    // Força a navegação para a home onde o catálogo reside
+    
     router.push(`/?${params.toString()}#catalogo`, { scroll: false });
   };
 

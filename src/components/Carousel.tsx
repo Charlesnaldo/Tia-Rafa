@@ -1,96 +1,84 @@
 "use client";
 
-import React, { useCallback } from "react";
+import React from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
-import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import ProductCard from "./ProductCard";
+import { PRODUTOS_LISTA } from "@/constants/produtos";
+import { Sparkles } from "lucide-react";
 
-export default function Carousel() {
-  const [emblaRef, emblaApi] = useEmblaCarousel(
-    {
-      align: "center",
-      loop: true,
-      skipSnaps: false,
-    },
-    [Autoplay({ delay: 5000, stopOnInteraction: false })]
+export default function DualCarousel() {
+  const produtos = Object.values(PRODUTOS_LISTA);
+  
+  // Divide os produtos em duas listas
+  const metade = Math.ceil(produtos.length / 2);
+  const linhaSuperior = produtos.slice(0, metade);
+  const linhaInferior = produtos.slice(metade);
+
+  // Configuração da Linha Superior (Esquerda)
+  const [emblaRefTop] = useEmblaCarousel(
+    { loop: true, align: "start", dragFree: true },
+    [Autoplay({ delay: 3000, stopOnInteraction: false, playOnInit: true })]
   );
 
-  const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
-  const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi]);
-
-  const materiais: { title: string; desc: string; price: string; color: string; tipo: 'digital' | 'fisico'; estrelas: number }[] = [
-    { title: "Alfabetização Mágica", desc: "50+ páginas lúdicas", price: "27,90", color: "bg-purple-400", tipo: 'digital', estrelas: 5 },
-    { title: "Matemática Divertida", desc: "Números e formas", price: "19,90", color: "bg-pink-400", tipo: 'digital', estrelas: 4 },
-    { title: "Datas Comemorativas", desc: "Calendário escolar", price: "47,00", color: "bg-orange-400", tipo: 'digital', estrelas: 5 },
-    { title: "Artes e Cores", desc: "Pintura e criatividade", price: "15,00", color: "bg-blue-400", tipo: 'digital', estrelas: 5 },
-    { title: "Leitura Inicial", desc: "Pequenos textos em PDF", price: "22,00", color: "bg-emerald-400", tipo: 'digital', estrelas: 4 },
-  ];
+  // Configuração da Linha Inferior (Direita - usando direction: rtl)
+  const [emblaRefBottom] = useEmblaCarousel(
+    { loop: true, align: "start", dragFree: true, direction: "rtl" },
+    [Autoplay({ delay: 3000, stopOnInteraction: false, playOnInit: true })]
+  );
 
   return (
-    <div className="relative group px-4 md:px-12 py-16 bg-white overflow-hidden">
-
-      {/* Header do Carrossel Centralizado */}
-      <div className="flex flex-col items-center justify-center mb-12 px-4 text-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="p-3 bg-orange-100 rounded-2xl text-orange-600 shadow-sm">
-            <Sparkles size={28} />
-          </div>
-          <h3 className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 text-4xl md:text-5xl lg:text-6xl font-black leading-tight tracking-tighter font-fredoka">
-            Destaques da Semana
-          </h3>
-          <div className="h-1.5 w-24 bg-gradient-to-r from-purple-600 to-orange-400 rounded-full mt-2" />
+    <section className="py-20 bg-white overflow-hidden flex flex-col gap-10">
+      
+      {/* Header */}
+      <div className="flex flex-col items-center text-center px-4 mb-4">
+        <div className="p-3 bg-purple-100 rounded-2xl text-purple-600 mb-4 animate-bounce">
+          <Sparkles size={28} />
         </div>
+        <h3 className="text-4xl md:text-5xl font-black font-fredoka bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500">
+          Destaques Mágicos
+        </h3>
+        <p className="text-gray-400 mt-2 font-medium">Toque e arraste para explorar os materiais!</p>
       </div>
 
-      {/* Viewport do Embla */}
-      <div className="relative max-w-7xl mx-auto">
-        <div className="overflow-hidden px-4" ref={emblaRef}>
-          <div className="flex -ml-6 py-8">
-            {materiais.map((item, index) => (
-              <div
-                key={index}
-                className="pl-6 flex-[0_0_88%] sm:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0"
-              >
-                <div className="transition-all duration-500 hover:translate-y-[-10px]">
-                  <ProductCard
-                    title={item.title}
-                    description={item.desc}
-                    price={item.price}
-                    imageColor={item.color}
-                    tipo={item.tipo}
-                    estrelas={item.estrelas}
-                  />
-                </div>
+      {/* Linha 1: Desliza para a Esquerda */}
+      <div className="cursor-grab active:cursor-grabbing">
+        <div className="overflow-hidden" ref={emblaRefTop}>
+          <div className="flex gap-6 ml-6">
+            {linhaSuperior.map((produto) => (
+              <div key={produto.id} className="flex-[0_0_280px] md:flex-[0_0_350px] min-w-0">
+                <ProductCard {...produto} />
               </div>
             ))}
           </div>
         </div>
-
-        {/* Botões de Navegação Flutuantes nas Pontas */}
-        <button
-          onClick={scrollPrev}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 md:-translate-x-6 z-20 p-4 rounded-full bg-white shadow-xl text-gray-400 hover:text-purple-600 transition-all active:scale-90 border border-gray-100 hidden sm:flex"
-        >
-          <ChevronLeft size={28} />
-        </button>
-        <button
-          onClick={scrollNext}
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 md:translate-x-6 z-20 p-4 rounded-full bg-white shadow-xl text-gray-400 hover:text-purple-600 transition-all active:scale-90 border border-gray-100 hidden sm:flex"
-        >
-          <ChevronRight size={28} />
-        </button>
       </div>
 
-      {/* Indicadores de Paginação */}
-      <div className="flex justify-center gap-2 mt-8">
-        {materiais.map((_, i) => (
-          <div
-            key={i}
-            className="h-2 w-2 rounded-full bg-gray-200 transition-all group-hover:bg-purple-300"
-          />
-        ))}
+      {/* Linha 2: Desliza para a Direita */}
+      <div className="cursor-grab active:cursor-grabbing">
+        <div className="overflow-hidden" ref={emblaRefBottom} dir="rtl">
+          <div className="flex gap-6 mr-6">
+            {linhaInferior.map((produto) => (
+              <div key={produto.id} className="flex-[0_0_280px] md:flex-[0_0_350px] min-w-0" dir="ltr">
+                <ProductCard {...produto} />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
+
+      {/* Estilo para suavizar as bordas (efeito fade) */}
+      <style jsx>{`
+        section {
+          mask-image: linear-gradient(
+            to right,
+            transparent,
+            black 10%,
+            black 90%,
+            transparent
+          );
+        }
+      `}</style>
+    </section>
   );
 }

@@ -8,7 +8,7 @@ import { useSearchParams } from "next/navigation";
 import { PRODUTOS_LISTA } from "@/constants/produtos";
 import { formatCurrency } from "@/lib/utils";
 
-// 1. Movemos toda a lógica para um componente interno
+
 function CatalogContent() {
   const searchParams = useSearchParams();
   const busca = searchParams.get("busca")?.toLowerCase() || "";
@@ -26,8 +26,8 @@ function CatalogContent() {
   });
 
   return (
-    <section id="catalogo" className="py-20 bg-white font-fredoka">
-      <div className="max-w-[1600px] mx-auto px-4 md:px-6">
+    <section className="py-20 bg-white font-fredoka scroll-mt-20">
+      <div id="catalogo"className="max-w-[1600px] mx-auto px-4 md:px-6">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-6xl font-black tracking-tighter mb-8 leading-tight">
             {busca ? (
@@ -49,7 +49,7 @@ function CatalogContent() {
               <button
                 key={filtro.id}
                 onClick={() => setCategoria(filtro.id as 'todos' | 'digital' | 'fisico')}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all ${categoria === filtro.id
+                className={`flex items-center cursor-pointer gap-2 px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all ${categoria === filtro.id
                     ? 'bg-purple-600 text-white shadow-xl shadow-purple-200 scale-105'
                     : 'bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600'
                   }`}
