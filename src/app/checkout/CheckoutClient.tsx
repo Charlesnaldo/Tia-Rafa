@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { Loader2, ChevronLeft, ArrowRight, Mail } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { PRODUTOS_LISTA } from "@/constants/produtos";
 import { formatCurrency } from "@/lib/utils";
+import SearchParamsClient from "./SearchParamsClient"; // Import the new component
 
 export default function CheckoutClient() {
-  const searchParams = useSearchParams();
+  const searchParams = SearchParamsClient(); // Use the new component to get search params
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
 
@@ -109,3 +109,5 @@ export default function CheckoutClient() {
     </div>
   );
 }
+
+
