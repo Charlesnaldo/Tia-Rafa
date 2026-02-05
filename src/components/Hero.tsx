@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+
 import { Sparkles, ArrowRight, Star } from "lucide-react";
 
 export default function Hero() {
