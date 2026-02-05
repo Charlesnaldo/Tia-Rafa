@@ -1,58 +1,116 @@
 "use client";
 
-import { Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, BookOpen, Heart, Info } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
-// 1. Componente de conteúdo com a lógica de navegação
 function HeaderMobileContent() {
   const pathname = usePathname();
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const controlNavbar = () => {
+      if (typeof window !== "undefined") {
+        if (window.scrollY > lastScrollY && window.scrollY > 80) {
+          setIsVisible(false);
+        } else {
+          setIsVisible(true);
+        }
+        setLastScrollY(window.scrollY);
+      }
+    };
+    window.addEventListener("scroll", controlNavbar);
+    return () => window.removeEventListener("scroll", controlNavbar);
+  }, [lastScrollY]);
 
   const menuItems = [
-    { name: "Início", href: "/", icon: <Home size={24} /> },
-    { name: "Materiais", href: "/#catalogo", icon: <BookOpen size={24} /> },
-    { name: "Favoritos", href: "#", icon: <Heart size={24} /> },
-    { name: "Sobre", href: "/sobre", icon: <Info size={24} /> },
+    { name: "Início", href: "/", icon: Home },
+    { name: "Materiais", href: "/#catalogo", icon: BookOpen },
+    { name: "Ameis", href: "#", icon: Heart },
+    { name: "Sobre", href: "/sobre", icon: Info },
   ];
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 pb-safe pt-3 px-2 z-[100] shadow-[0_-8px_30px_rgba(0,0,0,0.08)] rounded-t-[32px]">
-      <div className="flex justify-around items-center max-w-md mx-auto">
-        {menuItems.map((item) => {
-          const isActive = pathname === item.href;
+    <AnimatePresence>
+      {isVisible && (
+        <motion.nav
+          initial={{ y: 100, x: "-50%", opacity: 0 }}
+          animate={{ y: 0, x: "-50%", opacity: 1 }}
+          exit={{ y: 100, x: "-50%", opacity: 0 }}
+          transition={{ type: "spring", stiffness: 260, damping: 20 }}
+          className="lg:hidden fixed bottom-6 left-1/2 z-[100] w-[92%] max-w-md"
+        >
+          <div className="bg-white/90 backdrop-blur-2xl border border-white/50 rounded-[2.5rem] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.15)] px-2 py-3 flex justify-around items-center relative">
+            
+            {menuItems.map((item) => {
+              const isActive = pathname === item.href;
+              const Icon = item.icon;
 
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className="flex flex-col items-center justify-center min-w-[70px] relative pb-2"
-            >
-              <div className={`p-2 rounded-2xl transition-all duration-300 ${isActive
-                ? "bg-purple-600 text-white -translate-y-1 shadow-lg shadow-purple-200"
-                : "text-gray-400"
-                }`}>
-                {item.icon}
-              </div>
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className="flex flex-col items-center justify-center relative min-w-[68px] outline-none"
+                >
+                  {/* Background Glow para o item ativo */}
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeGlow"
+                      className="absolute inset-0 bg-purple-100/50 rounded-3xl z-0"
+                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                    />
+                  )}
 
-              <span className={`text-[10px] font-bold mt-1 transition-opacity duration-300 ${isActive ? "text-purple-600 opacity-100" : "text-gray-400 opacity-80"
-                }`}>
-                {item.name}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+                  <motion.div
+                    whileTap={{ scale: 0.8 }}
+                    className={`relative z-10 p-3 rounded-2xl transition-colors duration-300 ${
+                      isActive
+                        ? "text-purple-600"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    {/* Efeito de flutuação no ícone ativo */}
+                    <motion.div
+                      animate={isActive ? { y: -5 } : { y: 0 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                    >
+                      <Icon 
+                        size={24} 
+                        strokeWidth={isActive ? 2.5 : 2}
+                        className={isActive ? "drop-shadow-[0_0_8px_rgba(147,51,234,0.3)]" : ""}
+                      />
+                    </motion.div>
+
+                    {/* Pontinho embaixo do ícone ativo */}
+                    {isActive && (
+                      <motion.div 
+                        layoutId="dot"
+                        className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-purple-600 rounded-full"
+                      />
+                    )}
+                  </motion.div>
+
+                  <span className={`relative z-10 text-[9px] font-black uppercase tracking-[0.1em] mt-0.5 transition-all duration-300 ${
+                    isActive ? "text-purple-600 scale-110" : "text-gray-400"
+                  }`}>
+                    {item.name}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </motion.nav>
+      )}
+    </AnimatePresence>
   );
 }
 
-// 2. Export principal protegido
 export default function HeaderMobile() {
   return (
-    <Suspense fallback={
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white h-16 animate-pulse rounded-t-[32px]" />
-    }>
+    <Suspense fallback={null}>
       <HeaderMobileContent />
     </Suspense>
   );

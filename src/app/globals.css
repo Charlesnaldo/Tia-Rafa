@@ -1,6 +1,28 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@keyframes bounce-once {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.animate-bounce-once {
+  animation: bounce-once 2s ease-in-out;
+}
+
+@layer utilities {
+  @keyframes gradient-x {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+  .animate-gradient-x {
+    animation: gradient-x 6s ease infinite;
+  }
+}
 
 
 @custom-variant dark (&:is(.dark *));

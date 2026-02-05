@@ -46,11 +46,12 @@ export async function POST(request: Request) {
         },
         // --- ESTA É A LINHA QUE CONECTA COM O SEU WEBHOOK ---
         notification_url: `${baseUrl}/api/webhook/mercadopago`,
+        purpose: 'wallet_purchase',
         // ----------------------------------------------------
       },
     });
 
-    return NextResponse.json({ url: result.init_point });
+    return NextResponse.json({ preferenceId: result.id });
 
   } catch (error) {
     console.error("ERRO COMPLETO MP:", error);

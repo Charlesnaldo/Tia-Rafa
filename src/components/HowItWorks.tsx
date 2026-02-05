@@ -39,7 +39,7 @@ export default function HowItWorks() {
   ];
 
   return (
-    <section className="py-32 bg-[#FDFCFE] font-fredoka overflow-hidden relative">
+    <section className="py-10 bg-[#FDFCFE] font-fredoka overflow-hidden relative">
       {/* Elementos Decorativos de Fundo */}
       <div className="absolute top-0 left-0 w-64 h-64 bg-purple-100 rounded-full blur-3xl opacity-40 -translate-x-1/2 -translate-y-1/2" />
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-orange-100 rounded-full blur-3xl opacity-40 translate-x-1/3 translate-y-1/3" />

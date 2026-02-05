@@ -21,11 +21,19 @@ import {
 import BotaoCompra from "@/components/BotaoCompra";
 import BotaoCompartilhar from "@/components/BotaoCompartilhar";
 
-export default async function ProdutoDetalhes({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+// Altere sua função para isso:
+export default async function ProdutoDetalhes({ 
+  params 
+}: { 
+  params: Promise<{ id: string }> // 1. Defina o tipo como Promise
+}) {
+  
+  const { id } = await params; // 2. Adicione o await aqui
+  
   const produto = PRODUTOS_LISTA[id];
 
   if (!produto) notFound();
+
 
   // Garante que temos um array de strings para a galeria
   const listaImagens = produto.imagens && produto.imagens.length > 0 
@@ -33,7 +41,7 @@ export default async function ProdutoDetalhes({ params }: { params: Promise<{ id
     : [produto.imagem || "/img/placeholder.png"];
 
   return (
-    <main className="min-h-screen bg-[#FAFAFA] font-fredoka text-[#2D3748] pb-20 pt-8 md:pt-32">
+    <main className="min-h-screen bg-[#FAFAFA] font-fredoka text-[#2D3748] pb-10 pt-5 md:pt-10">
       <section className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-start">
         
         {/* Lado Esquerdo: Preview com Galeria Interativa */}
@@ -42,7 +50,7 @@ export default async function ProdutoDetalhes({ params }: { params: Promise<{ id
             href="/#catalogo" 
             className="group inline-flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-purple-600 transition-colors mb-8"
           >
-            <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+            <ChevronLeft size={30} className="group-hover:-translate-x-1 transition-transform" />
             Voltar para a loja
           </Link>
 

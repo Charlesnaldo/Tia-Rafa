@@ -56,3 +56,11 @@ export default function SucessoPage() {
     </div>
   );
 }
+
+export default function SucessoPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen w-full flex items-center justify-center"><p>Carregando...</p></div>}>
+      <SucessoContent />
+    </Suspense>
+  );
+}

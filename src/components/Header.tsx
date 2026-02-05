@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, Suspense } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Sparkles, Search, X, BookOpen, Heart, MessageCircle } from "lucide-react";
-
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Search, X, BookOpen, Heart, MessageCircle, Palette, Instagram, Youtube } from "lucide-react";
 
 function HeaderContent() {
   const router = useRouter();
@@ -14,63 +14,98 @@ function HeaderContent() {
 
   const handleSearch = (term: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    
-    if (term) {
-      params.set("busca", term);
-    } else {
-      params.delete("busca");
-    }
-    
-    
+    if (term) params.set("busca", term);
+    else params.delete("busca");
     router.push(`/?${params.toString()}#catalogo`, { scroll: false });
   };
 
   return (
-    <nav className="max-w-7xl mx-auto">
-      <div className="relative bg-white/90 backdrop-blur-md rounded-[3rem] px-8 py-4 flex items-center justify-between shadow-lg border border-white/20">
-        
-        {/* Logo e Links aparecem se a busca estiver fechada */}
-        {!isSearchOpen && (
-          <Link href="/" className="flex items-center gap-3 group animate-in fade-in duration-500">
-            <div className="bg-purple-100 p-2 rounded-2xl group-hover:rotate-12 transition-all">
-              <Sparkles className="text-purple-600" size={24} />
-            </div>
-            <h1 className="text-2xl font-black text-gray-900">
-              <span className="text-purple-600">TIA</span>
-              <span className="text-pink-500 ml-1">RAFA</span>
-            </h1>
-          </Link>
-        )}
+    <nav className="max-w-7xl mx-auto relative">
+      <div className="relative px-4 py-6 flex items-center justify-between animate-in fade-in slide-in-from-top-6 duration-1000">
 
-        <div className="flex items-center gap-6 flex-1 justify-end">
-          {/* Barra de Busca Expansível */}
-          <div className={`relative flex items-center transition-all duration-500 ${isSearchOpen ? 'flex-1 max-w-md' : 'w-10'}`}>
-            <input 
+        {/* LADO ESQUERDO: Redes Sociais Animadas */}
+        <div className={`flex items-center gap-4 flex-1 transition-opacity duration-500 ${isSearchOpen ? 'opacity-0' : 'opacity-100'}`}>
+          <a
+            href="https://instagram.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group relative p-3 bg-white/90 text-pink-900 rounded-2xl shadow-sm border border-pink-50 hover:bg-pink-500 hover:text-white transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-pink-200 animate-float"
+          >
+            <Instagram size={40} className="group-hover:scale-110 transition-transform" />
+            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-pink-500"></span>
+            </span>
+          </a>
+
+          <a
+            href="https://youtube.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group p-3 bg-white/80 text-red-500 rounded-2xl shadow-sm border border-red-50 hover:bg-red-500 hover:text-white transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-red-200 animate-float [animation-delay:0.2s]"
+          >
+            <Youtube size={40} className="group-hover:scale-110 transition-transform" />
+          </a>
+
+          <a
+            href="https://wa.me/5500000000000"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group p-3 bg-white/80 text-green-500 rounded-2xl shadow-sm border border-green-50 hover:bg-green-500 hover:text-white transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-green-200 animate-float [animation-delay:0.4s]"
+          >
+            <MessageCircle size={40} className="group-hover:scale-110 transition-transform" />
+          </a>
+        </div>
+
+        {/* CENTRO: Logo */}
+        <div className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-700 ${isSearchOpen ? 'opacity-0 scale-90' : 'opacity-100 scale-100'}`}>
+          <Link href="/" className="block group">
+            <Image
+              src="/logo.png"
+              alt="Logo Tia Rafa"
+              width={380}
+              height={100}
+              className="object-contain transform group-hover:scale-105 transition-transform duration-500"
+              priority
+            />
+          </Link>
+        </div>
+
+        {/* LADO DIREITO: Busca e Menu */}
+        <div className="flex items-center gap-8 flex-1 justify-end">
+          <div className={`relative flex items-center transition-all duration-500 ${isSearchOpen ? 'w-full max-w-2xl' : 'w-12'}`}>
+            <input
               type="text"
-              placeholder="O que você procura?"
+              placeholder="O que vamos ensinar hoje? 📚"
               value={searchValue}
               onChange={(e) => handleSearch(e.target.value)}
-              className={`w-full bg-gray-100 border border-gray-200 rounded-full py-2.5 pl-4 pr-10 outline-none focus:ring-2 focus:ring-purple-500 font-bold text-gray-800
-                ${isSearchOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-0 pointer-events-none'}`}
+              className={`w-full bg-white/95 backdrop-blur-md border-2 border-purple-100 rounded-[2rem] py-4 pl-6 pr-14 outline-none focus:ring-4 focus:ring-purple-100 font-bold text-gray-700 transition-all
+                ${isSearchOpen ? 'opacity-100 scale-100 shadow-2xl' : 'opacity-0 scale-0 pointer-events-none'}`}
             />
             <button 
               onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className={`absolute right-1 p-2.5 rounded-full transition-all ${isSearchOpen ? 'bg-purple-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              className={`absolute right-1 p-3 rounded-full transition-all shadow-md hover:scale-110 active:scale-95
+                ${isSearchOpen ? 'bg-pink-400 text-white' : 'bg-white text-purple-800 border border-purple-100'}`}
             >
-              {isSearchOpen ? <X size={18} /> : <Search size={20} />}
+              {isSearchOpen ? <X size={30} /> : <Search size={30} />}
             </button>
           </div>
 
           {!isSearchOpen && (
-            <div className="flex items-center gap-6 animate-in fade-in slide-in-from-right-4 duration-500">
-              <Link href="/#catalogo" className="flex items-center gap-2 text-gray-700 font-black hover:text-purple-600 transition-all text-sm uppercase">
-                <BookOpen size={18} className="text-purple-600" /> MATERIAIS
+            <div className="flex items-center gap-10 animate-in fade-in slide-in-from-right-4 duration-700">
+              <Link href="/#catalogo" className="flex flex-col items-center gap-1 text-purple-800 font-black hover:text-purple-600 transition-all group">
+                <BookOpen size={40} className="group-hover:scale-110 group-hover:-rotate-6 transition-transform" />
+                <span className="text-[10px] uppercase tracking-[0.15em] font-fredoka">Materiais</span>
               </Link>
-              <Link href="/sobre" className="flex items-center gap-2 text-gray-700 font-black hover:text-pink-600 transition-all text-sm uppercase">
-                <Heart size={18} className="text-pink-600" /> SOBRE
+
+              <Link href="/sobre" className="flex flex-col items-center gap-1 text-purple-800 font-black hover:text-pink-400 transition-all group">
+                <Heart size={40} className="group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] uppercase tracking-[0.15em] font-fredoka">Sobre</span>
               </Link>
-              <Link href="https://wa.me/5500000000000" className="flex items-center gap-2 text-gray-700 font-black hover:text-green-600 transition-all text-sm uppercase">
-                <MessageCircle size={18} className="text-green-600" /> CONTATO
+
+              <Link href="/atividades" className="flex flex-col items-center gap-1 text-purple-800 font-black hover:text-blue-400 transition-all group">
+                <Palette size={40} className="group-hover:scale-110 group-hover:rotate-6 transition-transform" />
+                <span className="text-[10px] uppercase tracking-[0.15em] font-fredoka">Atividades</span>
               </Link>
             </div>
           )}
@@ -80,15 +115,15 @@ function HeaderContent() {
   );
 }
 
-// 2. Exportamos o Header envolvendo o conteúdo em Suspense
 export default function Header() {
+  const pathname = usePathname();
+
+  // Só renderiza se for a página inicial
+  if (pathname !== "/") return null;
+
   return (
-    <header className="absolute top-0 left-0 right-0 z-50 px-4 py-8 hidden lg:block font-fredoka bg-transparent">
-      <Suspense fallback={
-        <div className="max-w-7xl mx-auto">
-          <div className="h-20 bg-white/50 animate-pulse rounded-[3rem] border border-white/20"></div>
-        </div>
-      }>
+    <header className="absolute top-0 left-0 right-0 z-50 px-8 pt-[140px] hidden lg:block">
+      <Suspense fallback={<div className="h-32 w-full" />}>
         <HeaderContent />
       </Suspense>
     </header>

@@ -27,7 +27,7 @@ const depoimentos = [
 
 export default function Testimonials() {
   return (
-    <section className="py-24 bg-white font-fredoka overflow-hidden">
+    <section className="py-8 bg-white font-fredoka overflow-hidden">
       <div className="max-w-7xl mx-auto px-6">
         {/* Título da Seção */}
         <div className="text-center mb-16">
