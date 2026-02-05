@@ -221,6 +221,9 @@ function CatalogContent() {
           </div>
         )}
       </div>
+
+
+      
     </section>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Share2, Check } from "lucide-react";
+import { Share, Check, ExternalLink } from "lucide-react";
 import { useState } from "react";
 
 export default function BotaoCompartilhar({ titulo }: { titulo: string }) {
@@ -9,7 +9,6 @@ export default function BotaoCompartilhar({ titulo }: { titulo: string }) {
   const handleShare = async () => {
     const url = window.location.href;
 
-    // Tenta usar o compartilhamento nativo do sistema (celular)
     if (navigator.share) {
       try {
         await navigator.share({
@@ -21,7 +20,6 @@ export default function BotaoCompartilhar({ titulo }: { titulo: string }) {
         console.log("Erro ao compartilhar", err);
       }
     } else {
-      // Caso não tenha suporte (PC antigo), apenas copia o link
       navigator.clipboard.writeText(url);
       setCopiado(true);
       setTimeout(() => setCopiado(false), 2000);
@@ -31,17 +29,25 @@ export default function BotaoCompartilhar({ titulo }: { titulo: string }) {
   return (
     <button
       onClick={handleShare}
-      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-all font-bold text-xs uppercase tracking-tight"
+      className={`
+        relative flex items-center gap-2 px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95
+        ${copiado 
+          ? "bg-green-50 text-green-600 border-2 border-green-100" 
+          : "bg-white/80 backdrop-blur-md border-2 border-gray-100 text-gray-500 hover:border-purple-200 hover:text-purple-600 shadow-sm"
+        }
+      `}
     >
       {copiado ? (
         <>
-          <Check size={16} className="text-green-500" />
-          Link Copiado!
+          <Check size={16} strokeWidth={3} />
+          <span>Copiado!</span>
         </>
       ) : (
         <>
-          <Share2 size={16} />
-          Compartilhar
+          {/* Ícone de seta (ExternalLink) aparece mais em evidência no Mobile via Tailwind */}
+          <ExternalLink size={16} strokeWidth={3} className="block md:hidden" />
+          <Share size={16} strokeWidth={3} className="hidden md:block" />
+          <span>Enviar</span>
         </>
       )}
     </button>
