@@ -20,7 +20,7 @@ function HeaderContent() {
   };
 
   return (
-    <nav className="max-w-7xl mx-auto relative">
+    <nav className="max-w-[90%] xl:max-w-7xl mx-auto relative">
       <div className="relative px-4 py-6 flex items-center justify-between animate-in fade-in slide-in-from-top-6 duration-1000">
 
         {/* LADO ESQUERDO: Redes Sociais Animadas */}
