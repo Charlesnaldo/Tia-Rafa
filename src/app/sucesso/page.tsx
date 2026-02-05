@@ -1,9 +1,11 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { CheckCircle, Mail, Download, ArrowRight, Sparkles } from "lucide-react";
 
-export default function SucessoPage() {
+// 1. Criamos o conteúdo da página em um componente separado
+function SucessoContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-white font-fredoka flex items-center justify-center p-6">
       <div className="max-w-2xl w-full bg-white rounded-[3rem] p-12 shadow-2xl border border-green-100 text-center relative overflow-hidden">
@@ -57,9 +59,10 @@ export default function SucessoPage() {
   );
 }
 
+// 2. O Export Default (Apenas UM por arquivo)
 export default function SucessoPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen w-full flex items-center justify-center"><p>Carregando...</p></div>}>
+    <Suspense fallback={<div className="min-h-screen w-full flex items-center justify-center"><p className="font-fredoka font-bold text-purple-500">Carregando alegria...</p></div>}>
       <SucessoContent />
     </Suspense>
   );
