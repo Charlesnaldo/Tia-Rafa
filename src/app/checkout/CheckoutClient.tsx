@@ -138,7 +138,11 @@ export default function CheckoutClient() {
                     return data;
                   })
                   .then((res) => {
-                    if (res.status === 'approved') clearCart();
+                    if (res.status === 'approved') {
+                      clearCart();
+                      // Redireciona para a página de sucesso com os dados mínimos
+                      window.location.href = `/sucesso?payment_id=${res.id}&status=approved`;
+                    }
                     resolve(res);
                   })
                   .catch((err) => {
