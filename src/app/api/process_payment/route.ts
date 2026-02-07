@@ -51,21 +51,31 @@ export async function POST(request: Request) {
 
     const payment = new Payment(client);
 
-    // Estrutura do pagamento otimizada
+    // Estrutura do pagamento otimizada para PIX e Cartão
     const paymentBody: any = {
       transaction_amount: transactionAmountFromClient,
       description: formData.description || "Compra em Tia Rafaela",
-      installments: formData.installments ? Number(formData.installments) : 1,
       payment_method_id: formData.payment_method_id,
       payer: {
-        email: formData.payer.email,
-        identification: formData.payer.identification,
-        first_name: formData.payer.first_name || "Cliente",
-        last_name: formData.payer.last_name || "Tia Rafaela",
+        email: formData.payer?.email || "cliente@tiarafaela.com.br",
+        first_name: formData.payer?.first_name || "Cliente",
+        last_name: formData.payer?.last_name || "Tia Rafaela",
       },
     };
 
-    // Apenas adiciona token se for cartão (PIX não tem token)
+    // O PIX exige identificação (CPF/CNPJ)
+    if (formData.payer?.identification) {
+      paymentBody.payer.identification = formData.payer.identification;
+    } else if (formData.identification) {
+      paymentBody.payer.identification = formData.identification;
+    }
+
+    // Se no formulário o usuário não preencheu e estamos em Produção, 
+    // o Mercado Pago vai exigir o CPF. 
+    // Vamos garantir que os installments sejam sempre válidos (mínimo 1)
+    paymentBody.installments = formData.installments ? Number(formData.installments) : 1;
+
+    // Apenas adiciona token se for cartão
     if (formData.token) {
       paymentBody.token = formData.token;
     }
@@ -74,6 +84,8 @@ export async function POST(request: Request) {
     if (formData.issuer_id) {
       paymentBody.issuer_id = formData.issuer_id;
     }
+
+    console.log("MERCADO PAGO: Tentando criar pagamento com corpo:", JSON.stringify(paymentBody));
 
     const result = await payment.create({ body: paymentBody });
 
