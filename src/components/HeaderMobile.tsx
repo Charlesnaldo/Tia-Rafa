@@ -94,7 +94,7 @@ function HeaderMobileContent() {
                       />
                     )}
 
-                    {item.count > 0 && item.name === "Carrinho" && (
+                    {(item.count ?? 0) > 0 && item.name === "Carrinho" && (
                       <motion.span
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
