@@ -33,22 +33,32 @@ export default function CheckoutClient() {
 
   useEffect(() => {
     const renderPaymentBrick = async () => {
-      if (!preferenceId || !isMpReady || itemCount === 0) return;
+      console.log("Tentando renderizar Brick. States:", { preferenceId, isMpReady, itemCount, hasRef: !!paymentBrickRef.current });
+
+      if (!preferenceId || !isMpReady || itemCount === 0) {
+        console.log("Aguardando condições: MP Ready?", isMpReady, "Has Preference?", !!preferenceId);
+        return;
+      }
 
       const container = document.getElementById('payment-brick-container');
-      if (!container) return;
+      if (!container) {
+        console.error("Container 'payment-brick-container' não encontrado no DOM!");
+        return;
+      }
 
-      // Se já houver uma instância, não faz nada (evita duplicidade no Strict Mode)
-      if (paymentBrickRef.current) return;
+      if (paymentBrickRef.current) {
+        console.log("Já existe uma instância do Brick renderizada.");
+        return;
+      }
 
       try {
         const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
+        console.log("Public Key disponível?", !!publicKey);
+
         if (!publicKey) {
-          console.error("MP Public Key missing!");
+          console.error("ERRO: NEXT_PUBLIC_MP_PUBLIC_KEY não configurada!");
           return;
         }
-
-        console.log("Iniciando Payment Brick com Preference:", preferenceId);
 
         const mp = new (window as any).MercadoPago(publicKey, {
           locale: 'pt-BR'
@@ -145,25 +155,33 @@ export default function CheckoutClient() {
   }
 
   const handleCheckout = async () => {
+    console.log("Btn Continuar clicado. Email:", email);
     if (!email.includes("@") || email.length < 5) return alert("Por favor, insira um e-mail válido");
+
     setLoading(true);
     try {
+      console.log("Chamando /api/checkout...");
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cartItems: cartItems, emailCliente: email, cartTotal: cartTotal }),
       });
+
       const data = await response.json();
+      console.log("Resposta da API /api/checkout:", data);
+
       if (data.preferenceId) {
+        console.log("Preference ID recebido:", data.preferenceId);
         setPreferenceId(data.preferenceId);
         setStep(2);
       } else {
+        console.error("Erro retornado pela API:", data.error);
         throw new Error(data.error || "Erro ao gerar preferência");
       }
-    } catch (error) {
+    } catch (error: any) {
       setLoading(false);
-      console.error("Erro ao iniciar checkout:", error);
-      alert("Ocorreu um erro ao processar o checkout. Tente novamente.");
+      console.error("Erro FATAL ao iniciar checkout:", error);
+      alert(`Erro: ${error.message || "Ocorreu um erro ao processar o checkout."}`);
     }
   };
 
