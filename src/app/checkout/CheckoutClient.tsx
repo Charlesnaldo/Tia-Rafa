@@ -101,18 +101,33 @@ export default function CheckoutClient() {
             },
             onSubmit: ({ formData }: any) => {
               const currentId = preferenceIdRef.current;
-              console.log("Processando pagamento para ID:", currentId);
+              console.log("MERCADO PAGO: onSubmit disparado. ID encontrado:", currentId);
+
+              if (!currentId || currentId === "undefined") {
+                const msg = "Erro: ID de preferência não encontrado. Por favor, recarregue a página.";
+                console.error(msg);
+                alert(msg);
+                return;
+              }
 
               return new Promise((resolve, reject) => {
+                const payload = {
+                  ...formData,
+                  preferenceId: String(currentId).trim()
+                };
+
+                console.log("MERCADO PAGO: Enviando payload final:", payload);
+
                 fetch("/api/process_payment", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ ...formData, preferenceId: currentId }),
+                  body: JSON.stringify(payload),
                 })
                   .then(async (res) => {
                     const data = await res.json();
                     if (!res.ok) {
-                      throw new Error(data.details || data.error || "Erro ao processar");
+                      console.error("ERRO NO BACKEND:", data);
+                      throw new Error(data.details || data.error || "Erro ao processar pagamento");
                     }
                     return data;
                   })
@@ -121,8 +136,8 @@ export default function CheckoutClient() {
                     resolve(res);
                   })
                   .catch((err) => {
-                    console.error("Erro no process_payment:", err);
-                    alert(`Pagamento não processado: ${err.message}`);
+                    console.error("MERCADO PAGO: Erro na finalização:", err);
+                    alert(`Não foi possível finalizar: ${err.message}`);
                     reject(err);
                   });
               });
