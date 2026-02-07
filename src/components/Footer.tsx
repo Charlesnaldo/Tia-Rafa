@@ -53,7 +53,7 @@ export default function Footer() {
             </p>
 
             <div className="flex gap-4">
-              <a href="https://instagram.com" target="_blank" className="w-12 h-12 bg-pink-400 shadow-lg shadow-pink-200 rounded-[1.2rem] flex items-center justify-center text-white hover:-translate-y-2 transition-all duration-300">
+              <a href="https://www.instagram.com/tia_rafaprof/" target="_blank" className="w-12 h-12 bg-pink-400 shadow-lg shadow-pink-200 rounded-[1.2rem] flex items-center justify-center text-white hover:-translate-y-2 transition-all duration-300">
                 <Instagram size={22} strokeWidth={2.5} />
               </a>
               <a href="https://youtube.com" target="_blank" className="w-12 h-12 bg-red-400 shadow-lg shadow-red-200 rounded-[1.2rem] flex items-center justify-center text-white hover:-translate-y-2 transition-all duration-300">

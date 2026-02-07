@@ -33,7 +33,6 @@ function CatalogContent() {
       const matchesTag = tagAtiva === 'Tudo' || (produto.tags && produto.tags.includes(tagAtiva));
       return matchesBusca && matchesCategoria && matchesTag;
     });
-    setPaginaAtual(1); // Reseta para a primeira página ao filtrar
     return filtrados;
   }, [busca, categoria, tagAtiva]);
 
@@ -162,7 +161,7 @@ function CatalogContent() {
                         </div>
 
                         <div className="bg-gradient-to-br from-purple-500 to-pink-600 text-white p-2 rounded-xl shadow-md shadow-purple-100 transform group-hover:rotate-12 transition-all">
-                          <ShoppingCart size={16} strokeWidth={3} />
+                          <ShoppingCart size={25} strokeWidth={3} />
                         </div>
                       </div>
                     </div>
@@ -186,7 +185,7 @@ function CatalogContent() {
                   <button
                     key={num}
                     onClick={() => setPaginaAtual(num)}
-                    className={`w-10 h-10 rounded-xl font-bold text-sm transition-all ${
+                    className={`w-10 h-10 rounded-xl cursor-pointer  font-bold text-sm transition-all ${
                       paginaAtual === num
                         ? "bg-purple-600 text-white shadow-md scale-110"
                         : "bg-white text-gray-400 border border-gray-100 hover:text-purple-600"
@@ -199,7 +198,7 @@ function CatalogContent() {
                 <button
                   onClick={() => setPaginaAtual(p => Math.min(p + 1, totalPaginas))}
                   disabled={paginaAtual === totalPaginas}
-                  className="p-2 rounded-xl bg-white border border-gray-100 text-purple-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-purple-50 transition-all"
+                  className="p-2 rounded-xl bg-white border border-gray-100 text-purple-600 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-purple-50 transition-all"
                 >
                   <ChevronRight size={20} />
                 </button>

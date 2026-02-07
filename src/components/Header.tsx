@@ -14,7 +14,7 @@ function HeaderContent() {
         {/* LADO ESQUERDO: Redes Sociais */}
         <div className="flex items-center gap-4 flex-1">
           <a
-            href="https://instagram.com"
+            href="https://www.instagram.com/tia_rafaprof/"
             target="_blank"
             rel="noopener noreferrer"
             className="group relative p-3 bg-white/90 text-pink-900 rounded-2xl shadow-sm border border-pink-50 hover:bg-pink-500 hover:text-white transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-pink-200 animate-float"
