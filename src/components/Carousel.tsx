@@ -10,18 +10,18 @@ import { Sparkles } from "lucide-react";
 export default function DualCarousel() {
   const produtos = Object.values(PRODUTOS_LISTA);
   
-  // Divide os produtos em duas listas
+
   const metade = Math.ceil(produtos.length / 2);
   const linhaSuperior = produtos.slice(0, metade);
   const linhaInferior = produtos.slice(metade);
 
-  // Configuração da Linha Superior (Esquerda)
+ 
   const [emblaRefTop] = useEmblaCarousel(
     { loop: true, align: "start", dragFree: true },
     [Autoplay({ delay: 3000, stopOnInteraction: false, playOnInit: true })]
   );
 
-  // Configuração da Linha Inferior (Direita - usando direction: rtl)
+ 
   const [emblaRefBottom] = useEmblaCarousel(
     { loop: true, align: "start", dragFree: true, direction: "rtl" },
     [Autoplay({ delay: 3000, stopOnInteraction: false, playOnInit: true })]
@@ -41,7 +41,7 @@ export default function DualCarousel() {
         <p className="text-gray-400 mt-2 font-medium">Toque e arraste para explorar os materiais!</p>
       </div>
 
-      {/* Linha 1: Desliza para a Esquerda */}
+     
       <div className="cursor-grab active:cursor-grabbing">
         <div className="overflow-hidden" ref={emblaRefTop}>
           <div className="flex gap-6 ml-6">
@@ -54,7 +54,7 @@ export default function DualCarousel() {
         </div>
       </div>
 
-      {/* Linha 2: Desliza para a Direita */}
+     
       <div className="cursor-grab active:cursor-grabbing">
         <div className="overflow-hidden" ref={emblaRefBottom} dir="rtl">
           <div className="flex gap-6 mr-6">

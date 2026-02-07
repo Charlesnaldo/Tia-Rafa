@@ -3,13 +3,15 @@
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, BookOpen, Heart, Info } from "lucide-react";
+import { Home, BookOpen, Heart, Info, ShoppingCart } from "lucide-react"; // Import ShoppingCart
 import { motion, AnimatePresence } from "framer-motion";
+import { useCart } from "@/context/CartContext"; // Import useCart
 
 function HeaderMobileContent() {
   const pathname = usePathname();
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const { itemCount } = useCart(); // Get item count from cart context
 
   useEffect(() => {
     const controlNavbar = () => {
@@ -29,8 +31,8 @@ function HeaderMobileContent() {
   const menuItems = [
     { name: "Início", href: "/", icon: Home },
     { name: "Materiais", href: "/#catalogo", icon: BookOpen },
-    { name: "Ameis", href: "#", icon: Heart },
     { name: "Sobre", href: "/sobre", icon: Info },
+    { name: "Carrinho", href: "/carrinho", icon: ShoppingCart, count: itemCount }, // Add cart item
   ];
 
   return (
@@ -91,6 +93,18 @@ function HeaderMobileContent() {
                         className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-purple-600 rounded-full"
                       />
                     )}
+
+                    {item.count > 0 && item.name === "Carrinho" && (
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center"
+                      >
+                        {item.count}
+                      </motion.span>
+                    )}
+
                   </motion.div>
 
                   <span className={`relative z-10 text-[9px] font-black uppercase tracking-[0.1em] mt-0.5 transition-all duration-300 ${

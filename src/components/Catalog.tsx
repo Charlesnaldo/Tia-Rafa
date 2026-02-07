@@ -1,17 +1,20 @@
 "use client";
 
 import { useState, Suspense, useMemo } from "react";
-import { ShoppingCart, FileText, SearchX, Zap, ChevronLeft, ChevronRight } from "lucide-react";
+import { ShoppingCart, FileText, SearchX, Zap, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
-import { PRODUTOS_LISTA } from "@/constants/produtos";
+import { useSearchParams, useRouter } from "next/navigation"; // Import useRouter
+import { PRODUTOS_LISTA, Produto } from "@/constants/produtos"; // Import Produto type
 import { formatCurrency } from "@/lib/utils";
+import { useCart } from "@/context/CartContext"; // Import useCart
 
 function CatalogContent() {
   const searchParams = useSearchParams();
   const busca = searchParams.get("busca")?.toLowerCase() || "";
-  
+  const router = useRouter(); // Initialize useRouter
+  const { addToCart } = useCart(); // Initialize useCart
+
   // CONFIGURAÇÃO DO FUNDO
   const bgImage = "/background.webp";
 
@@ -43,13 +46,34 @@ function CatalogContent() {
     paginaAtual * itensPorPagina
   );
 
+  const handleAddToCart = (produto: Produto) => {
+    addToCart({
+      id: produto.id,
+      nome: produto.nome,
+      preco: produto.preco,
+      imagem: produto.imagem || (produto.imagens && produto.imagens.length > 0 ? produto.imagens[0] : "/img/placeholder.png"),
+    }, 1); // Add 1 quantity by default
+    // Optionally add a toast notification here
+  };
+
+  const handleBuyNow = (produto: Produto) => {
+    addToCart({
+      id: produto.id,
+      nome: produto.nome,
+      preco: produto.preco,
+      imagem: produto.imagem || (produto.imagens && produto.imagens.length > 0 ? produto.imagens[0] : "/img/placeholder.png"),
+    }, 1); // Add 1 quantity by default
+    router.push('/carrinho'); // Redirect to cart page
+  };
+
+
   return (
-    <section 
-      className="relative py-16 font-fredoka scroll-mt-10 overflow-hidden" 
+    <section
+      className="relative py-16 font-fredoka scroll-mt-10 overflow-hidden"
       id="catalogo"
     >
       {/* BACKGROUND DIRETO NO CÓDIGO */}
-      <div 
+      <div
         className="absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url('${bgImage}')` }}
       />
@@ -112,16 +136,16 @@ function CatalogContent() {
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
               {produtosExibidos.map((produto) => {
-                const imagemFinal = (produto.imagens && produto.imagens.length > 0) 
-                  ? produto.imagens[0] 
+                const imagemFinal = (produto.imagens && produto.imagens.length > 0)
+                  ? produto.imagens[0]
                   : (produto.imagem || "/img/placeholder.png");
-                
+
                 return (
-                  <Link
+                  <div
                     key={produto.id}
-                    href={`/produto/${produto.id}`}
                     className="group bg-white/90 backdrop-blur-sm rounded-2xl border border-white/50 p-3 hover:shadow-xl hover:shadow-purple-100/30 transition-all duration-300 relative flex flex-col h-full hover:-translate-y-1"
                   >
+                    {/* Product Type Tag */}
                     <div className={`absolute top-2 right-2 z-10 px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm ${produto.tipo === 'digital'
                       ? 'bg-blue-500 text-white shadow-blue-200'
                       : 'bg-orange-500 text-white shadow-orange-200'
@@ -129,43 +153,84 @@ function CatalogContent() {
                       {produto.tipo === 'digital' ? 'PDF' : 'Físico'}
                     </div>
 
-                    <div className={`relative aspect-square rounded-xl overflow-hidden mb-3 shadow-inner ${produto.cor}`}>
-                      <Image
-                        src={imagemFinal}
-                        alt={produto.nome}
-                        width={300}
-                        height={300}
-                        className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105 p-2"
-                      />
-                    </div>
-
-                    <div className="flex flex-col flex-1 px-0.5">
-                      <div className="flex gap-1 mb-2">
-                        {produto.tags?.slice(0, 1).map(tag => (
-                          <span key={tag} className="text-[9px] font-bold text-gray-400 bg-gray-50/50 px-1.5 py-0.5 rounded-md">
-                            {tag}
-                          </span>
-                        ))}
+                    {/* Link to Product Details */}
+                    <Link href={`/produto/${produto.id}`} className="flex flex-col flex-grow">
+                      <div className={`relative aspect-square rounded-xl overflow-hidden mb-3 shadow-inner ${produto.cor}`}>
+                        <Image
+                          src={imagemFinal}
+                          alt={produto.nome}
+                          width={300}
+                          height={300}
+                          className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105 p-2"
+                        />
                       </div>
 
-                      <h3 className="text-sm font-bold text-gray-800 line-clamp-2 leading-tight mb-3 h-10">
-                        {produto.nome}
-                      </h3>
+                      <div className="flex flex-col flex-1 px-0.5">
+                        <div className="flex gap-1 mb-2">
+                          {produto.tags?.slice(0, 1).map(tag => (
+                            <span key={tag} className="text-[9px] font-bold text-gray-400 bg-gray-50/50 px-1.5 py-0.5 rounded-md">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
 
-                      <div className="mt-auto flex items-end justify-between">
-                        <div className="flex flex-col">
+                        <h3 className="text-sm font-bold text-gray-800 line-clamp-2 leading-tight mb-3 h-10">
+                          {produto.nome}
+                        </h3>
+
+                        <div className="flex flex-col mt-auto">
                           <span className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">Investimento</span>
                           <span className="text-lg font-black text-gray-900 group-hover:text-purple-600 transition-colors">
                             R$ {formatCurrency(produto.preco)}
                           </span>
                         </div>
-
-                        <div className="bg-gradient-to-br from-purple-500 to-pink-600 text-white p-2 rounded-xl shadow-md shadow-purple-100 transform group-hover:rotate-12 transition-all">
-                          <ShoppingCart size={25} strokeWidth={3} />
-                        </div>
                       </div>
+                    </Link>
+
+                    {/* Action Buttons (Add to Cart / Buy Now) */}
+                    {/* BOTÕES – MOBILE LIMPO */}
+                    <div className="mt-3 pt-3 border-t border-purple-100 flex gap-2">
+                      {/* CARRINHO – SOMENTE ÍCONE */}
+                      <button
+                        onClick={() => handleAddToCart(produto)}
+                        aria-label="Adicionar ao carrinho"
+                        className="
+      w-10 h-10
+      cursor-pointer
+      bg-purple-100 text-purple-800
+      rounded-xl
+      flex items-center justify-center
+      transition-all
+      active:scale-95
+      hover:bg-purple-200
+      md:w-11 md:h-11
+    "
+                      >
+                        <ShoppingCart size={19}/>
+                      </button>
+
+                      {/* COMPRAR */}
+                      <button
+                        onClick={() => handleBuyNow(produto)}
+                        className="
+      flex-1 h-10
+      cursor-pointer
+      bg-gradient-to-r from-pink-500 to-purple-500
+      text-white
+      rounded-xl
+      text-[11px] font-extrabold
+      flex items-center justify-center gap-1
+      shadow-md
+      transition-all
+      active:scale-95
+      md:text-xs md:h-11
+    "
+                      >
+                        <Download size={19} />
+                        Comprar
+                      </button>
                     </div>
-                  </Link>
+                  </div>
                 );
               })}
             </div>
@@ -180,16 +245,15 @@ function CatalogContent() {
                 >
                   <ChevronLeft size={20} />
                 </button>
-                
+
                 {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((num) => (
                   <button
                     key={num}
                     onClick={() => setPaginaAtual(num)}
-                    className={`w-10 h-10 rounded-xl cursor-pointer  font-bold text-sm transition-all ${
-                      paginaAtual === num
+                    className={`w-10 h-10 rounded-xl cursor-pointer  font-bold text-sm transition-all ${paginaAtual === num
                         ? "bg-purple-600 text-white shadow-md scale-110"
                         : "bg-white text-gray-400 border border-gray-100 hover:text-purple-600"
-                    }`}
+                      }`}
                   >
                     {num}
                   </button>
@@ -213,7 +277,7 @@ function CatalogContent() {
             <p className="font-bold text-xl text-gray-500">Nenhum material mágico encontrado.</p>
             <button
               onClick={() => { setCategoria('todos'); setTagAtiva('Tudo'); }}
-              className="mt-3 text-purple-600 font-bold hover:underline text-sm"
+              className="mt-3 text-purple-600 font-bold hover:underline text-sm cursor-pointer"
             >
               Limpar todos os filtros
             </button>
@@ -222,7 +286,7 @@ function CatalogContent() {
       </div>
 
 
-      
+
     </section>
   );
 }

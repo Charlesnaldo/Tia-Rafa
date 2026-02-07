@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ShoppingCart, Sparkles, Download, Package } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { useCart } from "@/context/CartContext"; // Import useCart
 
 interface ProductCardProps {
   id: string;
@@ -28,6 +29,13 @@ export default function ProductCard({
 }: ProductCardProps) {
   const imagemPrincipal = imagens[0] || imagem || "/img/placeholder.png";
   const temSegundaImagem = imagens.length > 1;
+  const { addToCart } = useCart(); // Use the cart hook
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart({ id, nome, preco, imagem: imagemPrincipal }, 1); // Add 1 quantity
+  };
 
   return (
     <Link
@@ -119,11 +127,7 @@ export default function ProductCard({
 
           {/* Botão de Carrinho */}
           <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              // Adicionar ao carrinho
-            }}
+            onClick={handleAddToCart} // Use the new handler
             className="relative group/btn"
           >
             <div className="bg-gradient-to-br from-purple-500 to-pink-600 text-white p-3.5 rounded-2xl shadow-lg shadow-purple-200/50 transform transition-all duration-300 group-hover/btn:scale-110 group-hover/btn:rotate-12">

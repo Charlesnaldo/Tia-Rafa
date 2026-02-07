@@ -4,9 +4,12 @@ import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Heart, MessageCircle, Palette, Instagram, Youtube } from "lucide-react";
+import { BookOpen, Heart, MessageCircle, Palette, Instagram, Youtube, ShoppingCart } from "lucide-react"; // Import ShoppingCart
+import { useCart } from "@/context/CartContext"; // Import useCart
 
 function HeaderContent() {
+  const { itemCount } = useCart(); // Get item count from cart context
+
   return (
     <nav className="max-w-[90%] xl:max-w-7xl mx-auto relative">
       <div className="relative px-4 py-6 flex items-center justify-between animate-in fade-in slide-in-from-top-6 duration-1000">
@@ -74,6 +77,17 @@ function HeaderContent() {
           <Link href="/atividades" className="flex flex-col items-center gap-1 text-purple-800 font-black hover:text-blue-400 transition-all group">
             <Palette size={40} className="group-hover:scale-110 group-hover:rotate-6 transition-transform" />
             <span className="text-[10px] uppercase tracking-[0.15em] font-fredoka">Atividades</span>
+          </Link>
+
+          {/* Carrinho de Compras */}
+          <Link href="/carrinho" className="flex flex-col items-center gap-1 text-purple-800 font-black hover:text-green-400 transition-all group relative">
+            <ShoppingCart size={40} className="group-hover:scale-110 transition-transform" />
+            <span className="text-[10px] uppercase tracking-[0.15em] font-fredoka">Carrinho</span>
+            {itemCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {itemCount}
+              </span>
+            )}
           </Link>
         </div>
       </div>

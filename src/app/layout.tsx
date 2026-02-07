@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import HeaderMobile from "@/components/HeaderMobile";
 import HeaderMobileTop from "@/components/HeaderMobileTop";
 import Footer from "@/components/Footer";
+import { CartProvider } from "@/context/CartContext";
 
 const fredoka = Fredoka({
   subsets: ["latin"],
@@ -26,27 +27,28 @@ export default function RootLayout({
   return (
     <html lang="pt-br" className="scroll-smooth">
       <body className={`${fredoka.className} antialiased flex flex-col min-h-screen bg-white`}>
+        <CartProvider>
+          {/* HEADER DESKTOP */}
+          <div className="hidden lg:block">
+            <Header />
+          </div>
 
-        {/* HEADER DESKTOP */}
-        <div className="hidden lg:block">
-          <Header />
-        </div>
+          {/* LOGO MOBILE NO TOPO */}
+          <div className="block lg:hidden">
+            <HeaderMobileTop />
+          </div>
 
-        {/* LOGO MOBILE NO TOPO */}
-        <div className="block lg:hidden">
-          <HeaderMobileTop />
-        </div>
+          <main className="flex-grow">
+            {children}
+          </main>
 
-        <main className="flex-grow">
-          {children}
-        </main>
+          {/* MENU MOBILE FLUTUANTE */}
+          <div className="block lg:hidden">
+            <HeaderMobile />
+          </div>
 
-        {/* MENU MOBILE FLUTUANTE */}
-        <div className="block lg:hidden">
-          <HeaderMobile />
-        </div>
-
-        <Footer />
+          <Footer />
+        </CartProvider>
       </body>
     </html>
   );

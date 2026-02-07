@@ -5,24 +5,27 @@ import { Loader2, ChevronLeft, Mail, Sparkles, Heart, ShieldCheck } from "lucide
 import Image from "next/image";
 import Link from "next/link";
 import Script from 'next/script';
-import { PRODUTOS_LISTA } from "@/constants/produtos";
+import { PRODUTOS_LISTA } from "@/constants/produtos"; // Keep this for now, though direct product access removed
 import { formatCurrency } from "@/lib/utils";
-import SearchParamsClient from "./SearchParamsClient";
+// import SearchParamsClient from "./SearchParamsClient"; // Not needed if using cart context
+import { useCart } from "@/context/CartContext"; // Import useCart
 
 export default function CheckoutClient() {
-  const searchParams = SearchParamsClient();
+  // const searchParams = SearchParamsClient(); // No longer needed for single product ID
+  const { cartItems, cartTotal, itemCount, clearCart } = useCart(); // Get cart details
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [preferenceId, setPreferenceId] = useState<string | null>(null);
   const [isMpReady, setIsMpReady] = useState(false);
   const paymentBrickRef = useRef<any>(null);
 
-  const idDoProduto = searchParams.get("id") || "";
-  const produto = PRODUTOS_LISTA[idDoProduto];
+  // const idDoProduto = searchParams.get("id") || ""; // No longer fetching single product
+  // const produto = PRODUTOS_LISTA[idDoProduto]; // No longer fetching single product
 
   useEffect(() => {
     const renderPaymentBrick = async () => {
-      if (!preferenceId || !isMpReady || !produto || paymentBrickRef.current) return;
+      // Only proceed if preferenceId is set, MP SDK is ready, cart is not empty, and brick hasn't rendered
+      if (!preferenceId || !isMpReady || itemCount === 0 || paymentBrickRef.current) return;
 
       const container = document.getElementById('payment-brick-container');
       if (!container) return;
@@ -35,7 +38,7 @@ export default function CheckoutClient() {
 
         const settings = {
           initialization: {
-            amount: Number(produto.preco / 100),
+            amount: Number(cartTotal), // Use cartTotal for amount
             preferenceId: preferenceId,
           },
           customization: {
@@ -64,10 +67,16 @@ export default function CheckoutClient() {
                 fetch("/api/process_payment", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(formData),
+                  body: JSON.stringify({ ...formData, preferenceId }),
                 })
                 .then((res) => res.json())
-                .then((res) => resolve(res))
+                .then((res) => {
+                  if (res.status === 'approved') {
+                    clearCart(); // Clear cart on successful payment
+                    // Optionally redirect to a success page
+                  }
+                  resolve(res);
+                })
                 .catch((err) => reject(err));
               });
             },
@@ -86,9 +95,17 @@ export default function CheckoutClient() {
     };
 
     renderPaymentBrick();
-  }, [preferenceId, isMpReady, produto]);
+  }, [preferenceId, isMpReady, cartTotal, itemCount, clearCart]); // Add cartTotal, itemCount, clearCart to dependencies
 
-  if (!produto) return null;
+  // If cart is empty, redirect to cart page or display a message
+  if (itemCount === 0 && !preferenceId) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <p className="text-xl font-bold text-gray-700">Seu carrinho está vazio!</p>
+        <Link href="/carrinho" className="mt-4 text-blue-500 hover:underline">Ir para o carrinho</Link>
+      </div>
+    );
+  }
 
   const handleCheckout = async () => {
     if (!email.includes("@")) return alert("E-mail inválido");
@@ -97,12 +114,14 @@ export default function CheckoutClient() {
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: idDoProduto, emailCliente: email }),
+        body: JSON.stringify({ cartItems: cartItems, emailCliente: email, cartTotal: cartTotal }), // Send cartItems and cartTotal
       });
       const data = await response.json();
       if (data.preferenceId) setPreferenceId(data.preferenceId);
     } catch (error) {
       setLoading(false);
+      console.error("Erro ao iniciar checkout:", error);
+      alert("Ocorreu um erro ao processar o checkout. Tente novamente.");
     }
   };
 
@@ -116,16 +135,16 @@ export default function CheckoutClient() {
 
       <div className="max-w-4xl mx-auto">
         {/* Header de Voltar */}
-        <Link href={`/produto/${idDoProduto}`} className="flex items-center gap-2 text-blue-400 font-bold mb-6 hover:text-pink-400 transition-colors group">
+        <Link href={`/carrinho`} className="flex items-center gap-2 text-blue-400 font-bold mb-6 hover:text-pink-400 transition-colors group">
           <div className="bg-white p-2 rounded-full shadow-sm group-hover:shadow-md transition-all">
             <ChevronLeft size={20} />
           </div>
-          Voltar para a loja
+          Voltar para o Carrinho
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
-          {/* Coluna 1: Resumo do Produto (Estilo Alfaletrando) */}
+          {/* Coluna 1: Resumo do Pedido */}
           <div className="space-y-6">
             <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-blue-50 relative overflow-hidden">
               <div className="absolute top-0 right-0 p-4">
@@ -133,16 +152,27 @@ export default function CheckoutClient() {
               </div>
               
               <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-40 h-40 bg-pink-50 rounded-[2rem] relative p-4 shadow-inner">
-                  {produto.imagem && (
-                    <Image src={produto.imagem} fill className="object-contain p-4" alt={produto.nome} unoptimized />
-                  )}
+                {/* Generic image for cart checkout */}
+                <div className="w-40 h-40 bg-pink-50 rounded-[2rem] relative p-4 shadow-inner flex items-center justify-center">
+                  <Image src="/img/placeholder.png" width={80} height={80} alt="Seu Carrinho" unoptimized />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-black text-gray-800 leading-tight">{produto.nome}</h1>
-                  <p className="text-blue-400 font-black text-3xl mt-2">{formatCurrency(produto.preco)}</p>
+                  <h1 className="text-2xl font-black text-gray-800 leading-tight">Seu Pedido</h1>
+                  <p className="text-blue-400 font-black text-3xl mt-2">{formatCurrency(cartTotal)}</p>
+                  <p className="text-gray-600 text-sm mt-1">Total de {itemCount} item(s)</p>
                 </div>
               </div>
+
+              {/* List of cart items for review */}
+              <div className="mt-6 space-y-3">
+                {cartItems.map(item => (
+                  <div key={item.id} className="flex justify-between items-center text-gray-700 text-sm">
+                    <span>{item.nome} (x{item.quantity})</span>
+                    <span>{formatCurrency(item.preco * item.quantity)}</span>
+                  </div>
+                ))}
+              </div>
+
             </div>
 
             {/* Banner Informativo */}

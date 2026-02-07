@@ -6,55 +6,87 @@ const client = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN || "",
 });
 
+// Regex for basic email validation
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { id, emailCliente, endereco } = body;
+    const { cartItems, emailCliente } = body; // Expect cartItems and emailCliente
 
-    const produto = PRODUTOS_LISTA[id];
-    if (!produto) return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 });
+    if (!emailCliente || !emailRegex.test(emailCliente)) {
+      return NextResponse.json({ error: "E-mail do cliente inválido." }, { status: 400 });
+    }
+
+    if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
+        return NextResponse.json({ error: "Carrinho de compras vazio ou inválido." }, { status: 400 });
+    }
+
+    const processedItems: {
+        id: string;
+        title: string;
+        unit_price: number;
+        quantity: number;
+        currency_id: string;
+    }[] = [];
+    let totalAmount = 0;
+    const metadataProductIds: string[] = [];
+
+    for (const item of cartItems) {
+        const produto = PRODUTOS_LISTA[item.id];
+        if (!produto) {
+            return NextResponse.json({ error: `Produto com ID ${item.id} não encontrado.` }, { status: 404 });
+        }
+        if (item.quantity <= 0) {
+            return NextResponse.json({ error: `Quantidade inválida para o produto ${produto.nome}.` }, { status: 400 });
+        }
+
+        const valorNumerico = produto.preco / 100; // Assuming preco is in cents
+
+        processedItems.push({
+            id: produto.id,
+            title: produto.nome,
+            unit_price: valorNumerico,
+            quantity: item.quantity,
+            currency_id: "BRL",
+        });
+        totalAmount += valorNumerico * item.quantity;
+        metadataProductIds.push(produto.id);
+    }
 
     const baseUrl = (process.env.NEXT_PUBLIC_URL || "http://localhost:3000").replace(/\/$/, "");
-    const valorNumerico = produto.preco / 100;
 
     const preference = new Preference(client);
 
     const result = await preference.create({
       body: {
-        items: [
-          {
-            id: produto.id,
-            title: produto.nome,
-            unit_price: valorNumerico,
-            quantity: 1,
-            currency_id: "BRL",
-          },
-        ],
+        items: processedItems, // Use the processed multiple items
         payer: {
           email: emailCliente,
         },
         metadata: {
-          id_produto: id,
+          id_produtos: JSON.stringify(metadataProductIds), // Store array of product IDs
           email_comprador: emailCliente,
-          tipo_produto: produto.tipo,
-          ...(endereco && { endereco_entrega: JSON.stringify(endereco) })
+          // Removed tipo_produto and single id_produto as they are now multi-item
+          // endereco_entrega (if needed, would be handled here based on body)
         },
         back_urls: {
           success: `${baseUrl}/sucesso`,
           failure: `${baseUrl}/erro`,
           pending: `${baseUrl}/pendente`,
         },
-        // --- ESTA É A LINHA QUE CONECTA COM O SEU WEBHOOK ---
         notification_url: `${baseUrl}/api/webhook/mercadopago`,
         purpose: 'wallet_purchase',
-        // ----------------------------------------------------
       },
     });
 
     return NextResponse.json({ preferenceId: result.id });
 
   } catch (error) {
-    console.error("ERRO COMPLETO MP:", error);
-    return NextResponse.json({ error: (error as Error).message }, { status: 400 });
+    console.error("ERRO COMPLETO MP (Checkout):", error);
+    return NextResponse.json(
+      { error: "Ocorreu um erro ao iniciar o checkout. Por favor, tente novamente." },
+      { status: 500 }
+    );
   }
 }

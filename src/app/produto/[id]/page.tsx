@@ -1,53 +1,80 @@
+"use client"; // Convert to Client Component
+
+import React, { useState } from "react";
 import { PRODUTOS_LISTA } from "@/constants/produtos";
 import { formatCurrency } from "@/lib/utils";
-import { notFound } from "next/navigation";
-import Galeria from "@/components/Galeria"; // Certifique-se que o caminho está correto
+import { notFound, useRouter } from "next/navigation"; // Import useRouter
+import Galeria from "@/components/Galeria";
 import Link from "next/link";
 import Image from "next/image";
-import { 
-  ChevronLeft, 
-  ShieldCheck, 
-  Sparkles, 
-  Printer, 
-  Star, 
-  Package, 
-  Zap, 
-  Truck, 
-  CreditCard, 
-  Mail, 
-  Heart, 
-  CheckCircle2 
+import {
+  ChevronLeft,
+  ShieldCheck,
+  Sparkles,
+  Printer,
+  Star,
+  Package,
+  Zap,
+  Truck,
+  CreditCard,
+  Mail,
+  Heart,
+  CheckCircle2,
+  MinusCircle, // Import for quantity control
+  PlusCircle, // Import for quantity control
+  ShoppingCart, // Import for Add to Cart button
+  Download, // Import Download icon
 } from "lucide-react";
-import BotaoCompra from "@/components/BotaoCompra";
+// import BotaoCompra from "@/components/BotaoCompra"; // Remove BotaoCompra
 import BotaoCompartilhar from "@/components/BotaoCompartilhar";
+import { useCart } from "@/context/CartContext"; // Import useCart
 
-// Altere sua função para isso:
-export default async function ProdutoDetalhes({ 
-  params 
-}: { 
-  params: Promise<{ id: string }> // 1. Defina o tipo como Promise
+export default function ProdutoDetalhes({
+  params
+}: {
+  params: Promise<{ id: string }> // Keep params as a Promise type
 }) {
-  
-  const { id } = await params; // 2. Adicione o await aqui
-  
+  const router = useRouter();
+  const { addToCart } = useCart();
+  const [quantity, setQuantity] = useState(1); // State for quantity
+
+  const { id } = React.use(params); // Unwrap the Promise using React.use()
   const produto = PRODUTOS_LISTA[id];
 
   if (!produto) notFound();
 
-
-  // Garante que temos um array de strings para a galeria
-  const listaImagens = produto.imagens && produto.imagens.length > 0 
-    ? produto.imagens 
+  const listaImagens = produto.imagens && produto.imagens.length > 0
+    ? produto.imagens
     : [produto.imagem || "/img/placeholder.png"];
+
+  const handleAddToCart = () => {
+    addToCart({
+      id: produto.id,
+      nome: produto.nome,
+      preco: produto.preco,
+      imagem: produto.imagem || listaImagens[0],
+    }, quantity);
+    // Optionally add a toast notification here
+  };
+
+  const handleBuyNow = () => {
+    addToCart({
+      id: produto.id,
+      nome: produto.nome,
+      preco: produto.preco,
+      imagem: produto.imagem || listaImagens[0],
+    }, quantity);
+    router.push('/carrinho'); // Redirect to cart page
+  };
 
   return (
     <main className="min-h-screen bg-[#FAFAFA] font-fredoka text-[#2D3748] pb-10 pt-5 md:pt-10">
       <section className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-start">
-        
+
         {/* Lado Esquerdo: Preview com Galeria Interativa */}
         <div className="relative">
-          <Link 
-            href="/#catalogo" 
+          <Link
+            href="/#catalogo"
             className="group inline-flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-purple-600 transition-colors mb-8"
           >
             <ChevronLeft size={30} className="group-hover:-translate-x-1 transition-transform" />
@@ -55,12 +82,12 @@ export default async function ProdutoDetalhes({
           </Link>
 
           {/* COMPONENTE DE GALERIA SUBSTITUINDO A IMAGEM ESTÁTICA */}
-          <Galeria 
-            imagens={listaImagens} 
-            nome={produto.nome} 
-            cor={produto.cor} 
+          <Galeria
+            imagens={listaImagens}
+            nome={produto.nome}
+            cor={produto.cor}
           />
-          
+
           <div className="absolute top-[85px] -right-2 bg-white p-4 rounded-2xl shadow-xl flex items-center gap-3 border border-gray-50 z-10">
             <div className="bg-yellow-100 p-2 rounded-xl text-yellow-600">
               <Sparkles size={20} />
@@ -133,10 +160,50 @@ export default async function ProdutoDetalhes({
           <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-xl shadow-gray-200/50">
             <div className="flex items-baseline gap-2 mb-6">
               <span className="text-gray-400 text-lg font-medium">Investimento:</span>
-              <span className="text-4xl font-black text-gray-800">R$ {formatCurrency(produto.preco)}</span>
+              <span className="text-4xl font-black text-gray-800">R$ {formatCurrency(produto.preco * quantity)}</span> {/* Update price based on quantity */}
             </div>
 
-            <BotaoCompra produto={produto} />
+            {/* Quantity Selector */}
+            <div className="flex items-center gap-4 mb-6">
+              <span className="text-lg font-medium text-gray-700">Quantidade:</span>
+              <div className="flex items-center border border-gray-300 rounded-lg p-1">
+                <button
+                  onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
+                  className="p-2 text-gray-500 hover:text-red-500 disabled:opacity-50"
+                  disabled={quantity <= 1}
+                >
+                  <MinusCircle size={24} />
+                </button>
+                <span className="px-4 text-xl font-bold text-gray-800">{quantity}</span>
+                <button
+                  onClick={() => setQuantity(prev => prev + 1)}
+                  className="p-2 text-gray-500 hover:text-green-500"
+                >
+                  <PlusCircle size={24} />
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Adicionar ao Carrinho */}
+                <button
+                    onClick={handleAddToCart}
+                    className="w-full py-4 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-2xl font-black text-lg transition-all flex items-center justify-center gap-3 shadow-md hover:shadow-lg active:scale-[0.98]"
+                >
+                    <ShoppingCart size={22} />
+                    Adicionar ao Carrinho
+                </button>
+
+                {/* Comprar Agora */}
+                <button
+                    onClick={handleBuyNow}
+                    className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-2xl font-black text-lg transition-all flex items-center justify-center gap-3 shadow-xl shadow-purple-200 hover:shadow-2xl active:scale-[0.98]"
+                >
+                    {produto.tipo === 'digital' ? <Download size={22} /> : <Package size={22} />}
+                    Comprar Agora
+                </button>
+            </div>
+
 
             <div className="mt-6 flex items-center justify-center gap-6 opacity-40 grayscale hover:grayscale-0 transition-all">
               <Image src="/mercadopago-logo.webp" alt="Mercado Pago" width={56} height={16} className="h-4 w-auto" />
@@ -175,7 +242,7 @@ export default async function ProdutoDetalhes({
               <span className="absolute top-6 right-8 text-6xl font-black text-gray-100 group-hover:text-purple-50 transition-colors">
                 0{i + 1}
               </span>
-              
+
               <div className="relative w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-300">
                 {item.icon}
               </div>
@@ -184,7 +251,7 @@ export default async function ProdutoDetalhes({
                 {item.t}
                 <CheckCircle2 size={16} className="text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
               </h4>
-              
+
               <p className="text-gray-500 text-sm leading-relaxed font-medium">
                 {item.d}
               </p>
