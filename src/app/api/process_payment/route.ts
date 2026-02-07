@@ -8,23 +8,25 @@ const client = new MercadoPagoConfig({
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    console.log("BACKEND: Payload Recebido Completo:", JSON.stringify(body, null, 2));
+    console.log("BACKEND: Payload Recebido:", JSON.stringify(body));
 
-    const { preferenceId, ...formData } = body;
+    const { preferenceId, preference_id, ...formData } = body;
+    const id = preferenceId || preference_id;
 
-    if (!preferenceId || preferenceId === "undefined") {
-      console.error("BACKEND ERROR: Preference ID está ausente ou é a string 'undefined'");
+    if (!id || id === "undefined" || id === "null") {
+      console.error("BACKEND ERROR: Preference ID inválido:", id);
       return NextResponse.json({
-        error: "Preference ID inválido ou ausente.",
-        received: preferenceId
+        error: "ID de preferência inválido ou ausente.",
+        received: String(id)
       }, { status: 400 });
     }
 
     const preferenceClient = new Preference(client);
-    const preferenceDetails = await preferenceClient.get(preferenceId);
+    // Correção Vital: Na v2 o método get espera um OBJETO { preferenceId: id }
+    const preferenceDetails = await preferenceClient.get({ preferenceId: String(id) });
 
     if (!preferenceDetails || !preferenceDetails.items || preferenceDetails.items.length === 0) {
-      console.error("BACKEND ERROR: Detalhes da preferência não encontrados para o ID:", preferenceId);
+      console.error("BACKEND ERROR: Detalhes da preferência não encontrados para o ID:", id);
       return NextResponse.json({ error: "Detalhes da compra não encontrados no Mercado Pago." }, { status: 404 });
     }
 
