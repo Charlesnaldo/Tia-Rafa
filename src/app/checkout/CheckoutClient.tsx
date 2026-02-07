@@ -41,11 +41,11 @@ export default function CheckoutClient() {
           customization: {
             visual: {
               style: { 
-                theme: 'flat', // O tema flat é o que melhor se adapta ao design customizado
+                theme: 'flat', 
                 customVariables: {
                   borderRadiusBig: '20px',
                   borderRadiusMedium: '12px',
-                  colorPrimary: '#60A5FA', // Azul suave
+                  colorPrimary: '#60A5FA', 
                 }
               }
             },

@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import CheckoutWrapper from './CheckoutWrapper';
 
-export const dynamic = 'force-dynamic'; // Force dynamic rendering for this page
+export const dynamic = 'force-dynamic'; 
 
 export default function CheckoutPage() {
   return (

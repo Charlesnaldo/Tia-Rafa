@@ -13,7 +13,7 @@ export default function Hero() {
       {/* --- IMAGEM DE FUNDO E OVERLAY --- */}
       <div className="absolute inset-0 -z-10">
         <Image
-          src="/fundo-hero.jpg" // Certifique-se que o arquivo existe em /public
+          src="/fundo-hero.webp" // Certifique-se que o arquivo existe em /public
           alt="Fundo lúdico infantil"
           fill
           className="object-cover opacity-95"

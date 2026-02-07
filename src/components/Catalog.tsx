@@ -13,7 +13,7 @@ function CatalogContent() {
   const busca = searchParams.get("busca")?.toLowerCase() || "";
   
   // CONFIGURAÇÃO DO FUNDO
-  const bgImage = "/background.png";
+  const bgImage = "/background.webp";
 
   const [categoria, setCategoria] = useState<'todos' | 'digital' | 'fisico'>('todos');
   const [tagAtiva, setTagAtiva] = useState<string>('Tudo');

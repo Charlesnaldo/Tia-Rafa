@@ -139,7 +139,7 @@ export default async function ProdutoDetalhes({
             <BotaoCompra produto={produto} />
 
             <div className="mt-6 flex items-center justify-center gap-6 opacity-40 grayscale hover:grayscale-0 transition-all">
-              <Image src="/mercadopago-logo.png" alt="Mercado Pago" width={56} height={16} className="h-4 w-auto" />
+              <Image src="/mercadopago-logo.webp" alt="Mercado Pago" width={56} height={16} className="h-4 w-auto" />
               <div className="w-[1px] h-4 bg-gray-400"></div>
               <div className="flex items-center gap-1 text-[10px] font-bold">
                 <ShieldCheck size={12} />

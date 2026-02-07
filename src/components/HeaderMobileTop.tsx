@@ -18,7 +18,7 @@ const pathname = usePathname();
       <div className="flex justify-center pt-5">
         <Link href="/" aria-label="Home">
           <Image
-            src="/logo.png"
+            src="/logo.webp"
             alt="Logo Tia Rafa"
             width={240}
             height={70}

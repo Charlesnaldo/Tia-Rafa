@@ -12,7 +12,7 @@ export default function Footer() {
         <div 
           className="absolute inset-0 opacity-90" 
           style={{ 
-            backgroundImage: "url('/fundo-footer.jpg')", 
+            backgroundImage: "url('/fundo-footer.webp')", 
             backgroundSize: 'cover',      
             backgroundPosition: 'center', 
           }}
@@ -36,7 +36,7 @@ export default function Footer() {
                
                 <div className="relative">
                   <Image 
-                    src="/logo.png" 
+                    src="/logo.webp" 
                     alt="Logo Tia Rafa" 
                     width={240} 
                     height={80} 

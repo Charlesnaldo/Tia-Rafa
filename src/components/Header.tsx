@@ -49,7 +49,7 @@ function HeaderContent() {
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-700">
           <Link href="/" className="block group">
             <Image
-              src="/logo.png"
+              src="/logo.webp"
               alt="Logo Tia Rafa"
               width={380}
               height={100}

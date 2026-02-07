@@ -142,7 +142,7 @@ function SobreContent() {
               
               <div className="relative aspect-[4/5] rounded-[3.5rem] overflow-hidden border-[12px] border-white shadow-2xl shadow-pink-200/30">
                 <Image
-                  src="/perfil1.png"
+                  src="/perfil1.webp"
                   alt="Rafaela Abreu"
                   fill
                   sizes="(max-width: 768px) 100vw, 50vw"
