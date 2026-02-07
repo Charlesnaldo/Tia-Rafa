@@ -52,7 +52,7 @@ export default function HowItWorks() {
   return (
     <section className="py-24 font-fredoka overflow-hidden relative bg-white" id="como-funciona">
       
-      {/* ONDA SUPERIOR */}
+      
     
 <div className="absolute top-0 left-0 w-full leading-[0] z-20">
   <svg 
@@ -66,7 +66,7 @@ export default function HowItWorks() {
   </svg>
 </div>
       
-      {/* ONDA PNG SUPERIOR (Coloque logo após a abertura da <section>) */}
+      
 <div className="absolute top-0 left-0 w-full leading-[0] z-0 rotate-180">
   <svg 
     viewBox="0 0 1200 120" 
@@ -77,26 +77,25 @@ export default function HowItWorks() {
   </svg>
 </div>
 
-      {/* IMAGEM DE FUNDO COM OPACIDADE */}
       <div 
-        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-15" 
+        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-25" 
         style={{ backgroundImage: "url('/background2.jpg')" }}
       />
 
-      {/* ONDA INFERIOR */}
+     
        <div className="absolute bottom-0 left-0 w-full leading-[0]">
         <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="relative block w-full h-16 md:h-24 fill-white">
           <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"></path>
         </svg>
       </div>
 
-      {/* Elementos Decorativos de Fundo */}
+      
       <div className="absolute top-0 left-0 w-64 h-64 bg-purple-100 rounded-full blur-3xl opacity-40 -translate-x-1/2 -translate-y-1/2" />
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-orange-100 rounded-full blur-3xl opacity-40 translate-x-1/3 translate-y-1/3" />
 
       <div className="max-w-7xl mx-auto px-6 relative z-10">
 
-        {/* Título da Seção */}
+        
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 bg-white border border-gray-100 px-5 py-2 rounded-full shadow-sm mb-6">
             <Sparkles className="text-orange-400" size={18} />
@@ -122,7 +121,7 @@ export default function HowItWorks() {
           </div>
         </div>
 
-        {/* Grid de Passos */}
+        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative">
           {steps.map((step, index) => (
             <div key={index} className="relative group">
@@ -156,7 +155,7 @@ export default function HowItWorks() {
           ))}
         </div>
 
-        {/* Card de Chamada Final */}
+        
         <div className="mt-24 mb-10 relative">
           <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-500 rounded-[3.5rem] blur-xl opacity-20 -rotate-1 scale-105" />
           <div className="relative bg-white rounded-[3.5rem] p-8 md:p-14 border border-purple-100 flex flex-col lg:flex-row items-center justify-between gap-10 shadow-2xl">
