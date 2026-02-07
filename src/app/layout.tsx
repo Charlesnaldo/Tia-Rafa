@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Fredoka } from "next/font/google";
 import "./globals.css";
+
 import Header from "@/components/Header";
-import HeaderMobile from "@/components/HeaderMobile"; // Certifique-se que este arquivo existe
+import HeaderMobile from "@/components/HeaderMobile";
+import HeaderMobileTop from "@/components/HeaderMobileTop";
 import Footer from "@/components/Footer";
 
 const fredoka = Fredoka({
@@ -24,20 +26,25 @@ export default function RootLayout({
   return (
     <html lang="pt-br" className="scroll-smooth">
       <body className={`${fredoka.className} antialiased flex flex-col min-h-screen bg-white`}>
-        
-        {/* HEADER DESKTOP: hidden por padrão, block em telas lg (1024px+) */}
+
+        {/* HEADER DESKTOP */}
         <div className="hidden lg:block">
           <Header />
         </div>
 
-        {/* HEADER MOBILE: block por padrão, hidden em telas lg */}
+        {/* LOGO MOBILE NO TOPO */}
         <div className="block lg:hidden">
-          <HeaderMobile />
+          <HeaderMobileTop />
         </div>
 
         <main className="flex-grow">
           {children}
         </main>
+
+        {/* MENU MOBILE FLUTUANTE */}
+        <div className="block lg:hidden">
+          <HeaderMobile />
+        </div>
 
         <Footer />
       </body>

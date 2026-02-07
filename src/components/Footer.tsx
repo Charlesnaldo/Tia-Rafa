@@ -6,7 +6,7 @@ import { Mail, MessageCircle, Instagram, Youtube, Heart, ArrowRight, ShieldCheck
 
 export default function Footer() {
   return (
-    <footer className="relative pt-24 pb-12 overflow-hidden font-fredoka bg-[#FDFDFF]">
+    <footer className="relative pt-8 pb-12 overflow-hidden font-fredoka bg-[#FDFDFF]">
       {/* RESTAURADO: Background Layer original */}
       <div className="absolute inset-0 z-0">
         <div 
@@ -29,18 +29,18 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-6 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-20">
           
-          {/* Coluna 1: Branding com Logo Imagem */}
+
           <div className="lg:col-span-4 space-y-8">
             <div className="inline-block">
               <Link href="/" className="group block">
-                {/* Logo configurada com tamanho fixo para evitar que o layout quebre */}
+               
                 <div className="relative">
                   <Image 
                     src="/logo.png" 
                     alt="Logo Tia Rafa" 
                     width={240} 
                     height={80} 
-                    className="object-contain transform group-hover:scale-105 transition-transform duration-300"
+                    className="object-contain transform group-hover:scale-120 transition-transform duration-600"
                     priority
                   />
                 </div>

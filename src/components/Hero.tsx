@@ -7,7 +7,8 @@ import { Sparkles, ArrowRight, Star } from "lucide-react";
 
 export default function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden font-fredoka">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden font-fredoka pt-39 pb-28 lg:pt-0 lg:pb-0">
+
 
       {/* --- IMAGEM DE FUNDO E OVERLAY --- */}
       <div className="absolute inset-0 -z-10">
@@ -56,16 +57,8 @@ export default function Hero() {
       <div className="max-w-7xl mx-auto px-4 pt-12 md:pt-40 pb-20 relative z-10">
         <div className="text-center">
 
-          {/* Badge Animada */}
-          <div className="">
-            {/* <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-purple-500"></span>
-            </span>
-            <span className="text-purple-700 text-xs md:text-sm font-black uppercase tracking-widest">
-              Materiais 100% Digitais
-            </span> */}
-          </div>
+        
+          
 
           {/* Título de Impacto */}
           <h1 className="pt-10 md:pt-48 lg:pt-64 text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-esmerald-900 to-orange-400 text-5xl md:text-7xl lg:text-8xl font-black leading-[1.1] tracking-tighter text-gray-900 mb-10">
@@ -90,7 +83,7 @@ export default function Hero() {
             </Link>
 
             <Link
-              href="/"
+              href="/atividades"
               className="bg-white/80 backdrop-blur-sm text-purple-600 border-4 border-white font-black px-12 py-6 rounded-[2.5rem] text-xl hover:bg-white hover:scale-105 hover:shadow-2xl shadow-lg transition-all flex items-center gap-3 w-fit group"
             >
               Material Grátis <span className="group-hover:animate-bounce">🎁</span>

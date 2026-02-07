@@ -115,7 +115,7 @@ function SobreContent() {
             </Link>
             
             <Link
-              href="/materiais"
+              href="/#catalogo"
               className="px-6 py-2.5 bg-gradient-to-r from-pink-400 to-pink-500 text-white rounded-full font-bold text-sm hover:shadow-lg hover:shadow-pink-200 transition-all hover:scale-105 active:scale-95"
             >
               Ver Materiais

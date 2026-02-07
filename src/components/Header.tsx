@@ -36,7 +36,7 @@ function HeaderContent() {
           </a>
 
           <a
-            href="https://wa.me/5500000000000"
+            href="https://wa.me/5585987455937"
             target="_blank"
             rel="noopener noreferrer"
             className="group p-3 bg-white/80 text-green-500 rounded-2xl shadow-sm border border-green-50 hover:bg-green-500 hover:text-white transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-green-200 animate-float [animation-delay:0.4s]"
@@ -84,7 +84,9 @@ function HeaderContent() {
 export default function Header() {
   const pathname = usePathname();
 
-  if (pathname !== "/") return null;
+   const allowedRoutes = ["/", "/atividades"];
+
+  if (!allowedRoutes.includes(pathname)) return null;
 
   return (
     <header className="absolute top-0 left-0 right-0 z-50 px-8 pt-[140px] hidden lg:block">
