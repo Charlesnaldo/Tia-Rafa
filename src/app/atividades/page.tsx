@@ -1,6 +1,7 @@
 
 import React from 'react';
-import ActivityCard from '@/components/ActivityCard'; // Adjust path if necessary
+import ActivityCard from '@/components/ActivityCard';
+import Header from '@/components/Header'; // Import the Header component
 
 const AtividadesPage: React.FC = () => {
   const activities = [
@@ -31,20 +32,24 @@ const AtividadesPage: React.FC = () => {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold text-center mb-10">Atividades Gratuitas para Download</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {activities.map((activity) => (
-          <ActivityCard
-            key={activity.id}
-            title={activity.title}
-            description={activity.description}
-            downloadLink={activity.downloadLink}
-          />
-        ))}
-      </div>
-    </div>
+    <>
+      <Header /> {/* Add the Header component here */}
+      <main className="container mx-auto px-4 py-8 mt-[380px]"> {/* Added mt-[200px] to account for fixed header */}
+        <h1 className="text-4xl font-bold text-center mb-10">Atividades Gratuitas para Download</h1>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {activities.map((activity) => (
+            <ActivityCard
+              key={activity.id}
+              title={activity.title}
+              description={activity.description}
+              downloadLink={activity.downloadLink}
+            />
+          ))}
+        </div>
+      </main>
+    </>
   );
 };
 
 export default AtividadesPage;
+
