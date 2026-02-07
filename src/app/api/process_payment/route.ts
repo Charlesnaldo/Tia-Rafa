@@ -54,21 +54,25 @@ export async function POST(request: Request) {
     // Estrutura do pagamento otimizada
     const paymentBody: any = {
       transaction_amount: transactionAmountFromClient,
-      token: formData.token,
       description: formData.description || "Compra em Tia Rafaela",
-      installments: Number(formData.installments),
+      installments: formData.installments ? Number(formData.installments) : 1,
       payment_method_id: formData.payment_method_id,
-      issuer_id: formData.issuer_id,
       payer: {
         email: formData.payer.email,
         identification: formData.payer.identification,
+        first_name: formData.payer.first_name || "Cliente",
+        last_name: formData.payer.last_name || "Tia Rafaela",
       },
     };
 
-    // Adiciona nomes se disponíveis
-    if (formData.payer.first_name) {
-      paymentBody.payer.first_name = formData.payer.first_name;
-      paymentBody.payer.last_name = formData.payer.last_name;
+    // Apenas adiciona token se for cartão (PIX não tem token)
+    if (formData.token) {
+      paymentBody.token = formData.token;
+    }
+
+    // Apenas adiciona issuer_id se existir
+    if (formData.issuer_id) {
+      paymentBody.issuer_id = formData.issuer_id;
     }
 
     const result = await payment.create({ body: paymentBody });
@@ -77,6 +81,8 @@ export async function POST(request: Request) {
       status: result.status,
       status_detail: result.status_detail,
       id: result.id,
+      // Dados extras para PIX (QR Code) se o Brick precisar
+      point_of_interaction: result.point_of_interaction
     });
 
   } catch (error: any) {
