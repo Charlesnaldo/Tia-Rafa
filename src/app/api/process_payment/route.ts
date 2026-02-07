@@ -70,10 +70,22 @@ export async function POST(request: Request) {
       id: result.id,
     });
 
-  } catch (error) {
-    console.error("ERRO COMPLETO MP (Process Payment):", error);
+  } catch (error: any) {
+    console.error("ERRO DETALHADO NO BACKEND (Process Payment):");
+    console.error("- Mensagem:", error.message);
+    if (error.cause) {
+      console.error("- Causa:", JSON.stringify(error.cause, null, 2));
+    }
+    // Se o erro vier da API do Mercado Pago, ele geralmente tem um campo 'body' ou 'api_response'
+    if (error.api_response) {
+      console.error("- Resposta da API MP:", JSON.stringify(error.api_response, null, 2));
+    }
+
     return NextResponse.json(
-      { error: "Ocorreu um erro ao processar o pagamento. Por favor, tente novamente." },
+      {
+        error: "Erro interno no servidor ao processar pagamento.",
+        details: error.message
+      },
       { status: 500 }
     );
   }
