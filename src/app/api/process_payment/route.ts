@@ -25,39 +25,44 @@ export async function POST(request: Request) {
     let expectedAmount = 0;
     if (preferenceDetails.items) {
       for (const item of preferenceDetails.items) {
-        expectedAmount += (item.unit_price || 0) * (item.quantity || 1);
+        expectedAmount += Number(item.unit_price || 0) * Number(item.quantity || 1);
       }
     }
 
-    const transactionAmountFromClient = formData.transaction_amount;
+    // Arredondar para 2 casas decimais para evitar erros de ponto flutuante
+    expectedAmount = Math.round(expectedAmount * 100) / 100;
+    const transactionAmountFromClient = Math.round(Number(formData.transaction_amount) * 100) / 100;
 
-    // Use a small epsilon for floating point comparison if needed, 
-    // but here transaction_amount is usually exact.
-    if (Math.abs(expectedAmount - transactionAmountFromClient) > 0.01) {
-      console.warn(`Price mismatch: Expected ${expectedAmount}, received ${transactionAmountFromClient} from client for preference ${preferenceId}`);
+    console.log(`Validando valores: Esperado ${expectedAmount}, Recebido ${transactionAmountFromClient}`);
+
+    if (Math.abs(expectedAmount - transactionAmountFromClient) > 0.1) {
+      console.warn(`Price mismatch: Expected ${expectedAmount}, received ${transactionAmountFromClient}`);
       return NextResponse.json({ error: "Transaction amount mismatch." }, { status: 403 });
     }
 
     const payment = new Payment(client);
 
-    const result = await payment.create({
-      body: {
-        transaction_amount: expectedAmount, // Use the server-validated amount
-        token: formData.token,
-        description: formData.description,
-        installments: formData.installments,
-        payment_method_id: formData.payment_method_id,
-        payer: {
-          email: formData.payer.email,
-          first_name: formData.payer.first_name,
-          last_name: formData.payer.last_name,
-          identification: {
-            type: formData.payer.identification.type,
-            number: formData.payer.identification.number,
-          },
-        },
+    // Estrutura do pagamento otimizada
+    const paymentBody: any = {
+      transaction_amount: transactionAmountFromClient,
+      token: formData.token,
+      description: formData.description || "Compra em Tia Rafaela",
+      installments: Number(formData.installments),
+      payment_method_id: formData.payment_method_id,
+      issuer_id: formData.issuer_id,
+      payer: {
+        email: formData.payer.email,
+        identification: formData.payer.identification,
       },
-    });
+    };
+
+    // Adiciona nomes se disponíveis
+    if (formData.payer.first_name) {
+      paymentBody.payer.first_name = formData.payer.first_name;
+      paymentBody.payer.last_name = formData.payer.last_name;
+    }
+
+    const result = await payment.create({ body: paymentBody });
 
     return NextResponse.json({
       status: result.status,
