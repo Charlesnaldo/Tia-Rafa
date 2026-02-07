@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     }
 
     const preferenceClient = new Preference(client);
-    const preferenceDetails = await preferenceClient.get({ id: preferenceId });
+    const preferenceDetails = await preferenceClient.get(preferenceId);
 
     if (!preferenceDetails || !preferenceDetails.items || preferenceDetails.items.length === 0) {
         return NextResponse.json({ error: "Preference details not found or invalid." }, { status: 404 });
