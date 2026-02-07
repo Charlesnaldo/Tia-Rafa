@@ -5,7 +5,12 @@ import { useEffect, useState } from 'react';
 
 const DynamicCheckoutClient = dynamic(() => import('./CheckoutClient'), {
   ssr: false,
-  loading: () => <div>Loading checkout...</div>,
+  loading: () => (
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#F8FAFF] font-fredoka gap-4">
+      <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-400 rounded-full animate-spin" />
+      <p className="text-blue-400 font-bold animate-pulse">Preparando checkout seguro...</p>
+    </div>
+  ),
 });
 
 export default function CheckoutWrapper() {
@@ -16,7 +21,12 @@ export default function CheckoutWrapper() {
   }, []);
 
   if (!hasMounted) {
-    return <div>Loading checkout...</div>; // Or a more elaborate loading spinner
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#F8FAFF] font-fredoka gap-4">
+        <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-400 rounded-full animate-spin" />
+        <p className="text-blue-400 font-bold animate-pulse">Carregando magia...</p>
+      </div>
+    );
   }
 
   return (

@@ -9,29 +9,37 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { preferenceId, ...formData } = body; // Extract preferenceId and rest of formData
-    
+
     if (!preferenceId) {
-        return NextResponse.json({ error: "Preference ID is missing." }, { status: 400 });
+      return NextResponse.json({ error: "Preference ID is missing." }, { status: 400 });
     }
 
     const preferenceClient = new Preference(client);
     const preferenceDetails = await preferenceClient.get(preferenceId);
 
     if (!preferenceDetails || !preferenceDetails.items || preferenceDetails.items.length === 0) {
-        return NextResponse.json({ error: "Preference details not found or invalid." }, { status: 404 });
+      return NextResponse.json({ error: "Preference details not found or invalid." }, { status: 404 });
     }
 
-    const expectedAmount = preferenceDetails.items[0].unit_price; // Assuming single item per preference
+    // Sum up items to get the total expected amount
+    let expectedAmount = 0;
+    if (preferenceDetails.items) {
+      for (const item of preferenceDetails.items) {
+        expectedAmount += (item.unit_price || 0) * (item.quantity || 1);
+      }
+    }
+
     const transactionAmountFromClient = formData.transaction_amount;
 
-    if (expectedAmount !== transactionAmountFromClient) {
-        console.warn(`Price mismatch: Expected ${expectedAmount}, received ${transactionAmountFromClient} from client for preference ${preferenceId}`);
-        // This is a critical security check. Reject if amounts don't match.
-        return NextResponse.json({ error: "Transaction amount mismatch. Possible tampering detected." }, { status: 403 });
+    // Use a small epsilon for floating point comparison if needed, 
+    // but here transaction_amount is usually exact.
+    if (Math.abs(expectedAmount - transactionAmountFromClient) > 0.01) {
+      console.warn(`Price mismatch: Expected ${expectedAmount}, received ${transactionAmountFromClient} from client for preference ${preferenceId}`);
+      return NextResponse.json({ error: "Transaction amount mismatch." }, { status: 403 });
     }
 
     const payment = new Payment(client);
-    
+
     const result = await payment.create({
       body: {
         transaction_amount: expectedAmount, // Use the server-validated amount

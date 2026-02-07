@@ -1,30 +1,38 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Loader2, ChevronLeft, Mail, Sparkles, Heart, ShieldCheck } from "lucide-react";
+import { 
+  Loader2, 
+  ChevronLeft, 
+  Mail, 
+  Sparkles, 
+  Heart, 
+  ShieldCheck, 
+  Lock, 
+  CheckCircle2, 
+  Zap,
+  ShoppingBag,
+  ArrowRight
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import Script from 'next/script';
-import { PRODUTOS_LISTA } from "@/constants/produtos"; // Keep this for now, though direct product access removed
+import { motion, AnimatePresence } from "framer-motion";
 import { formatCurrency } from "@/lib/utils";
-// import SearchParamsClient from "./SearchParamsClient"; // Not needed if using cart context
-import { useCart } from "@/context/CartContext"; // Import useCart
+import { useCart } from "@/context/CartContext";
+import { PRODUTOS_LISTA } from "@/constants/produtos";
 
 export default function CheckoutClient() {
-  // const searchParams = SearchParamsClient(); // No longer needed for single product ID
-  const { cartItems, cartTotal, itemCount, clearCart } = useCart(); // Get cart details
+  const { cartItems, cartTotal, itemCount, clearCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [preferenceId, setPreferenceId] = useState<string | null>(null);
   const [isMpReady, setIsMpReady] = useState(false);
+  const [step, setStep] = useState(1); // 1: Email, 2: Payment
   const paymentBrickRef = useRef<any>(null);
-
-  // const idDoProduto = searchParams.get("id") || ""; // No longer fetching single product
-  // const produto = PRODUTOS_LISTA[idDoProduto]; // No longer fetching single product
 
   useEffect(() => {
     const renderPaymentBrick = async () => {
-      // Only proceed if preferenceId is set, MP SDK is ready, cart is not empty, and brick hasn't rendered
       if (!preferenceId || !isMpReady || itemCount === 0 || paymentBrickRef.current) return;
 
       const container = document.getElementById('payment-brick-container');
@@ -38,7 +46,7 @@ export default function CheckoutClient() {
 
         const settings = {
           initialization: {
-            amount: Number(cartTotal), // Use cartTotal for amount
+            amount: Number(cartTotal) / 100, // Assuming cartTotal is in cents, MP expects decimal
             preferenceId: preferenceId,
           },
           customization: {
@@ -46,9 +54,11 @@ export default function CheckoutClient() {
               style: { 
                 theme: 'flat', 
                 customVariables: {
-                  borderRadiusBig: '20px',
-                  borderRadiusMedium: '12px',
-                  colorPrimary: '#60A5FA', 
+                  borderRadiusBig: '24px',
+                  borderRadiusMedium: '16px',
+                  colorPrimary: '#60A5FA', // Match site blue
+                  colorBackground: '#ffffff',
+                  formInputColor: '#4B5563',
                 }
               }
             },
@@ -72,8 +82,7 @@ export default function CheckoutClient() {
                 .then((res) => res.json())
                 .then((res) => {
                   if (res.status === 'approved') {
-                    clearCart(); // Clear cart on successful payment
-                    // Optionally redirect to a success page
+                    clearCart();
                   }
                   resolve(res);
                 })
@@ -94,30 +103,42 @@ export default function CheckoutClient() {
       }
     };
 
-    renderPaymentBrick();
-  }, [preferenceId, isMpReady, cartTotal, itemCount, clearCart]); // Add cartTotal, itemCount, clearCart to dependencies
+    if (step === 2) {
+      renderPaymentBrick();
+    }
+  }, [preferenceId, isMpReady, cartTotal, itemCount, clearCart, step]);
 
-  // If cart is empty, redirect to cart page or display a message
   if (itemCount === 0 && !preferenceId) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <p className="text-xl font-bold text-gray-700">Seu carrinho está vazio!</p>
-        <Link href="/carrinho" className="mt-4 text-blue-500 hover:underline">Ir para o carrinho</Link>
+      <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 text-center">
+        <div className="w-48 h-48 bg-blue-50 rounded-full flex items-center justify-center mb-6 animate-bounce duration-3000">
+           <ShoppingBag size={80} className="text-blue-300" />
+        </div>
+        <h2 className="text-3xl font-black text-gray-800 mb-2">Ops! Seu carrinho está vazio</h2>
+        <p className="text-gray-500 mb-8 max-w-sm">Que tal escolher alguns materiais mágicos para começar?</p>
+        <Link href="/" className="bg-pink-400 hover:bg-pink-500 text-white font-black px-10 py-4 rounded-full shadow-lg shadow-pink-100 transition-all hover:scale-105 active:scale-95">
+          VER MATERIAIS
+        </Link>
       </div>
     );
   }
 
   const handleCheckout = async () => {
-    if (!email.includes("@")) return alert("E-mail inválido");
+    if (!email.includes("@") || email.length < 5) return alert("Por favor, insira um e-mail válido");
     setLoading(true);
     try {
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cartItems: cartItems, emailCliente: email, cartTotal: cartTotal }), // Send cartItems and cartTotal
+        body: JSON.stringify({ cartItems: cartItems, emailCliente: email, cartTotal: cartTotal }),
       });
       const data = await response.json();
-      if (data.preferenceId) setPreferenceId(data.preferenceId);
+      if (data.preferenceId) {
+        setPreferenceId(data.preferenceId);
+        setStep(2);
+      } else {
+        throw new Error(data.error || "Erro ao gerar preferência");
+      }
     } catch (error) {
       setLoading(false);
       console.error("Erro ao iniciar checkout:", error);
@@ -126,116 +147,254 @@ export default function CheckoutClient() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFF] font-fredoka py-10 px-4">
+    <div className="min-h-screen bg-[#F8FAFF] font-fredoka py-8 px-4 sm:px-6 lg:px-8">
       <Script 
         src="https://sdk.mercadopago.com/js/v2" 
         strategy="afterInteractive"
         onLoad={() => setIsMpReady(true)}
       />
 
-      <div className="max-w-4xl mx-auto">
-        {/* Header de Voltar */}
-        <Link href={`/carrinho`} className="flex items-center gap-2 text-blue-400 font-bold mb-6 hover:text-pink-400 transition-colors group">
-          <div className="bg-white p-2 rounded-full shadow-sm group-hover:shadow-md transition-all">
-            <ChevronLeft size={20} />
+      <div className="max-w-5xl mx-auto">
+        {/* Progress Stepper */}
+        <div className="flex items-center justify-center mb-12 gap-4">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black ${step >= 1 ? 'bg-blue-400 text-white shadow-lg shadow-blue-100' : 'bg-gray-200 text-gray-500'}`}>
+              {step > 1 ? <CheckCircle2 size={24} /> : "1"}
+            </div>
+            <span className={`hidden sm:block font-bold ${step >= 1 ? 'text-blue-500' : 'text-gray-400'}`}>Identificação</span>
           </div>
-          Voltar para o Carrinho
-        </Link>
+          <div className={`h-1 w-12 sm:w-20 rounded-full ${step >= 2 ? 'bg-blue-400' : 'bg-gray-200'}`} />
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black ${step >= 2 ? 'bg-blue-400 text-white shadow-lg shadow-blue-100' : 'bg-gray-200 text-gray-500'}`}>
+              2
+            </div>
+            <span className={`hidden sm:block font-bold ${step >= 2 ? 'text-blue-500' : 'text-gray-400'}`}>Pagamento</span>
+          </div>
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* Coluna 1: Resumo do Pedido */}
-          <div className="space-y-6">
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-blue-50 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4">
-                <Sparkles className="text-yellow-300 animate-pulse" />
-              </div>
+          {/* Left Column: Summary (4 cols) */}
+          <div className="lg:col-span-12 xl:col-span-5 space-y-6 order-2 lg:order-1">
+            <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-[0_8px_40px_rgba(0,0,0,0.03)] border border-blue-50 relative overflow-hidden">
+              <div className="absolute -top-4 -right-4 w-24 h-24 bg-blue-50 rounded-full opacity-50 blur-2xl" />
               
-              <div className="flex flex-col items-center text-center space-y-4">
-                {/* Generic image for cart checkout */}
-                <div className="w-40 h-40 bg-pink-50 rounded-[2rem] relative p-4 shadow-inner flex items-center justify-center">
-                  <Image src="/img/placeholder.png" width={80} height={80} alt="Seu Carrinho" unoptimized />
+              <div className="flex items-center gap-3 mb-8">
+                <div className="bg-blue-100 p-2 rounded-xl text-blue-500">
+                   <ShoppingBag size={24} />
                 </div>
-                <div>
-                  <h1 className="text-2xl font-black text-gray-800 leading-tight">Seu Pedido</h1>
-                  <p className="text-blue-400 font-black text-3xl mt-2">{formatCurrency(cartTotal)}</p>
-                  <p className="text-gray-600 text-sm mt-1">Total de {itemCount} item(s)</p>
-                </div>
+                <h2 className="text-xl font-black text-gray-800">Resumo do Pedido</h2>
               </div>
 
-              {/* List of cart items for review */}
-              <div className="mt-6 space-y-3">
-                {cartItems.map(item => (
-                  <div key={item.id} className="flex justify-between items-center text-gray-700 text-sm">
-                    <span>{item.nome} (x{item.quantity})</span>
-                    <span>{formatCurrency(item.preco * item.quantity)}</span>
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                {cartItems.map(item => {
+                  const produto = PRODUTOS_LISTA[item.id];
+                  return (
+                    <motion.div 
+                      key={item.id} 
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="flex items-center gap-4 p-3 rounded-2xl bg-gray-50/50 hover:bg-white transition-colors border border-transparent hover:border-blue-100"
+                    >
+                      <div className="w-16 h-16 bg-white rounded-xl overflow-hidden shadow-sm flex-shrink-0 border border-gray-100">
+                        <Image 
+                          src={produto?.imagens?.[0] || "/img/placeholder.png"} 
+                          width={64} 
+                          height={64} 
+                          alt={item.nome}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-grow min-w-0">
+                        <h4 className="font-bold text-gray-800 truncate text-sm">{item.nome}</h4>
+                        <p className="text-xs text-blue-400 font-bold">Qtd: {item.quantity}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-black text-gray-700 text-sm">{formatCurrency(item.preco * item.quantity)}</p>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-8 pt-6 border-t-2 border-dashed border-gray-100 space-y-3">
+                <div className="flex justify-between text-gray-500 font-medium">
+                  <span>Subtotal</span>
+                  <span>{formatCurrency(cartTotal)}</span>
+                </div>
+                <div className="flex justify-between items-center bg-green-50 px-3 py-2 rounded-xl text-green-600 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Zap size={14} className="fill-green-600" />
+                    <span className="font-bold">Entrega Digital</span>
                   </div>
-                ))}
+                  <span className="font-black uppercase tracking-wider text-[10px]">Grátis</span>
+                </div>
+                <div className="flex justify-between items-center pt-4">
+                  <span className="text-lg font-black text-gray-800 uppercase tracking-tighter">Total</span>
+                  <span className="text-3xl font-black text-blue-500 tracking-tight">{formatCurrency(cartTotal)}</span>
+                </div>
               </div>
-
             </div>
 
-            {/* Banner Informativo */}
-            <div className="bg-blue-400 p-6 rounded-[2rem] text-white flex items-center gap-4 shadow-lg shadow-blue-200">
-              <div className="bg-white/20 p-3 rounded-2xl text-white">
-                <ShieldCheck size={28} />
-              </div>
-              <p className="text-sm font-bold leading-tight">
-                Seu material será enviado automaticamente para o e-mail cadastrado.
-              </p>
+            {/* Trust Badges */}
+            <div className="grid grid-cols-2 gap-4">
+               <div className="bg-white p-4 rounded-3xl border border-gray-100 flex flex-col items-center text-center gap-2 shadow-sm">
+                  <div className="bg-pink-50 p-2 rounded-full text-pink-400">
+                    <Lock size={20} />
+                  </div>
+                  <span className="text-[10px] sm:text-xs font-bold text-gray-500 leading-tight">Pagamento 100% Seguro</span>
+               </div>
+               <div className="bg-white p-4 rounded-3xl border border-gray-100 flex flex-col items-center text-center gap-2 shadow-sm">
+                  <div className="bg-blue-50 p-2 rounded-full text-blue-400">
+                    <ShieldCheck size={20} />
+                  </div>
+                  <span className="text-[10px] sm:text-xs font-bold text-gray-500 leading-tight">Acesso Imediato ao Material</span>
+               </div>
             </div>
+            
+            <Link href="/carrinho" className="flex items-center justify-center gap-2 text-gray-400 font-bold hover:text-blue-400 transition-colors group text-sm">
+              <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+              Editar carrinho
+            </Link>
           </div>
 
-          {/* Coluna 2: Checkout / Formulário */}
-          <div className="bg-white p-8 rounded-[3rem] shadow-[0_20px_50px_rgba(149,157,165,0.1)] border border-pink-50">
-            {!preferenceId ? (
-              <div className="space-y-6">
-                <div className="text-center mb-8">
-                  <h2 className="text-xl font-black text-gray-700">Quase lá! ✨</h2>
-                  <p className="text-gray-400 text-sm font-medium">Preencha seus dados para finalizar</p>
-                </div>
+          {/* Right Column: Steps (8 cols) */}
+          <div className="lg:col-span-12 xl:col-span-7 order-1 lg:order-2">
+            <div className="bg-white p-6 sm:p-10 rounded-[3rem] shadow-[0_20px_60px_rgba(149,157,165,0.06)] border border-pink-50 min-h-[500px] relative overflow-hidden">
+              
+              <AnimatePresence mode="wait">
+                {step === 1 ? (
+                  <motion.div 
+                    key="step-1"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="space-y-8"
+                  >
+                    <div className="text-center space-y-2">
+                       <div className="inline-block bg-pink-50 p-3 rounded-2xl mb-2">
+                          <Sparkles className="text-pink-400 animate-pulse" size={32} />
+                       </div>
+                       <h2 className="text-2xl font-black text-gray-800">Vamos começar! ✨</h2>
+                       <p className="text-gray-400 font-medium">Onde você deseja receber seu material mágico?</p>
+                    </div>
 
-                <div className="space-y-4">
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-2">E-mail para entrega</label>
-                  <div className="relative">
-                    <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-pink-300" size={20} />
-                    <input
-                      type="email"
-                      placeholder="seu-email@exemplo.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-14 pr-6 py-5 bg-pink-50/30 border-2 border-transparent focus:border-pink-200 focus:bg-white rounded-[1.8rem] outline-none font-bold text-gray-700 transition-all"
-                    />
-                  </div>
-                </div>
+                    <div className="space-y-6">
+                      <div className="space-y-3">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">
+                           E-mail para entrega
+                        </label>
+                        <div className="relative group">
+                          <div className={`absolute inset-0 bg-blue-100 rounded-[2rem] blur-xl opacity-0 transition-opacity group-focus-within:opacity-40`} />
+                          <div className="relative">
+                            <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-blue-400 transition-colors" size={20} />
+                            <input
+                              type="email"
+                              placeholder="seu-email@exemplo.com"
+                              value={email}
+                              onChange={(e) => setEmail(e.target.value)}
+                              className="w-full pl-16 pr-8 py-6 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg placeholder:text-gray-300"
+                            />
+                          </div>
+                        </div>
+                      </div>
 
-                <button
-                  onClick={handleCheckout}
-                  disabled={loading}
-                  className="w-full bg-blue-400 hover:bg-blue-500 disabled:bg-gray-200 text-white font-black py-6 rounded-[2rem] text-xl shadow-xl shadow-blue-100 transition-all flex items-center justify-center gap-3 active:scale-95 group"
-                >
-                  {loading ? <Loader2 className="animate-spin" /> : (
-                    <>CONTINUAR <Heart size={20} className="group-hover:fill-white transition-all" /></>
-                  )}
-                </button>
-              </div>
-            ) : (
-              <div className="animate-in fade-in zoom-in-95 duration-500">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="font-black text-gray-700 uppercase text-xs tracking-widest">Pagamento Seguro</h3>
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 rounded-full bg-pink-200"></div>
-                    <div className="w-2 h-2 rounded-full bg-blue-200"></div>
-                  </div>
+                      <div className="bg-blue-50/50 p-6 rounded-[2rem] flex items-start gap-4">
+                         <div className="bg-blue-400 p-2 rounded-xl text-white mt-1">
+                            <Heart size={16} className="fill-white" />
+                         </div>
+                         <p className="text-sm text-blue-600 font-medium leading-relaxed">
+                            <span className="font-black block mb-1">Dica da Tia Rafa:</span>
+                            Certifique-se de que o e-mail está correto. É por ele que você terá acesso instantâneo ao material!
+                         </p>
+                      </div>
+
+                      <button
+                        onClick={handleCheckout}
+                        disabled={loading || !email.includes("@")}
+                        className="w-full bg-blue-400 hover:bg-blue-500 disabled:bg-gray-100 disabled:text-gray-300 text-white font-black py-7 rounded-[2.5rem] text-xl shadow-xl shadow-blue-100 transition-all flex items-center justify-center gap-3 active:scale-95 group relative overflow-hidden"
+                      >
+                        {loading ? <Loader2 className="animate-spin" /> : (
+                          <>
+                             <span className="relative z-10">CONTINUAR PARA PAGAMENTO</span>
+                             <ArrowRight size={22} className="relative z-10 group-hover:translate-x-1 transition-transform" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div 
+                    key="step-2"
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="space-y-6"
+                  >
+                    <div className="flex items-center justify-between mb-4 px-2">
+                       <button 
+                        onClick={() => setStep(1)}
+                        className="flex items-center gap-1 text-gray-400 hover:text-blue-500 font-bold transition-colors text-sm"
+                       >
+                          <ChevronLeft size={16} />
+                          Mudar e-mail
+                       </button>
+                       <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full text-green-600 text-[10px] font-black uppercase">
+                          <CheckCircle2 size={12} />
+                          E-mail Identificado
+                       </div>
+                    </div>
+
+                    <div className="text-center mb-8">
+                       <h2 className="text-xl font-black text-gray-800">Finalizar Compra Segura</h2>
+                       <p className="text-gray-400 text-sm font-medium">Escolha a melhor forma de pagamento para você</p>
+                    </div>
+
+                    <div className="animate-in fade-in duration-1000">
+                      <div id="payment-brick-container" className="min-h-[400px]">
+                         {loading && (
+                           <div className="flex flex-col items-center justify-center py-20 text-blue-300 gap-4">
+                              <Loader2 className="animate-spin" size={40} />
+                              <p className="font-bold">Carregando formulário...</p>
+                           </div>
+                         )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Guarantees */}
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-8 text-gray-400 text-xs font-bold uppercase tracking-widest">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck size={18} className="text-blue-300" />
+                  Ambiente 100% Criptografado
                 </div>
-                {/* Onde o Mercado Pago renderiza */}
-                <div id="payment-brick-container" className="min-h-[400px]"></div>
-              </div>
-            )}
+                <div className="flex items-center gap-2">
+                  <Heart size={18} className="text-pink-300" />
+                  Feito com Amor pedagógico
+                </div>
+            </div>
           </div>
 
         </div>
       </div>
+
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #E5E7EB;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #D1D5DB;
+        }
+      `}</style>
     </div>
   );
 }
