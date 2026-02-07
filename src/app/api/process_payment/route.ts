@@ -8,13 +8,16 @@ const client = new MercadoPagoConfig({
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { preferenceId, ...formData } = body;
+    console.log("BACKEND: Payload Recebido Completo:", JSON.stringify(body, null, 2));
 
-    console.log("BACKEND: Recebido Preference ID:", preferenceId);
+    const { preferenceId, ...formData } = body;
 
     if (!preferenceId || preferenceId === "undefined") {
       console.error("BACKEND ERROR: Preference ID está ausente ou é a string 'undefined'");
-      return NextResponse.json({ error: "Preference ID inválido ou ausente." }, { status: 400 });
+      return NextResponse.json({
+        error: "Preference ID inválido ou ausente.",
+        received: preferenceId
+      }, { status: 400 });
     }
 
     const preferenceClient = new Preference(client);

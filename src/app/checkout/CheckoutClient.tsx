@@ -48,21 +48,27 @@ export default function CheckoutClient() {
         return;
       }
 
-      if (paymentBrickRef.current) {
-        console.log("Já existe uma instância do Brick.");
-        return;
-      }
-
       const container = document.getElementById('payment-brick-container');
 
       if (!container) {
-        if (retryCount < 10) { // Tenta 10 vezes (máximo 2 segundos)
+        if (retryCount < 10) {
           console.warn(`Container não encontrado. Tentando novamente em 200ms... (${retryCount + 1}/10)`);
           setTimeout(() => renderPaymentBrick(retryCount + 1), 200);
         } else {
           console.error("ERRO CRÍTICO: Container 'payment-brick-container' não apareceu no DOM após 2 segundos.");
         }
         return;
+      }
+
+      // Se já existir uma instância, vamos destruí-la para garantir que a nova use o ID correto
+      if (paymentBrickRef.current) {
+        console.log("Reiniciando Brick para novo ID...");
+        try {
+          await paymentBrickRef.current.unmount();
+          paymentBrickRef.current = null;
+        } catch (e) {
+          console.warn("Erro ao desmontar brick anterior:", e);
+        }
       }
 
       try {
