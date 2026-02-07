@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { 
-  Loader2, 
-  ChevronLeft, 
-  Mail, 
-  Sparkles, 
-  Heart, 
-  ShieldCheck, 
-  Lock, 
-  CheckCircle2, 
+import {
+  Loader2,
+  ChevronLeft,
+  Mail,
+  Sparkles,
+  Heart,
+  ShieldCheck,
+  Lock,
+  CheckCircle2,
   Zap,
   ShoppingBag,
   ArrowRight
@@ -33,30 +33,44 @@ export default function CheckoutClient() {
 
   useEffect(() => {
     const renderPaymentBrick = async () => {
-      if (!preferenceId || !isMpReady || itemCount === 0 || paymentBrickRef.current) return;
+      if (!preferenceId || !isMpReady || itemCount === 0) return;
 
       const container = document.getElementById('payment-brick-container');
       if (!container) return;
 
+      // Se já houver uma instância, não faz nada (evita duplicidade no Strict Mode)
+      if (paymentBrickRef.current) return;
+
       try {
-        const mp = new (window as any).MercadoPago(process.env.NEXT_PUBLIC_MP_PUBLIC_KEY, {
+        const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
+        if (!publicKey) {
+          console.error("MP Public Key missing!");
+          return;
+        }
+
+        console.log("Iniciando Payment Brick com Preference:", preferenceId);
+
+        const mp = new (window as any).MercadoPago(publicKey, {
           locale: 'pt-BR'
         });
         const bricksBuilder = mp.bricks();
 
+        // Limpa o container antes de renderizar (garante que não haja lixo de renderizações falhas)
+        container.innerHTML = '';
+
         const settings = {
           initialization: {
-            amount: Number(cartTotal) / 100, // Assuming cartTotal is in cents, MP expects decimal
+            amount: Number(cartTotal) / 100,
             preferenceId: preferenceId,
           },
           customization: {
             visual: {
-              style: { 
-                theme: 'flat', 
+              style: {
+                theme: 'flat',
                 customVariables: {
                   borderRadiusBig: '24px',
                   borderRadiusMedium: '16px',
-                  colorPrimary: '#60A5FA', // Match site blue
+                  colorPrimary: '#60A5FA',
                   colorBackground: '#ffffff',
                   formInputColor: '#4B5563',
                 }
@@ -71,7 +85,10 @@ export default function CheckoutClient() {
             }
           },
           callbacks: {
-            onReady: () => setLoading(false),
+            onReady: () => {
+              console.log("Payment Brick Ready");
+              setLoading(false);
+            },
             onSubmit: ({ formData }: any) => {
               return new Promise((resolve, reject) => {
                 fetch("/api/process_payment", {
@@ -79,18 +96,21 @@ export default function CheckoutClient() {
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ ...formData, preferenceId }),
                 })
-                .then((res) => res.json())
-                .then((res) => {
-                  if (res.status === 'approved') {
-                    clearCart();
-                  }
-                  resolve(res);
-                })
-                .catch((err) => reject(err));
+                  .then((res) => res.json())
+                  .then((res) => {
+                    if (res.status === 'approved') {
+                      clearCart();
+                    }
+                    resolve(res);
+                  })
+                  .catch((err) => {
+                    console.error("Erro no process_payment:", err);
+                    reject(err);
+                  });
               });
             },
             onError: (error: any) => {
-              console.error(error);
+              console.error("Erro interno do Payment Brick:", error);
               setLoading(false);
             },
           },
@@ -99,7 +119,8 @@ export default function CheckoutClient() {
         const brickInstance = await bricksBuilder.create('payment', 'payment-brick-container', settings);
         paymentBrickRef.current = brickInstance;
       } catch (err) {
-        console.error(err);
+        console.error("Erro ao criar Brick:", err);
+        setLoading(false);
       }
     };
 
@@ -112,7 +133,7 @@ export default function CheckoutClient() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 text-center">
         <div className="w-48 h-48 bg-blue-50 rounded-full flex items-center justify-center mb-6 animate-bounce duration-3000">
-           <ShoppingBag size={80} className="text-blue-300" />
+          <ShoppingBag size={80} className="text-blue-300" />
         </div>
         <h2 className="text-3xl font-black text-gray-800 mb-2">Ops! Seu carrinho está vazio</h2>
         <p className="text-gray-500 mb-8 max-w-sm">Que tal escolher alguns materiais mágicos para começar?</p>
@@ -148,8 +169,8 @@ export default function CheckoutClient() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFF] font-fredoka py-8 px-4 sm:px-6 lg:px-8">
-      <Script 
-        src="https://sdk.mercadopago.com/js/v2" 
+      <Script
+        src="https://sdk.mercadopago.com/js/v2"
         strategy="afterInteractive"
         onLoad={() => setIsMpReady(true)}
       />
@@ -173,15 +194,15 @@ export default function CheckoutClient() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
+
           {/* Left Column: Summary (4 cols) */}
           <div className="lg:col-span-12 xl:col-span-5 space-y-6 order-2 lg:order-1">
             <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-[0_8px_40px_rgba(0,0,0,0.03)] border border-blue-50 relative overflow-hidden">
               <div className="absolute -top-4 -right-4 w-24 h-24 bg-blue-50 rounded-full opacity-50 blur-2xl" />
-              
+
               <div className="flex items-center gap-3 mb-8">
                 <div className="bg-blue-100 p-2 rounded-xl text-blue-500">
-                   <ShoppingBag size={24} />
+                  <ShoppingBag size={24} />
                 </div>
                 <h2 className="text-xl font-black text-gray-800">Resumo do Pedido</h2>
               </div>
@@ -190,17 +211,17 @@ export default function CheckoutClient() {
                 {cartItems.map(item => {
                   const produto = PRODUTOS_LISTA[item.id];
                   return (
-                    <motion.div 
-                      key={item.id} 
+                    <motion.div
+                      key={item.id}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       className="flex items-center gap-4 p-3 rounded-2xl bg-gray-50/50 hover:bg-white transition-colors border border-transparent hover:border-blue-100"
                     >
                       <div className="w-16 h-16 bg-white rounded-xl overflow-hidden shadow-sm flex-shrink-0 border border-gray-100">
-                        <Image 
-                          src={produto?.imagens?.[0] || "/img/placeholder.png"} 
-                          width={64} 
-                          height={64} 
+                        <Image
+                          src={produto?.imagens?.[0] || "/img/placeholder.png"}
+                          width={64}
+                          height={64}
                           alt={item.nome}
                           className="w-full h-full object-cover"
                         />
@@ -238,20 +259,20 @@ export default function CheckoutClient() {
 
             {/* Trust Badges */}
             <div className="grid grid-cols-2 gap-4">
-               <div className="bg-white p-4 rounded-3xl border border-gray-100 flex flex-col items-center text-center gap-2 shadow-sm">
-                  <div className="bg-pink-50 p-2 rounded-full text-pink-400">
-                    <Lock size={20} />
-                  </div>
-                  <span className="text-[10px] sm:text-xs font-bold text-gray-500 leading-tight">Pagamento 100% Seguro</span>
-               </div>
-               <div className="bg-white p-4 rounded-3xl border border-gray-100 flex flex-col items-center text-center gap-2 shadow-sm">
-                  <div className="bg-blue-50 p-2 rounded-full text-blue-400">
-                    <ShieldCheck size={20} />
-                  </div>
-                  <span className="text-[10px] sm:text-xs font-bold text-gray-500 leading-tight">Acesso Imediato ao Material</span>
-               </div>
+              <div className="bg-white p-4 rounded-3xl border border-gray-100 flex flex-col items-center text-center gap-2 shadow-sm">
+                <div className="bg-pink-50 p-2 rounded-full text-pink-400">
+                  <Lock size={20} />
+                </div>
+                <span className="text-[10px] sm:text-xs font-bold text-gray-500 leading-tight">Pagamento 100% Seguro</span>
+              </div>
+              <div className="bg-white p-4 rounded-3xl border border-gray-100 flex flex-col items-center text-center gap-2 shadow-sm">
+                <div className="bg-blue-50 p-2 rounded-full text-blue-400">
+                  <ShieldCheck size={20} />
+                </div>
+                <span className="text-[10px] sm:text-xs font-bold text-gray-500 leading-tight">Acesso Imediato ao Material</span>
+              </div>
             </div>
-            
+
             <Link href="/carrinho" className="flex items-center justify-center gap-2 text-gray-400 font-bold hover:text-blue-400 transition-colors group text-sm">
               <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
               Editar carrinho
@@ -261,10 +282,10 @@ export default function CheckoutClient() {
           {/* Right Column: Steps (8 cols) */}
           <div className="lg:col-span-12 xl:col-span-7 order-1 lg:order-2">
             <div className="bg-white p-6 sm:p-10 rounded-[3rem] shadow-[0_20px_60px_rgba(149,157,165,0.06)] border border-pink-50 min-h-[500px] relative overflow-hidden">
-              
+
               <AnimatePresence mode="wait">
                 {step === 1 ? (
-                  <motion.div 
+                  <motion.div
                     key="step-1"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -272,17 +293,17 @@ export default function CheckoutClient() {
                     className="space-y-8"
                   >
                     <div className="text-center space-y-2">
-                       <div className="inline-block bg-pink-50 p-3 rounded-2xl mb-2">
-                          <Sparkles className="text-pink-400 animate-pulse" size={32} />
-                       </div>
-                       <h2 className="text-2xl font-black text-gray-800">Vamos começar! ✨</h2>
-                       <p className="text-gray-400 font-medium">Onde você deseja receber seu material mágico?</p>
+                      <div className="inline-block bg-pink-50 p-3 rounded-2xl mb-2">
+                        <Sparkles className="text-pink-400 animate-pulse" size={32} />
+                      </div>
+                      <h2 className="text-2xl font-black text-gray-800">Vamos começar! ✨</h2>
+                      <p className="text-gray-400 font-medium">Onde você deseja receber seu material mágico?</p>
                     </div>
 
                     <div className="space-y-6">
                       <div className="space-y-3">
                         <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">
-                           E-mail para entrega
+                          E-mail para entrega
                         </label>
                         <div className="relative group">
                           <div className={`absolute inset-0 bg-blue-100 rounded-[2rem] blur-xl opacity-0 transition-opacity group-focus-within:opacity-40`} />
@@ -300,13 +321,13 @@ export default function CheckoutClient() {
                       </div>
 
                       <div className="bg-blue-50/50 p-6 rounded-[2rem] flex items-start gap-4">
-                         <div className="bg-blue-400 p-2 rounded-xl text-white mt-1">
-                            <Heart size={16} className="fill-white" />
-                         </div>
-                         <p className="text-sm text-blue-600 font-medium leading-relaxed">
-                            <span className="font-black block mb-1">Dica da Tia Rafa:</span>
-                            Certifique-se de que o e-mail está correto. É por ele que você terá acesso instantâneo ao material!
-                         </p>
+                        <div className="bg-blue-400 p-2 rounded-xl text-white mt-1">
+                          <Heart size={16} className="fill-white" />
+                        </div>
+                        <p className="text-sm text-blue-600 font-medium leading-relaxed">
+                          <span className="font-black block mb-1">Dica da Tia Rafa:</span>
+                          Certifique-se de que o e-mail está correto. É por ele que você terá acesso instantâneo ao material!
+                        </p>
                       </div>
 
                       <button
@@ -316,47 +337,47 @@ export default function CheckoutClient() {
                       >
                         {loading ? <Loader2 className="animate-spin" /> : (
                           <>
-                             <span className="relative z-10">CONTINUAR PARA PAGAMENTO</span>
-                             <ArrowRight size={22} className="relative z-10 group-hover:translate-x-1 transition-transform" />
+                            <span className="relative z-10">CONTINUAR PARA PAGAMENTO</span>
+                            <ArrowRight size={22} className="relative z-10 group-hover:translate-x-1 transition-transform" />
                           </>
                         )}
                       </button>
                     </div>
                   </motion.div>
                 ) : (
-                  <motion.div 
+                  <motion.div
                     key="step-2"
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className="space-y-6"
                   >
                     <div className="flex items-center justify-between mb-4 px-2">
-                       <button 
+                      <button
                         onClick={() => setStep(1)}
                         className="flex items-center gap-1 text-gray-400 hover:text-blue-500 font-bold transition-colors text-sm"
-                       >
-                          <ChevronLeft size={16} />
-                          Mudar e-mail
-                       </button>
-                       <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full text-green-600 text-[10px] font-black uppercase">
-                          <CheckCircle2 size={12} />
-                          E-mail Identificado
-                       </div>
+                      >
+                        <ChevronLeft size={16} />
+                        Mudar e-mail
+                      </button>
+                      <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full text-green-600 text-[10px] font-black uppercase">
+                        <CheckCircle2 size={12} />
+                        E-mail Identificado
+                      </div>
                     </div>
 
                     <div className="text-center mb-8">
-                       <h2 className="text-xl font-black text-gray-800">Finalizar Compra Segura</h2>
-                       <p className="text-gray-400 text-sm font-medium">Escolha a melhor forma de pagamento para você</p>
+                      <h2 className="text-xl font-black text-gray-800">Finalizar Compra Segura</h2>
+                      <p className="text-gray-400 text-sm font-medium">Escolha a melhor forma de pagamento para você</p>
                     </div>
 
                     <div className="animate-in fade-in duration-1000">
                       <div id="payment-brick-container" className="min-h-[400px]">
-                         {loading && (
-                           <div className="flex flex-col items-center justify-center py-20 text-blue-300 gap-4">
-                              <Loader2 className="animate-spin" size={40} />
-                              <p className="font-bold">Carregando formulário...</p>
-                           </div>
-                         )}
+                        {loading && (
+                          <div className="flex flex-col items-center justify-center py-20 text-blue-300 gap-4">
+                            <Loader2 className="animate-spin" size={40} />
+                            <p className="font-bold">Carregando formulário...</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </motion.div>
@@ -366,14 +387,14 @@ export default function CheckoutClient() {
 
             {/* Guarantees */}
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-8 text-gray-400 text-xs font-bold uppercase tracking-widest">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck size={18} className="text-blue-300" />
-                  Ambiente 100% Criptografado
-                </div>
-                <div className="flex items-center gap-2">
-                  <Heart size={18} className="text-pink-300" />
-                  Feito com Amor pedagógico
-                </div>
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={18} className="text-blue-300" />
+                Ambiente 100% Criptografado
+              </div>
+              <div className="flex items-center gap-2">
+                <Heart size={18} className="text-pink-300" />
+                Feito com Amor pedagógico
+              </div>
             </div>
           </div>
 
