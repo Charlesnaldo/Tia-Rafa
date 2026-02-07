@@ -69,8 +69,6 @@ export default function CheckoutClient() {
         const mp = new (window as any).MercadoPago(publicKey, { locale: 'pt-BR' });
         const bricksBuilder = mp.bricks();
 
-        container.innerHTML = '';
-
         const settings = {
           initialization: {
             amount: Number(cartTotal) / 100,
@@ -79,14 +77,7 @@ export default function CheckoutClient() {
           customization: {
             visual: {
               style: {
-                theme: 'flat',
-                customVariables: {
-                  borderRadiusBig: '24px',
-                  borderRadiusMedium: '16px',
-                  colorPrimary: '#60A5FA',
-                  colorBackground: '#ffffff',
-                  formInputColor: '#4B5563',
-                }
+                theme: 'default',
               }
             },
             paymentMethods: {
@@ -99,7 +90,7 @@ export default function CheckoutClient() {
           },
           callbacks: {
             onReady: () => {
-              console.log("Payment Brick pronto para uso!");
+              console.log("MERCADO PAGO: Formulário renderizado com sucesso!");
               setLoading(false);
             },
             onSubmit: ({ formData }: any) => {
@@ -121,7 +112,7 @@ export default function CheckoutClient() {
               });
             },
             onError: (error: any) => {
-              console.error("Erro Brick:", error);
+              console.error("Erro SDK Mercado Pago:", error);
               setLoading(false);
             },
           },
