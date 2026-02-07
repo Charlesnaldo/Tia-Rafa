@@ -33,6 +33,8 @@ export default function CheckoutClient() {
 
   useEffect(() => {
     const renderPaymentBrick = async () => {
+      if (step !== 2) return;
+
       console.log("Tentando renderizar Brick. States:", { preferenceId, isMpReady, itemCount, hasRef: !!paymentBrickRef.current });
 
       if (!preferenceId || !isMpReady || itemCount === 0) {
@@ -40,103 +42,104 @@ export default function CheckoutClient() {
         return;
       }
 
-      const container = document.getElementById('payment-brick-container');
-      if (!container) {
-        console.error("Container 'payment-brick-container' não encontrado no DOM!");
-        return;
-      }
-
-      if (paymentBrickRef.current) {
-        console.log("Já existe uma instância do Brick renderizada.");
-        return;
-      }
-
-      try {
-        const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
-        console.log("Public Key disponível?", !!publicKey);
-
-        if (!publicKey) {
-          console.error("ERRO: NEXT_PUBLIC_MP_PUBLIC_KEY não configurada!");
+      // Adicionamos um pequeno delay para garantir que o React já montou o HTML do Step 2
+      setTimeout(async () => {
+        const container = document.getElementById('payment-brick-container');
+        if (!container) {
+          console.error("Container 'payment-brick-container' não encontrado no DOM!");
           return;
         }
 
-        const mp = new (window as any).MercadoPago(publicKey, {
-          locale: 'pt-BR'
-        });
-        const bricksBuilder = mp.bricks();
+        if (paymentBrickRef.current) {
+          console.log("Já existe uma instância do Brick renderizada.");
+          return;
+        }
 
-        // Limpa o container antes de renderizar (garante que não haja lixo de renderizações falhas)
-        container.innerHTML = '';
+        try {
+          const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
+          console.log("Public Key disponível?", !!publicKey);
 
-        const settings = {
-          initialization: {
-            amount: Number(cartTotal) / 100,
-            preferenceId: preferenceId,
-          },
-          customization: {
-            visual: {
-              style: {
-                theme: 'flat',
-                customVariables: {
-                  borderRadiusBig: '24px',
-                  borderRadiusMedium: '16px',
-                  colorPrimary: '#60A5FA',
-                  colorBackground: '#ffffff',
-                  formInputColor: '#4B5563',
+          if (!publicKey) {
+            console.error("ERRO: NEXT_PUBLIC_MP_PUBLIC_KEY não configurada!");
+            return;
+          }
+
+          const mp = new (window as any).MercadoPago(publicKey, {
+            locale: 'pt-BR'
+          });
+          const bricksBuilder = mp.bricks();
+
+          // Limpa o container antes de renderizar (garante que não haja lixo de renderizações falhas)
+          container.innerHTML = '';
+
+          const settings = {
+            initialization: {
+              amount: Number(cartTotal) / 100,
+              preferenceId: preferenceId,
+            },
+            customization: {
+              visual: {
+                style: {
+                  theme: 'flat',
+                  customVariables: {
+                    borderRadiusBig: '24px',
+                    borderRadiusMedium: '16px',
+                    colorPrimary: '#60A5FA',
+                    colorBackground: '#ffffff',
+                    formInputColor: '#4B5563',
+                  }
                 }
+              },
+              paymentMethods: {
+                creditCard: "all",
+                debitCard: "all",
+                bankTransfer: "all",
+                ticket: "all",
+                maxInstallments: 12
               }
             },
-            paymentMethods: {
-              creditCard: "all",
-              debitCard: "all",
-              bankTransfer: "all",
-              ticket: "all",
-              maxInstallments: 12
-            }
-          },
-          callbacks: {
-            onReady: () => {
-              console.log("Payment Brick Ready");
-              setLoading(false);
-            },
-            onSubmit: ({ formData }: any) => {
-              return new Promise((resolve, reject) => {
-                fetch("/api/process_payment", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ ...formData, preferenceId }),
-                })
-                  .then((res) => res.json())
-                  .then((res) => {
-                    if (res.status === 'approved') {
-                      clearCart();
-                    }
-                    resolve(res);
+            callbacks: {
+              onReady: () => {
+                console.log("Payment Brick Ready");
+                setLoading(false);
+              },
+              onSubmit: ({ formData }: any) => {
+                return new Promise((resolve, reject) => {
+                  fetch("/api/process_payment", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ...formData, preferenceId }),
                   })
-                  .catch((err) => {
-                    console.error("Erro no process_payment:", err);
-                    reject(err);
-                  });
-              });
+                    .then((res) => res.json())
+                    .then((res) => {
+                      if (res.status === 'approved') {
+                        clearCart();
+                      }
+                      resolve(res);
+                    })
+                    .catch((err) => {
+                      console.error("Erro no process_payment:", err);
+                      reject(err);
+                    });
+                });
+              },
+              onError: (error: any) => {
+                console.error("Erro interno do Payment Brick:", error);
+                setLoading(false);
+              },
             },
-            onError: (error: any) => {
-              console.error("Erro interno do Payment Brick:", error);
-              setLoading(false);
-            },
-          },
-        };
+          };
 
-        const brickInstance = await bricksBuilder.create('payment', 'payment-brick-container', settings);
-        paymentBrickRef.current = brickInstance;
-      } catch (err) {
-        console.error("Erro ao criar Brick:", err);
-        setLoading(false);
-      }
+          const brickInstance = await bricksBuilder.create('payment', 'payment-brick-container', settings);
+          paymentBrickRef.current = brickInstance;
+        } catch (err) {
+          console.error("Erro ao criar Brick:", err);
+          setLoading(false);
+        }
+      }, 100); // 100ms é suficiente para o DOM atualizar
     };
 
-    if (step === 2) {
-      renderPaymentBrick();
-    }
+    renderPaymentBrick();
   }, [preferenceId, isMpReady, cartTotal, itemCount, clearCart, step]);
 
   if (itemCount === 0 && !preferenceId) {
