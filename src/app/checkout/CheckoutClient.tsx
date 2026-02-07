@@ -30,6 +30,12 @@ export default function CheckoutClient() {
   const [isMpReady, setIsMpReady] = useState(false);
   const [step, setStep] = useState(1); // 1: Email, 2: Payment
   const paymentBrickRef = useRef<any>(null);
+  const preferenceIdRef = useRef<string | null>(null);
+
+  // Sincroniza o ref sempre que o preferenceId muda
+  useEffect(() => {
+    preferenceIdRef.current = preferenceId;
+  }, [preferenceId]);
 
   useEffect(() => {
     const renderPaymentBrick = async (retryCount = 0) => {
@@ -94,19 +100,29 @@ export default function CheckoutClient() {
               setLoading(false);
             },
             onSubmit: ({ formData }: any) => {
+              const currentId = preferenceIdRef.current;
+              console.log("Processando pagamento para ID:", currentId);
+
               return new Promise((resolve, reject) => {
                 fetch("/api/process_payment", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ ...formData, preferenceId }),
+                  body: JSON.stringify({ ...formData, preferenceId: currentId }),
                 })
-                  .then((res) => res.json())
+                  .then(async (res) => {
+                    const data = await res.json();
+                    if (!res.ok) {
+                      throw new Error(data.details || data.error || "Erro ao processar");
+                    }
+                    return data;
+                  })
                   .then((res) => {
                     if (res.status === 'approved') clearCart();
                     resolve(res);
                   })
                   .catch((err) => {
                     console.error("Erro no process_payment:", err);
+                    alert(`Pagamento não processado: ${err.message}`);
                     reject(err);
                   });
               });

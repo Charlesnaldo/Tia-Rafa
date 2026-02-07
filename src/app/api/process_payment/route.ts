@@ -8,17 +8,21 @@ const client = new MercadoPagoConfig({
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { preferenceId, ...formData } = body; // Extract preferenceId and rest of formData
+    const { preferenceId, ...formData } = body;
 
-    if (!preferenceId) {
-      return NextResponse.json({ error: "Preference ID is missing." }, { status: 400 });
+    console.log("BACKEND: Recebido Preference ID:", preferenceId);
+
+    if (!preferenceId || preferenceId === "undefined") {
+      console.error("BACKEND ERROR: Preference ID está ausente ou é a string 'undefined'");
+      return NextResponse.json({ error: "Preference ID inválido ou ausente." }, { status: 400 });
     }
 
     const preferenceClient = new Preference(client);
     const preferenceDetails = await preferenceClient.get(preferenceId);
 
     if (!preferenceDetails || !preferenceDetails.items || preferenceDetails.items.length === 0) {
-      return NextResponse.json({ error: "Preference details not found or invalid." }, { status: 404 });
+      console.error("BACKEND ERROR: Detalhes da preferência não encontrados para o ID:", preferenceId);
+      return NextResponse.json({ error: "Detalhes da compra não encontrados no Mercado Pago." }, { status: 404 });
     }
 
     // Sum up items to get the total expected amount
