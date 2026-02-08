@@ -194,7 +194,7 @@ export async function POST(request: Request) {
     console.log("[MP PROCESS] Pagamento criado com sucesso:", paymentResult.id);
     console.log("[MP PROCESS] Status:", paymentResult.status);
 
-    const response = {
+    const response: Record<string, any> = {
       id: paymentResult.id,
       status: paymentResult.status,
       status_detail: paymentResult.status_detail,
