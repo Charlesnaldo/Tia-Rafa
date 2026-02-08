@@ -42,36 +42,34 @@ export default function CheckoutClient() {
   }, [preferenceId]);
 
   useEffect(() => {
-    // 1. Checklist ponto 2 & 3: Inicializa apenas quando o componente monta e temos os IDs
-    if (step !== 2 || !preferenceId || !isMpReady || itemCount === 0) return;
+    // 1. Só roda se estivermos no passo final e com os IDs necessários
+    if (step !== 2 || !preferenceId || !isMpReady) return;
 
-    const initBrick = async () => {
+    let controller: any = null;
+
+    const renderBrick = async () => {
+      // 2. Aguarda o DOM estar 100% estável (Checklist ponto 3)
+      await new Promise(r => setTimeout(r, 1000));
+
+      const container = document.getElementById('payment-brick-container');
+      if (!container || container.clientWidth < 100) {
+        console.warn("Container não está pronto ou visível.");
+        return;
+      }
+
       try {
-        // Aguarda um pouco mais para o DOM e estilos estabilizarem (Checklist ponto 3)
-        await new Promise(r => setTimeout(r, 800));
-
         const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
-        if (!publicKey) return;
-
-        if (!(window as any).MercadoPago) return;
+        if (!publicKey || !(window as any).MercadoPago) return;
 
         const mp = new (window as any).MercadoPago(publicKey, { locale: 'pt-BR' });
         const bricksBuilder = mp.bricks();
 
-        if (paymentBrickRef.current) {
-          try { await paymentBrickRef.current.unmount(); } catch (e) { }
-          paymentBrickRef.current = null;
-        }
-
-        // Sanitização do ID
-        const cleanPreferenceId = String(preferenceId).trim();
-
+        // 3. Configurações Limpas (Checklist ponto 1 & 2)
         const settings = {
           initialization: {
-            // Quando usar preferenceId, NÃO envie o amount para evitar conflito de parâmetros (Checklist ponto 1)
-            preferenceId: cleanPreferenceId,
+            // USAR APENAS preferenceId (sem amount) para evitar o erro de conflito nos logs
+            preferenceId: String(preferenceId).trim(),
           },
-          // Obrigatório passar a instância do MP para o Brick (Checklist ponto 2)
           mercadoPago: mp,
           customization: {
             visual: {
@@ -86,7 +84,7 @@ export default function CheckoutClient() {
           },
           callbacks: {
             onReady: () => {
-              console.log("MERCADO PAGO: Pronto!");
+              console.log("MERCADO PAGO: Renderizado com sucesso!");
               setLoading(false);
             },
             onSubmit: ({ selectedPaymentMethod, formData }: any) => {
@@ -96,7 +94,7 @@ export default function CheckoutClient() {
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     ...formData,
-                    preferenceId: cleanPreferenceId,
+                    preferenceId: String(preferenceId).trim(),
                     payment_method_id: selectedPaymentMethod
                   }),
                 })
@@ -116,21 +114,30 @@ export default function CheckoutClient() {
               });
             },
             onError: (error: any) => {
-              console.error("Erro SDK:", error);
+              console.error("MERCADO PAGO ERRO:", error);
               setLoading(false);
             },
           },
         };
 
-        const controller = await bricksBuilder.create('payment', 'payment-brick-container', settings);
+        // 4. Criação do Brick
+        controller = await bricksBuilder.create('payment', 'payment-brick-container', settings);
         paymentBrickRef.current = controller;
+
       } catch (err) {
-        console.error("Erro na inicialização:", err);
+        console.error("Falha ao criar Brick:", err);
       }
     };
 
-    initBrick();
-  }, [step, preferenceId, isMpReady, cartTotal, itemCount, clearCart]);
+    renderBrick();
+
+    // 5. Cleanup para evitar duplicidade de instâncias
+    return () => {
+      if (controller) {
+        try { controller.unmount(); } catch (e) { }
+      }
+    };
+  }, [step, preferenceId, isMpReady]);
 
   if (itemCount === 0 && !preferenceId) {
     return (
