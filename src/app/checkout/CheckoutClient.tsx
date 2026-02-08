@@ -86,12 +86,13 @@ export default function CheckoutClient() {
 
         const settings = {
           initialization: {
-            amount: Number(cartTotal) / 100,
             preferenceId: preferenceId,
+            mercadoPago: mp, // VITAL: Deve estar junto com preferenceId
             payer: {
               email: email,
               first_name: nome.split(' ')[0] || "Cliente",
               last_name: nome.split(' ').slice(1).join(' ') || "Tia Rafaela",
+              entityType: 'individual',
               identification: {
                 type: 'CPF',
                 number: cpf.replace(/\D/g, '')
@@ -155,19 +156,16 @@ export default function CheckoutClient() {
           },
         };
 
-        // Delay de 500ms para garantir que o container existe e tem tamanho na tela
+        // Delay para garantir estabilidade visual antes da renderização
         setTimeout(async () => {
           try {
-            if (paymentBrickRef.current) return; // Evita duplicatas no timeout
-            const brickInstance = await bricksBuilder.create('payment', 'payment-brick-container', {
-              ...settings,
-              mercadoPago: mp
-            });
+            if (paymentBrickRef.current) return;
+            const brickInstance = await bricksBuilder.create('payment', 'payment-brick-container', settings);
             paymentBrickRef.current = brickInstance;
           } catch (e) {
-            console.error("Erro ao criar Brick após timeout:", e);
+            console.error("Erro ao criar Brick:", e);
           }
-        }, 500);
+        }, 800);
       } catch (err) {
         console.error("Falha ao inicializar SDK:", err);
         setLoading(false);
@@ -483,7 +481,11 @@ export default function CheckoutClient() {
                     </div>
 
                     <div>
-                      <div id="payment-brick-container" className="min-h-[400px] w-full">
+                      <div
+                        id="payment-brick-container"
+                        className="w-full"
+                        style={{ minHeight: '600px', display: 'block' }}
+                      >
                         {loading && (
                           <div className="flex flex-col items-center justify-center py-20 text-blue-300 gap-4">
                             <Loader2 className="animate-spin" size={40} />
