@@ -85,7 +85,12 @@ export default function CheckoutClient() {
 
         const settings = {
           initialization: {
+            amount: Number(cartTotal) / 100, // MANDATÓRIO: O SDK exige o valor em Reais
             preferenceId: preferenceId,
+            payer: {
+              email: email,
+              entityType: 'individual'
+            }
           },
           customization: {
             visual: {
@@ -101,7 +106,7 @@ export default function CheckoutClient() {
           },
           callbacks: {
             onReady: () => {
-              console.log("MERCADO PAGO: Pronto!");
+              console.log("MERCADO PAGO: Componente pronto!");
               setLoading(false);
             },
             onSubmit: ({ formData }: any) => {
@@ -131,7 +136,7 @@ export default function CheckoutClient() {
                     resolve(res);
                   })
                   .catch((err) => {
-                    console.error("MERCADO PAGO: Erro final:", err);
+                    console.error("MERCADO PAGO: Erro fatal:", err);
                     alert(`Não foi possível finalizar: ${err.message}`);
                     reject(err);
                   });
@@ -147,6 +152,7 @@ export default function CheckoutClient() {
         // Delay de 500ms para garantir que o container existe e tem tamanho na tela
         setTimeout(async () => {
           try {
+            if (paymentBrickRef.current) return; // Evita duplicatas no timeout
             const brickInstance = await bricksBuilder.create('payment', 'payment-brick-container', {
               ...settings,
               mercadoPago: mp
