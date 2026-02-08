@@ -12,46 +12,46 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { cartItems, emailCliente } = body; // Expect cartItems and emailCliente
+    const { cartItems, emailCliente, nomeCliente, telefoneCliente, cpfCliente } = body;
 
     if (!emailCliente || !emailRegex.test(emailCliente)) {
       return NextResponse.json({ error: "E-mail do cliente inválido." }, { status: 400 });
     }
 
     if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
-        return NextResponse.json({ error: "Carrinho de compras vazio ou inválido." }, { status: 400 });
+      return NextResponse.json({ error: "Carrinho de compras vazio ou inválido." }, { status: 400 });
     }
 
     const processedItems: {
-        id: string;
-        title: string;
-        unit_price: number;
-        quantity: number;
-        currency_id: string;
+      id: string;
+      title: string;
+      unit_price: number;
+      quantity: number;
+      currency_id: string;
     }[] = [];
     let totalAmount = 0;
     const metadataProductIds: string[] = [];
 
     for (const item of cartItems) {
-        const produto = PRODUTOS_LISTA[item.id];
-        if (!produto) {
-            return NextResponse.json({ error: `Produto com ID ${item.id} não encontrado.` }, { status: 404 });
-        }
-        if (item.quantity <= 0) {
-            return NextResponse.json({ error: `Quantidade inválida para o produto ${produto.nome}.` }, { status: 400 });
-        }
+      const produto = PRODUTOS_LISTA[item.id];
+      if (!produto) {
+        return NextResponse.json({ error: `Produto com ID ${item.id} não encontrado.` }, { status: 404 });
+      }
+      if (item.quantity <= 0) {
+        return NextResponse.json({ error: `Quantidade inválida para o produto ${produto.nome}.` }, { status: 400 });
+      }
 
-        const valorNumerico = produto.preco / 100; // Assuming preco is in cents
+      const valorNumerico = produto.preco / 100; // Assuming preco is in cents
 
-        processedItems.push({
-            id: produto.id,
-            title: produto.nome,
-            unit_price: valorNumerico,
-            quantity: item.quantity,
-            currency_id: "BRL",
-        });
-        totalAmount += valorNumerico * item.quantity;
-        metadataProductIds.push(produto.id);
+      processedItems.push({
+        id: produto.id,
+        title: produto.nome,
+        unit_price: valorNumerico,
+        quantity: item.quantity,
+        currency_id: "BRL",
+      });
+      totalAmount += valorNumerico * item.quantity;
+      metadataProductIds.push(produto.id);
     }
 
     const baseUrl = (process.env.NEXT_PUBLIC_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -63,6 +63,16 @@ export async function POST(request: Request) {
         items: processedItems, // Use the processed multiple items
         payer: {
           email: emailCliente,
+          name: nomeCliente ? nomeCliente.split(' ')[0] : "Cliente",
+          surname: nomeCliente ? (nomeCliente.split(' ').slice(1).join(' ') || "Checkout") : "Checkout",
+          identification: {
+            type: 'CPF',
+            number: cpfCliente ? cpfCliente.replace(/\D/g, '') : '',
+          },
+          phone: {
+            area_code: '',
+            number: telefoneCliente ? telefoneCliente.replace(/\D/g, '') : '',
+          }
         },
         metadata: {
           id_produtos: JSON.stringify(metadataProductIds), // Store array of product IDs

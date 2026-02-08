@@ -88,18 +88,8 @@ export default function CheckoutClient() {
           initialization: {
             amount: Number(cartTotal) / 100,
             preferenceId: preferenceId,
-            payer: {
-              email: email,
-              firstName: nome.split(' ')[0] || "Cliente",
-              lastName: nome.split(' ').slice(1).join(' ') || "Tia Rafaela",
-              entityType: 'individual',
-              identification: {
-                type: 'CPF',
-                number: cpf.replace(/\D/g, '')
-              }
-            }
           },
-          mercadoPago: mp, // Colocado na raiz do objeto de settings conforme v2
+          mercadoPago: mp,
           customization: {
             visual: {
               style: { theme: 'default' }
