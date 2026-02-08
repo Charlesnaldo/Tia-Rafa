@@ -28,6 +28,7 @@ export default function CheckoutClient() {
   const [email, setEmail] = useState("");
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
+  const [cpf, setCpf] = useState("");
   const [preferenceId, setPreferenceId] = useState<string | null>(null);
   const [isMpReady, setIsMpReady] = useState(false);
   const [step, setStep] = useState(1); // 1: Email, 2: Payment
@@ -85,11 +86,16 @@ export default function CheckoutClient() {
 
         const settings = {
           initialization: {
-            amount: Number(cartTotal) / 100, // MANDATÓRIO: O SDK exige o valor em Reais
+            amount: Number(cartTotal) / 100,
             preferenceId: preferenceId,
             payer: {
               email: email,
-              entityType: 'individual'
+              first_name: nome.split(' ')[0] || "Cliente",
+              last_name: nome.split(' ').slice(1).join(' ') || "Tia Rafaela",
+              identification: {
+                type: 'CPF',
+                number: cpf.replace(/\D/g, '')
+              }
             }
           },
           customization: {
@@ -201,6 +207,7 @@ export default function CheckoutClient() {
           emailCliente: email,
           nomeCliente: nome,
           telefoneCliente: telefone,
+          cpfCliente: cpf,
           cartTotal: cartTotal
         }),
       });
@@ -409,6 +416,22 @@ export default function CheckoutClient() {
                         </div>
                       </div>
 
+                      {/* CPF (Obrigatório para PIX) */}
+                      <div className="space-y-3">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">
+                          CPF (Obrigatório para PIX)
+                        </label>
+                        <div className="relative group">
+                          <input
+                            type="text"
+                            placeholder="000.000.000-00"
+                            value={cpf}
+                            onChange={(e) => setCpf(e.target.value)}
+                            className="w-full px-8 py-5 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg"
+                          />
+                        </div>
+                      </div>
+
                       <div className="bg-blue-50/50 p-6 rounded-[2rem] flex items-start gap-4">
                         <div className="bg-blue-400 p-2 rounded-xl text-white mt-1">
                           <Heart size={16} className="fill-white" />
@@ -421,7 +444,7 @@ export default function CheckoutClient() {
 
                       <button
                         onClick={handleCheckout}
-                        disabled={loading || !email.includes("@") || nome.length < 3}
+                        disabled={loading || !email.includes("@") || nome.length < 3 || cpf.replace(/\D/g, '').length < 11}
                         className="w-full bg-blue-400 hover:bg-blue-500 disabled:bg-gray-100 disabled:text-gray-300 text-white font-black py-7 rounded-[2.5rem] text-xl shadow-xl shadow-blue-100 transition-all flex items-center justify-center gap-3 active:scale-95 group relative overflow-hidden"
                       >
                         {loading ? <Loader2 className="animate-spin" /> : (
