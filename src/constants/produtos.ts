@@ -22,7 +22,7 @@ export const PRODUTOS_LISTA: Record<string, Produto> = {
   "boas-vindas": {
     id: "boas-vindas",
     nome: "Painel de Boas Vindas",
-    preco: 190,
+    preco: 10,
     imagens: ["/embreve.jpg"],
     cor: "bg-purple-100",
     descricao: "O Painel de Boas-Vindas Infantil foi criado para encantar e espalhar alegria logo na chegada! Com cores vibrantes, alegres e cheias de vida, ele transforma qualquer ambiente em um espaço divertido e acolhedor para as crianças",

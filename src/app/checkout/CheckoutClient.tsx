@@ -91,7 +91,7 @@ export default function CheckoutClient() {
               email: email,
               first_name: nome.split(' ')[0] || "Cliente",
               last_name: nome.split(' ').slice(1).join(' ') || "Tia Rafaela",
-              entity_type: 'individual'
+              entityType: 'individual'
             }
           },
           customization: {
