@@ -42,48 +42,33 @@ export default function CheckoutClient() {
   }, [preferenceId]);
 
   useEffect(() => {
-    const renderPaymentBrick = async (retryCount = 0) => {
-      if (step !== 2) return;
+    // 1. Checklist ponto 2 & 3: Inicializa apenas quando o componente monta e temos os IDs
+    if (step !== 2 || !preferenceId || !isMpReady || itemCount === 0) return;
 
-      console.log(`Tentativa ${retryCount + 1}: Renderizar Brick. States:`, { preferenceId, isMpReady, itemCount, hasRef: !!paymentBrickRef.current });
-
-      if (!preferenceId || !isMpReady || itemCount === 0) {
-        console.log("Aguardando condições SDK/Preferência...");
-        return;
-      }
-
-      const container = document.getElementById('payment-brick-container');
-
-      if (!container) {
-        if (retryCount < 10) {
-          console.warn(`Container não encontrado. Tentando novamente em 200ms... (${retryCount + 1}/10)`);
-          setTimeout(() => renderPaymentBrick(retryCount + 1), 200);
-        } else {
-          console.error("ERRO CRÍTICO: Container 'payment-brick-container' não apareceu no DOM após 2 segundos.");
-        }
-        return;
-      }
-
-      // Se já existir uma instância, vamos destruí-la para garantir que a nova use o ID correto
-      if (paymentBrickRef.current) {
-        console.log("Reiniciando Brick para novo ID...");
-        try {
-          await paymentBrickRef.current.unmount();
-          paymentBrickRef.current = null;
-        } catch (e) {
-          console.warn("Erro ao desmontar brick anterior:", e);
-        }
-      }
-
+    const initBrick = async () => {
       try {
         const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
+        console.log("Checking Public Key:", publicKey); // Checklist ponto 4
+
         if (!publicKey) {
-          console.error("ERRO: NEXT_PUBLIC_MP_PUBLIC_KEY ausente.");
+          console.error("ERRO: Public Key não encontrada!");
+          return;
+        }
+
+        // Checklist ponto 5: Usando window.MercadoPago
+        if (!(window as any).MercadoPago) {
+          console.warn("MercadoPago SDK não está no window.");
           return;
         }
 
         const mp = new (window as any).MercadoPago(publicKey, { locale: 'pt-BR' });
         const bricksBuilder = mp.bricks();
+
+        // Limpa instância anterior se houver
+        if (paymentBrickRef.current) {
+          try { await paymentBrickRef.current.unmount(); } catch (e) { }
+          paymentBrickRef.current = null;
+        }
 
         const settings = {
           initialization: {
@@ -93,12 +78,7 @@ export default function CheckoutClient() {
           mercadoPago: mp,
           customization: {
             visual: {
-              style: {
-                theme: 'flat', // Mudar tema para ver se resolve erro de renderização
-                customVariables: {
-                  borderRadius: '20px',
-                }
-              }
+              style: { theme: 'flat' }
             },
             paymentMethods: {
               ticket: "all",
@@ -114,37 +94,27 @@ export default function CheckoutClient() {
             },
             onSubmit: ({ selectedPaymentMethod, formData }: any) => {
               const currentId = preferenceIdRef.current;
-              if (!currentId || currentId === "undefined") {
-                alert("Erro: ID de preferência não encontrado.");
-                return;
-              }
-
               return new Promise((resolve, reject) => {
-                const payload = {
-                  ...formData,
-                  preferenceId: String(currentId).trim(),
-                  payment_method_id: selectedPaymentMethod
-                };
                 fetch("/api/process_payment", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(payload),
+                  body: JSON.stringify({
+                    ...formData,
+                    preferenceId: currentId,
+                    payment_method_id: selectedPaymentMethod
+                  }),
                 })
                   .then(async (res) => {
                     const data = await res.json();
                     if (!res.ok) throw new Error(data.details || data.error || "Erro ao processar");
-                    return data;
-                  })
-                  .then((res) => {
-                    if (res.status === 'approved') {
+                    if (data.status === 'approved') {
                       clearCart();
-                      window.location.href = `/sucesso?payment_id=${res.id}&status=approved`;
+                      window.location.href = `/sucesso?payment_id=${data.id}&status=approved`;
                     }
-                    resolve(res);
+                    resolve(data);
                   })
                   .catch((err) => {
-                    console.error("MERCADO PAGO: Erro fatal:", err);
-                    alert(`Não foi possível finalizar: ${err.message}`);
+                    alert(`Erro: ${err.message}`);
                     reject(err);
                   });
               });
@@ -156,50 +126,16 @@ export default function CheckoutClient() {
           },
         };
 
-        // Renderização com verificação de estabilidade do container
-        const initBrick = async () => {
-          if (initializingRef.current) return;
-          initializingRef.current = true;
-
-          try {
-            if (paymentBrickRef.current) {
-              await paymentBrickRef.current.unmount();
-              paymentBrickRef.current = null;
-            }
-
-            // Garantia de que o container tem largura antes de criar o Brick (evita erro de SVG)
-            const checkContainer = async () => {
-              for (let i = 0; i < 30; i++) {
-                const el = document.getElementById('payment-brick-container');
-                if (el && el.clientWidth > 100) return true; // Espera ter pelo menos 100px
-                await new Promise(r => setTimeout(r, 150));
-              }
-              return false;
-            };
-
-            const isStable = await checkContainer();
-            if (isStable) {
-              await new Promise(r => setTimeout(r, 300)); // Delay extra de segurança para o layout estabilizar
-            }
-
-            const brickInstance = await bricksBuilder.create('payment', 'payment-brick-container', settings);
-            paymentBrickRef.current = brickInstance;
-          } catch (e) {
-            console.error("Erro ao criar Brick:", e);
-          } finally {
-            initializingRef.current = false;
-          }
-        };
-
-        initBrick();
+        // Checklist ponto 1: Container com tamanho garantido via CSS
+        const controller = await bricksBuilder.create('payment', 'payment-brick-container', settings);
+        paymentBrickRef.current = controller;
       } catch (err) {
-        console.error("Falha ao inicializar SDK:", err);
-        setLoading(false);
+        console.error("Erro na inicialização do Brick:", err);
       }
     };
 
-    renderPaymentBrick();
-  }, [preferenceId, isMpReady, step]);
+    initBrick();
+  }, [step, preferenceId, isMpReady, cartTotal, itemCount, clearCart]);
 
   if (itemCount === 0 && !preferenceId) {
     return (
@@ -429,8 +365,8 @@ export default function CheckoutClient() {
                   <div
                     key={preferenceId || 'no-id'}
                     id="payment-brick-container"
-                    className="w-full relative"
-                    style={{ minHeight: '800px', width: '100%', display: 'block' }}
+                    className="w-full"
+                    style={{ width: "100%", minHeight: "400px" }}
                   >
                     {loading && (
                       <div className="flex flex-col items-center justify-center py-20 text-blue-300 gap-4">
@@ -454,12 +390,8 @@ export default function CheckoutClient() {
 
       <style jsx global>{`
         #payment-brick-container svg {
-          width: 50px !important;
-          height: 50px !important;
-        }
-        #payment-brick-container .mp-brick-payment-method-icon svg {
-           width: 40px !important;
-           height: 40px !important;
+          width: auto !important;
+          height: auto !important;
         }
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
