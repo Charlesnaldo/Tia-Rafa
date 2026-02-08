@@ -93,14 +93,18 @@ export default function CheckoutClient() {
           mercadoPago: mp,
           customization: {
             visual: {
-              style: { theme: 'default' }
+              style: {
+                theme: 'flat', // Mudar tema para ver se resolve erro de renderização
+                customVariables: {
+                  borderRadius: '20px',
+                }
+              }
             },
             paymentMethods: {
               ticket: "all",
               bankTransfer: "all",
               creditCard: "all",
               debitCard: "all",
-              mercadoPago: "all",
             }
           },
           callbacks: {
@@ -173,7 +177,11 @@ export default function CheckoutClient() {
               return false;
             };
 
-            await checkContainer();
+            const isStable = await checkContainer();
+            if (isStable) {
+              await new Promise(r => setTimeout(r, 300)); // Delay extra de segurança para o layout estabilizar
+            }
+
             const brickInstance = await bricksBuilder.create('payment', 'payment-brick-container', settings);
             paymentBrickRef.current = brickInstance;
           } catch (e) {
