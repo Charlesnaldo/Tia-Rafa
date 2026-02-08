@@ -16,6 +16,7 @@ export default function Hero() {
           src="/fundo-hero.webp" // Certifique-se que o arquivo existe em /public
           alt="Fundo lúdico infantil"
           fill
+          sizes="100vw"
           className="object-cover opacity-95"
           priority
         />
@@ -57,8 +58,8 @@ export default function Hero() {
       <div className="max-w-7xl mx-auto px-4 pt-12 md:pt-40 pb-20 relative z-10">
         <div className="text-center">
 
-        
-          
+
+
 
           {/* Título de Impacto */}
           <h1 className="pt-10 md:pt-48 lg:pt-64 text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-esmerald-900 to-orange-400 text-5xl md:text-7xl lg:text-8xl font-black leading-[1.1] tracking-tighter text-gray-900 mb-10">
@@ -92,7 +93,7 @@ export default function Hero() {
         </div>
       </div>
 
-      
+
       <div className="absolute bottom-0 left-0 w-full leading-[0]">
         <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="relative block w-full h-16 md:h-24 fill-white">
           <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"></path>

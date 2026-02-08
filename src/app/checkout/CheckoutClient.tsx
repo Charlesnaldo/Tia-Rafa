@@ -29,30 +29,71 @@ export default function CheckoutClient() {
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [cpf, setCpf] = useState("");
-  const [preferenceId, setPreferenceId] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
   const [isMpReady, setIsMpReady] = useState(false);
   const [step, setStep] = useState(1); // 1: Email, 2: Payment
   const paymentBrickRef = useRef<any>(null);
-  const preferenceIdRef = useRef<string | null>(null);
-  const initializingRef = useRef(false);
+  const orderIdRef = useRef<string | null>(null);
 
-  // Sincroniza o ref sempre que o preferenceId muda
+  // Sincroniza o ref sempre que o orderId muda para ser acessado dentro de callbacks
   useEffect(() => {
-    preferenceIdRef.current = preferenceId;
-  }, [preferenceId]);
+    orderIdRef.current = orderId;
+  }, [orderId]);
+
+  // Função utilitária para corrigir SVGs
+  const fixSvgAttributes = (element: HTMLElement) => {
+    const svgs = element.querySelectorAll('svg');
+    svgs.forEach((svg) => {
+      const width = svg.getAttribute('width');
+      const height = svg.getAttribute('height');
+      if (width === '' || width === 'auto' || width === null) {
+        svg.removeAttribute('width');
+        svg.style.width = '100%';
+      }
+      if (height === '' || height === 'auto' || height === null) {
+        svg.removeAttribute('height');
+        svg.style.height = 'auto';
+      }
+    });
+  };
 
   useEffect(() => {
-    // 1. Só roda se estivermos no passo final e com os IDs necessários
-    if (step !== 2 || !preferenceId || !isMpReady) return;
+    if (step !== 2 || !orderId || !isMpReady) return;
 
     let controller: any = null;
+    let observer: MutationObserver | null = null;
+    let styleElement: HTMLStyleElement | null = null;
+    let intervalFix: any = null;
 
     const renderBrick = async () => {
-      // 2. Aguarda o DOM estar 100% estável (Checklist ponto 3)
-      await new Promise(r => setTimeout(r, 1000));
+      // Suprimir erros de console chatos do SVG
+      const originalError = console.error;
+      console.error = (...args) => {
+        if (args[0] && typeof args[0] === 'string' && (args[0].includes('<svg> attribute width') || args[0].includes('<svg> attribute height'))) {
+          return;
+        }
+        originalError.apply(console, args);
+      };
 
+      // Injeta CSS global
+      styleElement = document.createElement('style');
+      styleElement.id = 'mp-svg-fix';
+      styleElement.textContent = `
+          svg { max-width: 100% !important; max-height: 100% !important; }
+          svg[width=""], svg[width="auto"], svg[height=""], svg[height="auto"] {
+            width: 100% !important; height: auto !important;
+          }
+          #payment-brick-container svg { width: 100% !important; height: auto !important; }
+        `;
+      document.head.appendChild(styleElement);
+
+      await new Promise(r => setTimeout(r, 1000));
       const container = document.getElementById('payment-brick-container');
       if (!container) return;
+
+      observer = new MutationObserver(() => fixSvgAttributes(container));
+      observer.observe(container, { childList: true, subtree: true, attributes: true, attributeFilter: ['width', 'height'] });
+      intervalFix = setInterval(() => fixSvgAttributes(container), 500);
 
       try {
         const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
@@ -61,42 +102,43 @@ export default function CheckoutClient() {
         const mp = new (window as any).MercadoPago(publicKey, { locale: 'pt-BR' });
         const bricksBuilder = mp.bricks();
 
-        // 3. Configuração Multi-meios (Pix + Cartão)
         const settings = {
           initialization: {
             amount: Number(cartTotal) / 100,
-            preferenceId: String(preferenceId).trim(),
           },
           mercadoPago: mp,
           customization: {
-            visual: {
-              style: { theme: 'flat' }
-            },
+            visual: { theme: 'flat' as any },
             paymentMethods: {
-              ticket: "all",
-              bankTransfer: "all",
-              creditCard: "all",
-              debitCard: "all",
+              ticket: "all" as any,
+              bankTransfer: "all" as any,
+              creditCard: "all" as any,
+              debitCard: "all" as any,
             }
           },
           callbacks: {
             onReady: () => {
               console.log("MERCADO PAGO: Multi-meios pronto!");
+              setTimeout(() => {
+                if (container) {
+                  fixSvgAttributes(container);
+                  setTimeout(() => fixSvgAttributes(container), 500);
+                }
+              }, 100);
               setLoading(false);
             },
             onSubmit: ({ selectedPaymentMethod, formData }: any) => {
-              const currentId = preferenceIdRef.current;
-
+              const currentOrderId = orderIdRef.current;
               return new Promise((resolve, reject) => {
                 fetch("/api/process_payment", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     ...formData,
-                    preferenceId: currentId,
+                    orderId: currentOrderId,
                     payment_method_id: selectedPaymentMethod,
                     payer: {
-                      email: email,
+                      email,
                       identification: {
                         type: "CPF",
                         number: cpf.replace(/\D/g, ""),
@@ -126,10 +168,8 @@ export default function CheckoutClient() {
           },
         };
 
-        // 4. Criação do Brick Multi-Meios
         controller = await bricksBuilder.create('payment', 'payment-brick-container', settings);
         paymentBrickRef.current = controller;
-
       } catch (err) {
         console.error("Falha ao criar Brick:", err);
       }
@@ -137,15 +177,19 @@ export default function CheckoutClient() {
 
     renderBrick();
 
-    // 5. Cleanup para evitar duplicidade de instâncias
     return () => {
-      if (controller) {
+      if (observer) observer.disconnect();
+      if (controller && typeof controller.unmount === 'function') {
         try { controller.unmount(); } catch (e) { }
       }
+      if (styleElement && styleElement.parentNode) {
+        styleElement.parentNode.removeChild(styleElement);
+      }
+      if (intervalFix) clearInterval(intervalFix);
     };
-  }, [step, preferenceId, isMpReady, cartTotal]);
+  }, [step, orderId, isMpReady, cartTotal, email, cpf, clearCart]);
 
-  if (itemCount === 0 && !preferenceId) {
+  if (itemCount === 0 && !orderId) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 text-center">
         <div className="w-48 h-48 bg-blue-50 rounded-full flex items-center justify-center mb-6 animate-bounce duration-3000">
@@ -161,39 +205,31 @@ export default function CheckoutClient() {
   }
 
   const handleCheckout = async () => {
-    console.log("Btn Continuar clicado. Email:", email);
     if (!email.includes("@") || email.length < 5) return alert("Por favor, insira um e-mail válido");
-
     setLoading(true);
     try {
-      console.log("Chamando /api/checkout...");
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          cartItems: cartItems,
+          cartItems,
           emailCliente: email,
           nomeCliente: nome,
           telefoneCliente: telefone,
           cpfCliente: cpf,
-          cartTotal: cartTotal
+          cartTotal
         }),
       });
 
       const data = await response.json();
-      console.log("Resposta da API /api/checkout:", data);
-
-      if (data.preferenceId) {
-        console.log("Preference ID recebido:", data.preferenceId);
-        setPreferenceId(data.preferenceId);
+      if (data.orderId) {
+        setOrderId(data.orderId);
         setStep(2);
       } else {
-        console.error("Erro retornado pela API:", data.error);
-        throw new Error(data.error || "Erro ao gerar preferência");
+        throw new Error(data.error || "Erro ao criar order");
       }
     } catch (error: any) {
       setLoading(false);
-      console.error("Erro FATAL ao iniciar checkout:", error);
       alert(`Erro: ${error.message || "Ocorreu um erro ao processar o checkout."}`);
     }
   };
@@ -207,7 +243,6 @@ export default function CheckoutClient() {
       />
 
       <div className="max-w-5xl mx-auto">
-        {/* Progress Stepper */}
         <div className="flex items-center justify-center mb-12 gap-4">
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black ${step >= 1 ? 'bg-blue-400 text-white shadow-lg shadow-blue-100' : 'bg-gray-200 text-gray-500'}`}>
@@ -225,12 +260,9 @@ export default function CheckoutClient() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-
-          {/* Left Column: Summary (4 cols) */}
+          {/* Summary Column */}
           <div className="lg:col-span-12 xl:col-span-5 space-y-6 order-2 lg:order-1">
             <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-[0_8px_40px_rgba(0,0,0,0.03)] border border-blue-50 relative overflow-hidden">
-              <div className="absolute -top-4 -right-4 w-24 h-24 bg-blue-50 rounded-full opacity-50 blur-2xl" />
-
               <div className="flex items-center gap-3 mb-8">
                 <div className="bg-blue-100 p-2 rounded-xl text-blue-500">
                   <ShoppingBag size={24} />
@@ -242,20 +274,9 @@ export default function CheckoutClient() {
                 {cartItems.map(item => {
                   const produto = PRODUTOS_LISTA[item.id];
                   return (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="flex items-center gap-4 p-3 rounded-2xl bg-gray-50/50 hover:bg-white transition-colors border border-transparent hover:border-blue-100"
-                    >
-                      <div className="w-16 h-16 bg-white rounded-xl overflow-hidden shadow-sm flex-shrink-0 border border-gray-100">
-                        <Image
-                          src={produto?.imagens?.[0] || "/img/placeholder.png"}
-                          width={64}
-                          height={64}
-                          alt={item.nome}
-                          className="w-full h-full object-cover"
-                        />
+                    <motion.div key={item.id} className="flex items-center gap-4 p-3 rounded-2xl bg-gray-50/50">
+                      <div className="w-16 h-16 bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
+                        <Image src={produto?.imagens?.[0] || "/img/placeholder.png"} width={64} height={64} alt={item.nome} className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-grow min-w-0">
                         <h4 className="font-bold text-gray-800 truncate text-sm">{item.nome}</h4>
@@ -270,7 +291,7 @@ export default function CheckoutClient() {
               </div>
 
               <div className="mt-8 pt-6 border-t-2 border-dashed border-gray-100 space-y-3">
-                <div className="flex justify-between text-gray-500 font-medium">
+                <div className="flex justify-between text-gray-500 font-medium font-bold">
                   <span>Subtotal</span>
                   <span>{formatCurrency(cartTotal)}</span>
                 </div>
@@ -288,43 +309,33 @@ export default function CheckoutClient() {
               </div>
             </div>
 
-            {/* Trust Badges */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white p-4 rounded-3xl border border-gray-100 flex flex-col items-center text-center gap-2 shadow-sm">
-                <div className="bg-pink-50 p-2 rounded-full text-pink-400">
-                  <Lock size={20} />
-                </div>
+                <div className="bg-pink-50 p-2 rounded-full text-pink-400"><Lock size={20} /></div>
                 <span className="text-[10px] sm:text-xs font-bold text-gray-500 leading-tight">Pagamento 100% Seguro</span>
               </div>
               <div className="bg-white p-4 rounded-3xl border border-gray-100 flex flex-col items-center text-center gap-2 shadow-sm">
-                <div className="bg-blue-50 p-2 rounded-full text-blue-400">
-                  <ShieldCheck size={20} />
-                </div>
+                <div className="bg-blue-50 p-2 rounded-full text-blue-400"><ShieldCheck size={20} /></div>
                 <span className="text-[10px] sm:text-xs font-bold text-gray-500 leading-tight">Acesso Imediato ao Material</span>
               </div>
             </div>
 
-            <Link href="/carrinho" className="flex items-center justify-center gap-2 text-gray-400 font-bold hover:text-blue-400 transition-colors group text-sm mt-6">
-              <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-              Editar carrinho
+            <Link href="/carrinho" className="flex items-center justify-center gap-2 text-gray-400 font-bold hover:text-blue-400 transition-colors text-sm mt-6">
+              <ChevronLeft size={16} /> Editar carrinho
             </Link>
           </div>
 
-          {/* Right Column: Steps (7 cols) */}
+          {/* Form Column */}
           <div className="lg:col-span-12 xl:col-span-7 order-1 lg:order-2">
             <div className="bg-white p-6 sm:p-10 rounded-[3rem] shadow-[0_20px_60px_rgba(149,157,165,0.06)] border border-pink-50 min-h-[600px] relative">
               {step === 1 ? (
-                <div key="step-1" className="space-y-8">
+                <div className="space-y-8">
                   <div className="text-center space-y-2">
-                    <div className="inline-block bg-pink-50 p-3 rounded-2xl mb-2">
-                      <Sparkles className="text-pink-400 animate-pulse" size={32} />
-                    </div>
+                    <div className="inline-block bg-pink-50 p-3 rounded-2xl mb-2"><Sparkles className="text-pink-400" size={32} /></div>
                     <h2 className="text-2xl font-black text-gray-800">Vamos começar! ✨</h2>
                     <p className="text-gray-400 font-medium">Onde você deseja receber seu material mágico?</p>
                   </div>
-
                   <div className="space-y-6">
-                    {/* Campos de formulário (Nome, Email, Telefone, CPF) */}
                     <div className="space-y-3">
                       <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">Nome Completo</label>
                       <input type="text" placeholder="Seu nome" value={nome} onChange={(e) => setNome(e.target.value)} className="w-full px-8 py-5 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg" />
@@ -341,41 +352,22 @@ export default function CheckoutClient() {
                       <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">CPF (Obrigatório para PIX)</label>
                       <input type="text" placeholder="000.000.000-00" value={cpf} onChange={(e) => setCpf(e.target.value)} className="w-full px-8 py-5 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg" />
                     </div>
-
-                    <button
-                      onClick={handleCheckout}
-                      disabled={loading || !email.includes("@") || nome.length < 3 || cpf.replace(/\D/g, '').length < 11}
-                      className="w-full bg-blue-400 hover:bg-blue-500 disabled:bg-gray-100 disabled:text-gray-300 text-white font-black py-7 rounded-[2.5rem] text-xl shadow-xl shadow-blue-100 transition-all flex items-center justify-center gap-3 active:scale-95 group relative overflow-hidden"
-                    >
-                      {loading ? <Loader2 className="animate-spin" /> : (
-                        <>
-                          <span className="relative z-10">CONTINUAR PARA PAGAMENTO</span>
-                          <ArrowRight size={22} className="relative z-10 group-hover:translate-x-1 transition-transform" />
-                        </>
-                      )}
+                    <button onClick={handleCheckout} disabled={loading} className="w-full bg-blue-400 hover:bg-blue-500 disabled:bg-gray-100 disabled:text-gray-300 text-white font-black py-7 rounded-[2.5rem] text-xl transition-all flex items-center justify-center gap-3">
+                      {loading ? <Loader2 className="animate-spin" /> : <>CONTINUAR PARA PAGAMENTO <ArrowRight size={22} /></>}
                     </button>
                   </div>
                 </div>
               ) : (
-                <div key="step-2" className="space-y-6">
+                <div className="space-y-6">
                   <div className="flex items-center justify-between mb-4 px-2">
-                    <button onClick={() => setStep(1)} className="flex items-center gap-1 text-gray-400 hover:text-blue-500 font-bold transition-colors text-sm">
-                      <ChevronLeft size={16} /> Mudar e-mail
-                    </button>
-                    <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full text-green-600 text-[10px] font-black uppercase">
-                      <CheckCircle2 size={12} /> E-mail Identificado
-                    </div>
+                    <button onClick={() => setStep(1)} className="flex items-center gap-1 text-gray-400 hover:text-blue-500 font-bold transition-colors text-sm"><ChevronLeft size={16} /> Mudar e-mail</button>
+                    <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full text-green-600 text-[10px] font-black uppercase"><CheckCircle2 size={12} /> E-mail Identificado</div>
                   </div>
                   <div className="text-center mb-8">
                     <h2 className="text-xl font-black text-gray-800">Finalizar Compra Segura</h2>
                     <p className="text-gray-400 text-sm font-medium">Escolha a melhor forma de pagamento para você</p>
                   </div>
-                  <div
-                    key={preferenceId || 'no-id'}
-                    id="payment-brick-container"
-                    className="w-full"
-                    style={{ width: "100%", minHeight: "400px" }}
-                  >
+                  <div key={orderId || 'no-id'} id="payment-brick-container" className="w-full" style={{ minHeight: "400px" }}>
                     {loading && (
                       <div className="flex flex-col items-center justify-center py-20 text-blue-300 gap-4">
                         <Loader2 className="animate-spin" size={40} />
@@ -386,34 +378,15 @@ export default function CheckoutClient() {
                 </div>
               )}
             </div>
-
-            {/* Guarantees */}
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-8 text-gray-400 text-xs font-bold uppercase tracking-widest">
-              <div className="flex items-center gap-2"><ShieldCheck size={18} className="text-blue-300" /> Ambiente 100% Criptografado</div>
-              <div className="flex items-center gap-2"><Heart size={18} className="text-pink-300" /> Feito com Amor pedagógico</div>
-            </div>
           </div>
         </div>
       </div>
 
       <style jsx global>{`
-        #payment-brick-container svg {
-          width: auto !important;
-          height: auto !important;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #E5E7EB;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #D1D5DB;
-        }
+        #payment-brick-container svg { max-width: 100% !important; max-height: 100% !important; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 10px; }
       `}</style>
     </div>
   );

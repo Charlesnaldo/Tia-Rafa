@@ -1,103 +1,148 @@
 import { NextResponse } from "next/server";
-import { MercadoPagoConfig, Payment, Preference } from "mercadopago";
-
-const client = new MercadoPagoConfig({
-  accessToken: process.env.MP_ACCESS_TOKEN || "",
-});
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const id = String(body.preferenceId || body.preference_id || "").trim();
+    const orderId = String(body.orderId || "").trim();
 
-    console.log(`[MP BACKEND] Iniciando processamento do ID: "${id}"`);
-    console.log(`[MP BACKEND] Credenciais: Token inicia com "${process.env.MP_ACCESS_TOKEN?.substring(0, 8)}"`);
+    console.log(`[MP PROCESS] Iniciando processamento da Order: "${orderId}"`);
+    console.log(`[MP PROCESS] Método de pagamento:`, body.payment_method_id);
 
-    if (!id || id === "undefined" || id === "null") {
-      return NextResponse.json({ error: "ID de preferência inválido." }, { status: 400 });
+    if (!orderId || orderId === "undefined" || orderId === "null") {
+      return NextResponse.json({ error: "ID da order inválido." }, { status: 400 });
     }
 
-    // 1. Buscar detalhes da preferência para validar o valor (Segurança)
-    const preferenceClient = new Preference(client);
-    let expectedAmount = 0;
+    const accessToken = process.env.MP_ACCESS_TOKEN;
+    if (!accessToken) {
+      console.error("[MP ERROR] Access Token não configurado");
+      return NextResponse.json({ error: "Configuração do Mercado Pago inválida." }, { status: 500 });
+    }
 
-    try {
-      // Usamos a chave preferenceId conforme exigido pelo SDK v2
-      // e fazemos cast para any para o TypeScript aceitar (visto que o tipo PreferenceGetData varia)
-      const preferenceDetails: any = await preferenceClient.get({
-        preferenceId: id
-      } as any);
-
-      console.log(`[MP BACKEND] Preferência encontrada. Detalhes: ${JSON.stringify(preferenceDetails?.items?.[0] || {})}`);
-
-      if (preferenceDetails.items) {
-        for (const item of preferenceDetails.items) {
-          expectedAmount += Number(item.unit_price || 0) * Number(item.quantity || 1);
-        }
+    // 1. Buscar detalhes da order para validação
+    console.log("[MP PROCESS] Buscando detalhes da order...");
+    const orderResponse = await fetch(`https://api.mercadopago.com/v1/orders/${orderId}`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
       }
-      expectedAmount = Math.round(expectedAmount * 100) / 100;
-      console.log(`[MP BACKEND] Preferência encontrada. Valor total esperado: ${expectedAmount}`);
-    } catch (err: any) {
-      console.error("[MP ERROR] Falha ao buscar preferência:", err.message);
+    });
+
+    if (!orderResponse.ok) {
+      const errorData = await orderResponse.json();
+      console.error("[MP ERROR] Falha ao buscar order:", errorData);
       return NextResponse.json({
-        error: "ID de compra expirado ou inválido no MP.",
-        details: err.message,
-        id_received: id
+        error: "Order não encontrada ou expirada.",
+        details: errorData
       }, { status: 404 });
     }
 
-    // 2. Criar o Pagamento
-    const payment = new Payment(client);
-    const transactionAmount = Math.round(Number(body.transaction_amount) * 100) / 100;
+    const orderData = await orderResponse.json();
+    console.log("[MP PROCESS] Order encontrada. Status:", orderData.status);
+
+    const expectedAmount = parseFloat(orderData.total_amount);
+    const transactionAmount = parseFloat(body.transaction_amount);
 
     // Validação de segurança básica de preço
     if (Math.abs(expectedAmount - transactionAmount) > 0.5) {
       console.warn(`[MP WARN] Diferença de preço detectada: Esperado ${expectedAmount}, Recebido ${transactionAmount}`);
     }
 
-    const paymentBody: any = {
+    // 2. Preparar dados do pagamento
+    const paymentData: any = {
       transaction_amount: transactionAmount,
-      description: body.description || "Compra em Tia Rafaela",
+      description: body.description || orderData.description || "Compra em Tia Rafaela",
       payment_method_id: body.payment_method_id,
-      installments: body.installments ? Number(body.installments) : 1,
       payer: {
-        email: body.payer?.email,
-        first_name: body.payer?.first_name || "Cliente",
-        last_name: body.payer?.last_name || "Tia Rafaela",
+        email: body.payer?.email || orderData.payer?.email,
+        first_name: body.payer?.first_name || orderData.payer?.first_name || "Cliente",
+        last_name: body.payer?.last_name || orderData.payer?.last_name || "Tia Rafaela",
       }
     };
 
-    // PIX exige identificação (CPF)
+    // PIX e outros métodos de transferência bancária exigem identificação (CPF)
     if (body.payer?.identification) {
-      paymentBody.payer.identification = body.payer.identification;
-    } else if (body.identification) {
-      paymentBody.payer.identification = body.identification;
+      paymentData.payer.identification = body.payer.identification;
+    } else if (orderData.payer?.identification) {
+      paymentData.payer.identification = orderData.payer.identification;
     }
 
-    // Token é obrigatório apenas para Cartão
-    if (body.token) paymentBody.token = body.token;
-    if (body.issuer_id) paymentBody.issuer_id = body.issuer_id;
+    // Configurações específicas por método de pagamento
+    if (body.payment_method_id === 'pix') {
+      // PIX não precisa de token nem parcelas
+      console.log("[MP PROCESS] Processando pagamento PIX");
+    } else {
+      // Cartão de crédito/débito precisa de token e pode ter parcelas
+      if (body.token) paymentData.token = body.token;
+      if (body.issuer_id) paymentData.issuer_id = body.issuer_id;
+      if (body.installments) paymentData.installments = Number(body.installments);
+      console.log("[MP PROCESS] Processando pagamento com cartão");
+    }
 
-    console.log("[MP BACKEND] Criando pagamento...");
-    const result = await payment.create({ body: paymentBody });
+    // Adicionar external_reference da order
+    if (orderData.external_reference) {
+      paymentData.external_reference = orderData.external_reference;
+    }
 
-    return NextResponse.json({
-      status: result.status,
-      status_detail: result.status_detail,
-      id: result.id,
-      point_of_interaction: result.point_of_interaction
+    // Adicionar metadata
+    paymentData.metadata = {
+      order_id: orderId,
+      ...(orderData.metadata || {})
+    };
+
+    console.log("[MP PROCESS] Criando pagamento...");
+
+    // 3. Criar o pagamento
+    const paymentResponse = await fetch("https://api.mercadopago.com/v1/payments", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "X-Idempotency-Key": `payment_${orderId}_${Date.now()}`
+      },
+      body: JSON.stringify(paymentData)
     });
+
+    const paymentResult = await paymentResponse.json();
+
+    if (!paymentResponse.ok) {
+      console.error("[MP ERROR] Erro ao criar pagamento:", paymentResult);
+      return NextResponse.json({
+        error: "Erro ao processar pagamento.",
+        details: paymentResult
+      }, { status: paymentResponse.status });
+    }
+
+    console.log("[MP PROCESS] Pagamento criado com sucesso:", paymentResult.id);
+    console.log("[MP PROCESS] Status:", paymentResult.status);
+
+    // 4. Retornar resposta com informações do pagamento
+    const response: any = {
+      id: paymentResult.id,
+      status: paymentResult.status,
+      status_detail: paymentResult.status_detail,
+      payment_method_id: paymentResult.payment_method_id,
+      order_id: orderId
+    };
+
+    // Para PIX, incluir informações do QR Code
+    if (paymentResult.payment_method_id === 'pix' && paymentResult.point_of_interaction) {
+      response.point_of_interaction = {
+        transaction_data: {
+          qr_code: paymentResult.point_of_interaction?.transaction_data?.qr_code,
+          qr_code_base64: paymentResult.point_of_interaction?.transaction_data?.qr_code_base64,
+          ticket_url: paymentResult.point_of_interaction?.transaction_data?.ticket_url
+        }
+      };
+      console.log("[MP PROCESS] PIX QR Code gerado com sucesso");
+    }
+
+    return NextResponse.json(response);
 
   } catch (error: any) {
     console.error("ERRO DETALHADO NO BACKEND (Process Payment):");
     console.error("- Mensagem:", error.message);
-    if (error.cause) {
-      console.error("- Causa:", JSON.stringify(error.cause, null, 2));
-    }
-    // Se o erro vier da API do Mercado Pago, ele geralmente tem um campo 'body' ou 'api_response'
-    if (error.api_response) {
-      console.error("- Resposta da API MP:", JSON.stringify(error.api_response, null, 2));
-    }
+    console.error("- Stack:", error.stack);
 
     return NextResponse.json(
       {

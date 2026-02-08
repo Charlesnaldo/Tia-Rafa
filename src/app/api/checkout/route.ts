@@ -1,10 +1,5 @@
 import { NextResponse } from "next/server";
-import { MercadoPagoConfig, Preference } from "mercadopago";
 import { PRODUTOS_LISTA } from "@/constants/produtos";
-
-const client = new MercadoPagoConfig({
-  accessToken: process.env.MP_ACCESS_TOKEN || "",
-});
 
 // Regex for basic email validation
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -12,7 +7,7 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { cartItems, emailCliente, nomeCliente, telefoneCliente, cpfCliente } = body;
+    const { cartItems, emailCliente, nomeCliente, telefoneCliente, cpfCliente, cartTotal } = body;
 
     if (!emailCliente || !emailRegex.test(emailCliente)) {
       return NextResponse.json({ error: "E-mail do cliente inválido." }, { status: 400 });
@@ -22,13 +17,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Carrinho de compras vazio ou inválido." }, { status: 400 });
     }
 
-    const processedItems: {
+    if (!cpfCliente || cpfCliente.replace(/\D/g, '').length < 11) {
+      return NextResponse.json({ error: "CPF é obrigatório para pagamentos." }, { status: 400 });
+    }
+
+    // Validar produtos e calcular total
+    const processedItems: Array<{
       id: string;
       title: string;
       unit_price: number;
       quantity: number;
       currency_id: string;
-    }[] = [];
+    }> = [];
+
     let totalAmount = 0;
     const metadataProductIds: string[] = [];
 
@@ -55,47 +56,82 @@ export async function POST(request: Request) {
     }
 
     const baseUrl = (process.env.NEXT_PUBLIC_URL || "http://localhost:3000").replace(/\/$/, "");
+    const accessToken = process.env.MP_ACCESS_TOKEN;
 
-    const preference = new Preference(client);
+    if (!accessToken) {
+      console.error("[MP ERROR] Access Token não configurado");
+      return NextResponse.json({ error: "Configuração do Mercado Pago inválida." }, { status: 500 });
+    }
 
-    const result = await preference.create({
-      body: {
-        items: processedItems, // Use the processed multiple items
-        payer: {
-          email: emailCliente,
-          name: nomeCliente ? nomeCliente.split(' ')[0] : "Cliente",
-          surname: nomeCliente ? (nomeCliente.split(' ').slice(1).join(' ') || "Checkout") : "Checkout",
-          identification: {
-            type: 'CPF',
-            number: cpfCliente ? cpfCliente.replace(/\D/g, '') : '',
-          },
-          phone: {
-            area_code: '',
-            number: telefoneCliente ? telefoneCliente.replace(/\D/g, '') : '',
+    // Criar Order usando a nova API
+    // IMPORTANTE: total_amount deve ser NUMBER, não STRING
+    const finalAmount = Number(totalAmount.toFixed(2));
+
+    const orderBody = {
+      type: "online",
+      total_amount: finalAmount,
+      external_reference: `order_${Date.now()}`,
+      description: `Compra - Tia Rafaela`,
+      transactions: {
+        payments: [
+          {
+            amount: finalAmount,
+            payment_method: {
+              id: "pix",
+              type: "bank_transfer"
+            }
           }
-        },
-        metadata: {
-          id_produtos: JSON.stringify(metadataProductIds), // Store array of product IDs
-          email_comprador: emailCliente,
-          // Removed tipo_produto and single id_produto as they are now multi-item
-          // endereco_entrega (if needed, would be handled here based on body)
-        },
-        back_urls: {
-          success: `${baseUrl}/sucesso`,
-          failure: `${baseUrl}/erro`,
-          pending: `${baseUrl}/pendente`,
-        },
-        notification_url: `${baseUrl}/api/webhook/mercadopago`,
-        purpose: 'wallet_purchase',
+        ]
       },
+      payer: {
+        email: emailCliente,
+        first_name: nomeCliente || "Cliente",
+        identification: {
+          type: "CPF",
+          number: cpfCliente.replace(/\D/g, '')
+        }
+      }
+    };
+
+    console.log("[MP CHECKOUT] Criando order com total:", finalAmount);
+    console.log("[MP CHECKOUT] Body:", JSON.stringify(orderBody, null, 2));
+
+    // Fazer requisição para criar a order
+    const response = await fetch("https://api.mercadopago.com/v1/orders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`,
+        "X-Idempotency-Key": `idemp_${Date.now()}`
+      },
+      body: JSON.stringify(orderBody)
     });
 
-    return NextResponse.json({ preferenceId: result.id });
+    const data = await response.json();
 
-  } catch (error) {
+    if (!response.ok) {
+      console.error("[MP ERROR] Status:", response.status);
+      console.error("[MP ERROR] Detalhes:", JSON.stringify(data, null, 2));
+      return NextResponse.json({
+        error: "Erro ao criar order no Mercado Pago.",
+        details: data,
+        status: response.status
+      }, { status: response.status });
+    }
+
+    console.log("[MP CHECKOUT] Order criada com sucesso:", data.id);
+
+    // Retornar o ID da order e informações adicionais
+    return NextResponse.json({
+      orderId: data.id,
+      totalAmount: finalAmount,
+      externalReference: orderBody.external_reference
+    });
+
+  } catch (error: any) {
     console.error("ERRO COMPLETO MP (Checkout):", error);
     return NextResponse.json(
-      { error: "Ocorreu um erro ao iniciar o checkout. Por favor, tente novamente." },
+      { error: "Ocorreu um erro ao iniciar o checkout. Por favor, tente novamente.", details: error.message },
       { status: 500 }
     );
   }

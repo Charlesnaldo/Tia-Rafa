@@ -185,28 +185,28 @@ export default function ProdutoDetalhes({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Adicionar ao Carrinho */}
-                <button
-                    onClick={handleAddToCart}
-                    className="w-full py-4 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-2xl font-black text-lg transition-all flex items-center justify-center gap-3 shadow-md hover:shadow-lg active:scale-[0.98]"
-                >
-                    <ShoppingCart size={22} />
-                    Adicionar ao Carrinho
-                </button>
+              {/* Adicionar ao Carrinho */}
+              <button
+                onClick={handleAddToCart}
+                className="w-full py-4 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-2xl font-black text-lg transition-all flex items-center justify-center gap-3 shadow-md hover:shadow-lg active:scale-[0.98]"
+              >
+                <ShoppingCart size={22} />
+                Adicionar ao Carrinho
+              </button>
 
-                {/* Comprar Agora */}
-                <button
-                    onClick={handleBuyNow}
-                    className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-2xl font-black text-lg transition-all flex items-center justify-center gap-3 shadow-xl shadow-purple-200 hover:shadow-2xl active:scale-[0.98]"
-                >
-                    {produto.tipo === 'digital' ? <Download size={22} /> : <Package size={22} />}
-                    Comprar Agora
-                </button>
+              {/* Comprar Agora */}
+              <button
+                onClick={handleBuyNow}
+                className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-2xl font-black text-lg transition-all flex items-center justify-center gap-3 shadow-xl shadow-purple-200 hover:shadow-2xl active:scale-[0.98]"
+              >
+                {produto.tipo === 'digital' ? <Download size={22} /> : <Package size={22} />}
+                Comprar Agora
+              </button>
             </div>
 
 
             <div className="mt-6 flex items-center justify-center gap-6 opacity-40 grayscale hover:grayscale-0 transition-all">
-              <Image src="/mercadopago-logo.webp" alt="Mercado Pago" width={56} height={16} className="h-4 w-auto" />
+              <Image src="/mercadopago-logo.webp" alt="Mercado Pago" width={56} height={16} style={{ height: 'auto', width: 'auto' }} />
               <div className="w-[1px] h-4 bg-gray-400"></div>
               <div className="flex items-center gap-1 text-[10px] font-bold">
                 <ShieldCheck size={12} />
