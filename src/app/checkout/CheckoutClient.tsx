@@ -83,17 +83,15 @@ export default function CheckoutClient() {
 
         const settings = {
           initialization: {
-            amount: Number(cartTotal) / 100,
             preferenceId: preferenceId,
             payer: {
-              email: email // Ajuda o PIX
+              email: email,
+              entity_type: 'individual' // Fix: Resolve erro "individual or association"
             }
           },
           customization: {
             visual: {
-              style: {
-                theme: 'default',
-              }
+              style: { theme: 'default' }
             },
             paymentMethods: {
               creditCard: "all",
@@ -113,19 +111,13 @@ export default function CheckoutClient() {
               console.log("MERCADO PAGO: onSubmit disparado. ID encontrado:", currentId);
 
               if (!currentId || currentId === "undefined") {
-                const msg = "Erro: ID de preferência não encontrado. Por favor, recarregue a página.";
-                console.error(msg);
-                alert(msg);
+                alert("Erro: ID de preferência não encontrado. Por favor, recarregue a página.");
                 return;
               }
 
               return new Promise((resolve, reject) => {
-                const payload = {
-                  ...formData,
-                  preferenceId: String(currentId).trim()
-                };
-
-                console.log("MERCADO PAGO: Enviando payload para processar:", payload);
+                const payload = { ...formData, preferenceId: String(currentId).trim() };
+                console.log("MERCADO PAGO: Enviando payload:", payload);
 
                 fetch("/api/process_payment", {
                   method: "POST",
@@ -134,22 +126,19 @@ export default function CheckoutClient() {
                 })
                   .then(async (res) => {
                     const data = await res.json();
-                    if (!res.ok) {
-                      console.error("ERRO NO BACKEND:", data);
-                      throw new Error(data.details || data.error || "Erro ao processar");
-                    }
+                    if (!res.ok) throw new Error(data.details || data.error || "Erro ao processar");
                     return data;
                   })
                   .then((res) => {
                     if (res.status === 'approved') {
                       clearCart();
-                      // Redireciona para a página de sucesso com os dados mínimos
                       window.location.href = `/sucesso?payment_id=${res.id}&status=approved`;
                     }
                     resolve(res);
                   })
                   .catch((err) => {
                     console.error("MERCADO PAGO: Erro na finalização:", err);
+                    alert(`Erro: ${err.message}`);
                     reject(err);
                   });
               });
