@@ -360,187 +360,106 @@ export default function CheckoutClient() {
               </div>
             </div>
 
-            <Link href="/carrinho" className="flex items-center justify-center gap-2 text-gray-400 font-bold hover:text-blue-400 transition-colors group text-sm">
+            <Link href="/carrinho" className="flex items-center justify-center gap-2 text-gray-400 font-bold hover:text-blue-400 transition-colors group text-sm mt-6">
               <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
               Editar carrinho
             </Link>
           </div>
 
-          {/* Right Column: Steps (8 cols) */}
+          {/* Right Column: Steps (7 cols) */}
           <div className="lg:col-span-12 xl:col-span-7 order-1 lg:order-2">
-            <div className="bg-white p-6 sm:p-10 rounded-[3rem] shadow-[0_20px_60px_rgba(149,157,165,0.06)] border border-pink-50 min-h-[500px] relative overflow-hidden">
+            <div className="bg-white p-6 sm:p-10 rounded-[3rem] shadow-[0_20px_60px_rgba(149,157,165,0.06)] border border-pink-50 min-h-[600px] relative">
+              {step === 1 ? (
+                <div key="step-1" className="space-y-8">
+                  <div className="text-center space-y-2">
+                    <div className="inline-block bg-pink-50 p-3 rounded-2xl mb-2">
+                      <Sparkles className="text-pink-400 animate-pulse" size={32} />
+                    </div>
+                    <h2 className="text-2xl font-black text-gray-800">Vamos começar! ✨</h2>
+                    <p className="text-gray-400 font-medium">Onde você deseja receber seu material mágico?</p>
+                  </div>
 
-              <AnimatePresence mode="wait">
-                {step === 1 ? (
-                  <motion.div
-                    key="step-1"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="space-y-8"
-                  >
-                    <div className="text-center space-y-2">
-                      <div className="inline-block bg-pink-50 p-3 rounded-2xl mb-2">
-                        <Sparkles className="text-pink-400 animate-pulse" size={32} />
-                      </div>
-                      <h2 className="text-2xl font-black text-gray-800">Vamos começar! ✨</h2>
-                      <p className="text-gray-400 font-medium">Onde você deseja receber seu material mágico?</p>
+                  <div className="space-y-6">
+                    {/* Campos de formulário (Nome, Email, Telefone, CPF) */}
+                    <div className="space-y-3">
+                      <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">Nome Completo</label>
+                      <input type="text" placeholder="Seu nome" value={nome} onChange={(e) => setNome(e.target.value)} className="w-full px-8 py-5 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg" />
+                    </div>
+                    <div className="space-y-3">
+                      <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">E-mail para entrega</label>
+                      <input type="email" placeholder="seu-email@exemplo.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-8 py-5 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg" />
+                    </div>
+                    <div className="space-y-3">
+                      <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">WhatsApp / Telefone</label>
+                      <input type="tel" placeholder="(00) 00000-0000" value={telefone} onChange={(e) => setTelefone(e.target.value)} className="w-full px-8 py-5 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg" />
+                    </div>
+                    <div className="space-y-3">
+                      <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">CPF (Obrigatório para PIX)</label>
+                      <input type="text" placeholder="000.000.000-00" value={cpf} onChange={(e) => setCpf(e.target.value)} className="w-full px-8 py-5 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg" />
                     </div>
 
-                    <div className="space-y-6">
-                      {/* Nome Completo */}
-                      <div className="space-y-3">
-                        <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">
-                          Nome Completo
-                        </label>
-                        <div className="relative group">
-                          <input
-                            type="text"
-                            placeholder="Seu nome"
-                            value={nome}
-                            onChange={(e) => setNome(e.target.value)}
-                            className="w-full px-8 py-5 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg"
-                          />
-                        </div>
-                      </div>
-
-                      {/* E-mail */}
-                      <div className="space-y-3">
-                        <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">
-                          E-mail para entrega
-                        </label>
-                        <div className="relative group">
-                          <div className={`absolute inset-0 bg-blue-100 rounded-[2rem] blur-xl opacity-0 transition-opacity group-focus-within:opacity-40`} />
-                          <div className="relative">
-                            <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-blue-400 transition-colors" size={20} />
-                            <input
-                              type="email"
-                              placeholder="seu-email@exemplo.com"
-                              value={email}
-                              onChange={(e) => setEmail(e.target.value)}
-                              className="w-full pl-16 pr-8 py-5 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg placeholder:text-gray-300"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Telefone */}
-                      <div className="space-y-3">
-                        <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">
-                          WhatsApp / Telefone
-                        </label>
-                        <div className="relative group">
-                          <input
-                            type="tel"
-                            placeholder="(00) 00000-0000"
-                            value={telefone}
-                            onChange={(e) => setTelefone(e.target.value)}
-                            className="w-full px-8 py-5 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg"
-                          />
-                        </div>
-                      </div>
-
-                      {/* CPF (Obrigatório para PIX) */}
-                      <div className="space-y-3">
-                        <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">
-                          CPF (Obrigatório para PIX)
-                        </label>
-                        <div className="relative group">
-                          <input
-                            type="text"
-                            placeholder="000.000.000-00"
-                            value={cpf}
-                            onChange={(e) => setCpf(e.target.value)}
-                            className="w-full px-8 py-5 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="bg-blue-50/50 p-6 rounded-[2rem] flex items-start gap-4">
-                        <div className="bg-blue-400 p-2 rounded-xl text-white mt-1">
-                          <Heart size={16} className="fill-white" />
-                        </div>
-                        <p className="text-sm text-blue-600 font-medium leading-relaxed">
-                          <span className="font-black block mb-1">Dica da Tia Rafa:</span>
-                          Certifique-se de que o e-mail está correto. É por ele que você terá acesso instantâneo ao material!
-                        </p>
-                      </div>
-
-                      <button
-                        onClick={handleCheckout}
-                        disabled={loading || !email.includes("@") || nome.length < 3 || cpf.replace(/\D/g, '').length < 11}
-                        className="w-full bg-blue-400 hover:bg-blue-500 disabled:bg-gray-100 disabled:text-gray-300 text-white font-black py-7 rounded-[2.5rem] text-xl shadow-xl shadow-blue-100 transition-all flex items-center justify-center gap-3 active:scale-95 group relative overflow-hidden"
-                      >
-                        {loading ? <Loader2 className="animate-spin" /> : (
-                          <>
-                            <span className="relative z-10">CONTINUAR PARA PAGAMENTO</span>
-                            <ArrowRight size={22} className="relative z-10 group-hover:translate-x-1 transition-transform" />
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </motion.div>
-                ) : (
-                  <div key="step-2" className="space-y-6">
-                    <div className="flex items-center justify-between mb-4 px-2">
-                      <button
-                        onClick={() => setStep(1)}
-                        className="flex items-center gap-1 text-gray-400 hover:text-blue-500 font-bold transition-colors text-sm"
-                      >
-                        <ChevronLeft size={16} />
-                        Mudar e-mail
-                      </button>
-                      <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full text-green-600 text-[10px] font-black uppercase">
-                        <CheckCircle2 size={12} />
-                        E-mail Identificado
-                      </div>
-                    </div>
-
-                    <div className="text-center mb-8">
-                      <h2 className="text-xl font-black text-gray-800">Finalizar Compra Segura</h2>
-                      <p className="text-gray-400 text-sm font-medium">Escolha a melhor forma de pagamento para você</p>
-                    </div>
-
-                    <div>
-                      <div
-                        key={preferenceId || 'no-id'}
-                        id="payment-brick-container"
-                        className="w-full relative"
-                        style={{ height: '600px', width: '100%', display: 'block', overflow: 'hidden' }}
-                      >
-                        {loading && (
-                          <div className="flex flex-col items-center justify-center py-20 text-blue-300 gap-4">
-                            <Loader2 className="animate-spin" size={40} />
-                            <p className="font-bold">Carregando formulário...</p>
-                          </div>
-                        )}
-                      </div>
+                    <button
+                      onClick={handleCheckout}
+                      disabled={loading || !email.includes("@") || nome.length < 3 || cpf.replace(/\D/g, '').length < 11}
+                      className="w-full bg-blue-400 hover:bg-blue-500 disabled:bg-gray-100 disabled:text-gray-300 text-white font-black py-7 rounded-[2.5rem] text-xl shadow-xl shadow-blue-100 transition-all flex items-center justify-center gap-3 active:scale-95 group relative overflow-hidden"
+                    >
+                      {loading ? <Loader2 className="animate-spin" /> : (
+                        <>
+                          <span className="relative z-10">CONTINUAR PARA PAGAMENTO</span>
+                          <ArrowRight size={22} className="relative z-10 group-hover:translate-x-1 transition-transform" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div key="step-2" className="space-y-6">
+                  <div className="flex items-center justify-between mb-4 px-2">
+                    <button onClick={() => setStep(1)} className="flex items-center gap-1 text-gray-400 hover:text-blue-500 font-bold transition-colors text-sm">
+                      <ChevronLeft size={16} /> Mudar e-mail
+                    </button>
+                    <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full text-green-600 text-[10px] font-black uppercase">
+                      <CheckCircle2 size={12} /> E-mail Identificado
                     </div>
                   </div>
-                )}
-              </AnimatePresence>
+                  <div className="text-center mb-8">
+                    <h2 className="text-xl font-black text-gray-800">Finalizar Compra Segura</h2>
+                    <p className="text-gray-400 text-sm font-medium">Escolha a melhor forma de pagamento para você</p>
+                  </div>
+                  <div
+                    key={preferenceId || 'no-id'}
+                    id="payment-brick-container"
+                    className="w-full relative"
+                    style={{ minHeight: '800px', width: '100%', display: 'block' }}
+                  >
+                    {loading && (
+                      <div className="flex flex-col items-center justify-center py-20 text-blue-300 gap-4">
+                        <Loader2 className="animate-spin" size={40} />
+                        <p className="font-bold">Carregando formulário...</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Guarantees */}
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-8 text-gray-400 text-xs font-bold uppercase tracking-widest">
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={18} className="text-blue-300" />
-                Ambiente 100% Criptografado
-              </div>
-              <div className="flex items-center gap-2">
-                <Heart size={18} className="text-pink-300" />
-                Feito com Amor pedagógico
-              </div>
+              <div className="flex items-center gap-2"><ShieldCheck size={18} className="text-blue-300" /> Ambiente 100% Criptografado</div>
+              <div className="flex items-center gap-2"><Heart size={18} className="text-pink-300" /> Feito com Amor pedagógico</div>
             </div>
           </div>
-
         </div>
       </div>
 
       <style jsx global>{`
         #payment-brick-container svg {
-          min-width: 1px;
-          min-height: 1px;
+          width: 50px !important;
+          height: 50px !important;
+        }
+        #payment-brick-container .mp-brick-payment-method-icon svg {
+           width: 40px !important;
+           height: 40px !important;
         }
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
