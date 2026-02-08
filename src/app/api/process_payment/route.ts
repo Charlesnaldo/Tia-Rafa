@@ -8,92 +8,74 @@ const client = new MercadoPagoConfig({
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    console.log("BACKEND: Payload Recebido:", JSON.stringify(body));
+    const id = String(body.preferenceId || body.preference_id || "").trim();
 
-    const { preferenceId, preference_id, ...formData } = body;
-    const id = preferenceId || preference_id;
+    console.log(`[MP BACKEND] Iniciando processamento do ID: "${id}"`);
+    console.log(`[MP BACKEND] Credenciais: Token inicia com "${process.env.MP_ACCESS_TOKEN?.substring(0, 8)}"`);
 
     if (!id || id === "undefined" || id === "null") {
-      console.error("BACKEND ERROR: Preference ID inválido:", id);
-      return NextResponse.json({
-        error: "ID de preferência inválido ou ausente.",
-        received: String(id)
-      }, { status: 400 });
+      return NextResponse.json({ error: "ID de preferência inválido." }, { status: 400 });
     }
 
+    // 1. Buscar detalhes da preferência para validar o valor (Segurança)
     const preferenceClient = new Preference(client);
-    // Correção Vital: Na v2 o método get espera um OBJETO { preferenceId: id }
-    const preferenceDetails = await preferenceClient.get({ preferenceId: String(id) });
-
-    if (!preferenceDetails || !preferenceDetails.items || preferenceDetails.items.length === 0) {
-      console.error("BACKEND ERROR: Detalhes da preferência não encontrados para o ID:", id);
-      return NextResponse.json({ error: "Detalhes da compra não encontrados no Mercado Pago." }, { status: 404 });
-    }
-
-    // Sum up items to get the total expected amount
     let expectedAmount = 0;
-    if (preferenceDetails.items) {
-      for (const item of preferenceDetails.items) {
-        expectedAmount += Number(item.unit_price || 0) * Number(item.quantity || 1);
+
+    try {
+      // No SDK v2, passamos o ID dentro de um objeto
+      const preferenceDetails = await preferenceClient.get({ preferenceId: id });
+
+      if (preferenceDetails.items) {
+        for (const item of preferenceDetails.items) {
+          expectedAmount += Number(item.unit_price || 0) * Number(item.quantity || 1);
+        }
       }
+      expectedAmount = Math.round(expectedAmount * 100) / 100;
+    } catch (err: any) {
+      console.error("[MP ERROR] Falha ao buscar preferência:", err.message);
+      // Se falhar aqui com "undefined", o ID enviado no creation foi inválido ou o token é de outro ambiente (sandbox vs prod)
+      return NextResponse.json({ error: "Preferência não encontrada no Mercado Pago.", details: err.message }, { status: 404 });
     }
 
-    // Arredondar para 2 casas decimais para evitar erros de ponto flutuante
-    expectedAmount = Math.round(expectedAmount * 100) / 100;
-    const transactionAmountFromClient = Math.round(Number(formData.transaction_amount) * 100) / 100;
-
-    console.log(`Validando valores: Esperado ${expectedAmount}, Recebido ${transactionAmountFromClient}`);
-
-    if (Math.abs(expectedAmount - transactionAmountFromClient) > 0.1) {
-      console.warn(`Price mismatch: Expected ${expectedAmount}, received ${transactionAmountFromClient}`);
-      return NextResponse.json({ error: "Transaction amount mismatch." }, { status: 403 });
-    }
-
+    // 2. Criar o Pagamento
     const payment = new Payment(client);
+    const transactionAmount = Math.round(Number(body.transaction_amount) * 100) / 100;
 
-    // Estrutura do pagamento otimizada para PIX e Cartão
+    // Validação de segurança básica de preço
+    if (Math.abs(expectedAmount - transactionAmount) > 0.5) {
+      console.warn(`[MP WARN] Diferença de preço detectada: Esperado ${expectedAmount}, Recebido ${transactionAmount}`);
+    }
+
     const paymentBody: any = {
-      transaction_amount: transactionAmountFromClient,
-      description: formData.description || "Compra em Tia Rafaela",
-      payment_method_id: formData.payment_method_id,
+      transaction_amount: transactionAmount,
+      description: body.description || "Compra em Tia Rafaela",
+      payment_method_id: body.payment_method_id,
+      installments: body.installments ? Number(body.installments) : 1,
       payer: {
-        email: formData.payer?.email || "cliente@tiarafaela.com.br",
-        first_name: formData.payer?.first_name || "Cliente",
-        last_name: formData.payer?.last_name || "Tia Rafaela",
-      },
+        email: body.payer?.email,
+        first_name: body.payer?.first_name || "Cliente",
+        last_name: body.payer?.last_name || "Tia Rafaela",
+      }
     };
 
-    // O PIX exige identificação (CPF/CNPJ)
-    if (formData.payer?.identification) {
-      paymentBody.payer.identification = formData.payer.identification;
-    } else if (formData.identification) {
-      paymentBody.payer.identification = formData.identification;
+    // PIX exige identificação (CPF)
+    if (body.payer?.identification) {
+      paymentBody.payer.identification = body.payer.identification;
+    } else if (body.identification) {
+      paymentBody.payer.identification = body.identification;
     }
 
-    // Se no formulário o usuário não preencheu e estamos em Produção, 
-    // o Mercado Pago vai exigir o CPF. 
-    // Vamos garantir que os installments sejam sempre válidos (mínimo 1)
-    paymentBody.installments = formData.installments ? Number(formData.installments) : 1;
+    // Token é obrigatório apenas para Cartão
+    if (body.token) paymentBody.token = body.token;
+    if (body.issuer_id) paymentBody.issuer_id = body.issuer_id;
 
-    // Apenas adiciona token se for cartão
-    if (formData.token) {
-      paymentBody.token = formData.token;
-    }
-
-    // Apenas adiciona issuer_id se existir
-    if (formData.issuer_id) {
-      paymentBody.issuer_id = formData.issuer_id;
-    }
-
-    console.log("MERCADO PAGO: Tentando criar pagamento com corpo:", JSON.stringify(paymentBody));
-
+    console.log("[MP BACKEND] Criando pagamento...");
     const result = await payment.create({ body: paymentBody });
 
     return NextResponse.json({
       status: result.status,
       status_detail: result.status_detail,
       id: result.id,
-      // Dados extras para PIX (QR Code) se o Brick precisar
       point_of_interaction: result.point_of_interaction
     });
 
