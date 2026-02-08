@@ -86,8 +86,8 @@ export default function CheckoutClient() {
 
         const settings = {
           initialization: {
+            amount: Number(cartTotal) / 100,
             preferenceId: preferenceId,
-            mercadoPago: mp, // VITAL: Deve estar junto com preferenceId
             payer: {
               email: email,
               first_name: nome.split(' ')[0] || "Cliente",
@@ -99,6 +99,7 @@ export default function CheckoutClient() {
               }
             }
           },
+          mercadoPago: mp, // VITAL: Deve ser propriedade do objeto de settings
           customization: {
             visual: {
               style: { theme: 'default' }
