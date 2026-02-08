@@ -34,6 +34,7 @@ export default function CheckoutClient() {
   const [step, setStep] = useState(1); // 1: Email, 2: Payment
   const paymentBrickRef = useRef<any>(null);
   const preferenceIdRef = useRef<string | null>(null);
+  const initializingRef = useRef(false);
 
   // Sincroniza o ref sempre que o preferenceId muda
   useEffect(() => {
@@ -86,22 +87,9 @@ export default function CheckoutClient() {
 
         const settings = {
           initialization: {
-            amount: Number(cartTotal) / 100,
             preferenceId: preferenceId,
           },
           mercadoPago: mp,
-          customization: {
-            visual: {
-              style: { theme: 'default' }
-            },
-            paymentMethods: {
-              creditCard: "all",
-              debitCard: "all",
-              bankTransfer: "all",
-              ticket: "all",
-              maxInstallments: 12
-            }
-          },
           callbacks: {
             onReady: () => {
               console.log("MERCADO PAGO: Componente pronto!");
@@ -149,14 +137,20 @@ export default function CheckoutClient() {
 
         // Renderização com verificação de estabilidade do container
         const initBrick = async () => {
+          if (initializingRef.current) return;
+          initializingRef.current = true;
+
           try {
-            if (paymentBrickRef.current) return;
+            if (paymentBrickRef.current) {
+              await paymentBrickRef.current.unmount();
+              paymentBrickRef.current = null;
+            }
 
             // Garantia de que o container tem largura antes de criar o Brick (evita erro de SVG)
             const checkContainer = async () => {
-              for (let i = 0; i < 10; i++) {
+              for (let i = 0; i < 20; i++) {
                 const el = document.getElementById('payment-brick-container');
-                if (el && el.offsetWidth > 0) return true;
+                if (el && el.clientWidth > 0) return true;
                 await new Promise(r => setTimeout(r, 100));
               }
               return false;
@@ -167,6 +161,8 @@ export default function CheckoutClient() {
             paymentBrickRef.current = brickInstance;
           } catch (e) {
             console.error("Erro ao criar Brick:", e);
+          } finally {
+            initializingRef.current = false;
           }
         };
 
@@ -516,6 +512,10 @@ export default function CheckoutClient() {
       </div>
 
       <style jsx global>{`
+        #payment-brick-container svg {
+          min-width: 1px;
+          min-height: 1px;
+        }
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
         }
