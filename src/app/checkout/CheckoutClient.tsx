@@ -88,6 +88,7 @@ export default function CheckoutClient() {
           initialization: {
             amount: Number(cartTotal) / 100,
             preferenceId: preferenceId,
+            mercadoPago: mp, // Colocado aqui para garantir que andem juntos
             payer: {
               email: email,
               first_name: nome.split(' ')[0] || "Cliente",
@@ -99,7 +100,6 @@ export default function CheckoutClient() {
               }
             }
           },
-          mercadoPago: mp, // VITAL: Deve ser propriedade do objeto de settings
           customization: {
             visual: {
               style: { theme: 'default' }
@@ -157,16 +157,14 @@ export default function CheckoutClient() {
           },
         };
 
-        // Delay para garantir estabilidade visual antes da renderização
-        setTimeout(async () => {
-          try {
-            if (paymentBrickRef.current) return;
-            const brickInstance = await bricksBuilder.create('payment', 'payment-brick-container', settings);
-            paymentBrickRef.current = brickInstance;
-          } catch (e) {
-            console.error("Erro ao criar Brick:", e);
-          }
-        }, 800);
+        // Renderização imediata sem o delay que causava desync
+        try {
+          if (paymentBrickRef.current) return;
+          const brickInstance = await bricksBuilder.create('payment', 'payment-brick-container', settings);
+          paymentBrickRef.current = brickInstance;
+        } catch (e) {
+          console.error("Erro ao criar Brick:", e);
+        }
       } catch (err) {
         console.error("Falha ao inicializar SDK:", err);
         setLoading(false);
@@ -456,12 +454,7 @@ export default function CheckoutClient() {
                     </div>
                   </motion.div>
                 ) : (
-                  <motion.div
-                    key="step-2"
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="space-y-6"
-                  >
+                  <div key="step-2" className="space-y-6">
                     <div className="flex items-center justify-between mb-4 px-2">
                       <button
                         onClick={() => setStep(1)}
@@ -495,7 +488,7 @@ export default function CheckoutClient() {
                         )}
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
               </AnimatePresence>
             </div>
