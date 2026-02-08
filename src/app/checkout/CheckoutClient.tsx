@@ -87,15 +87,28 @@ export default function CheckoutClient() {
 
         const settings = {
           initialization: {
+            amount: Number(cartTotal) / 100,
             preferenceId: preferenceId,
           },
           mercadoPago: mp,
+          customization: {
+            visual: {
+              style: { theme: 'default' }
+            },
+            paymentMethods: {
+              ticket: "all",
+              bankTransfer: "all",
+              creditCard: "all",
+              debitCard: "all",
+              mercadoPago: "all",
+            }
+          },
           callbacks: {
             onReady: () => {
               console.log("MERCADO PAGO: Componente pronto!");
               setLoading(false);
             },
-            onSubmit: ({ formData }: any) => {
+            onSubmit: ({ selectedPaymentMethod, formData }: any) => {
               const currentId = preferenceIdRef.current;
               if (!currentId || currentId === "undefined") {
                 alert("Erro: ID de preferência não encontrado.");
@@ -103,7 +116,11 @@ export default function CheckoutClient() {
               }
 
               return new Promise((resolve, reject) => {
-                const payload = { ...formData, preferenceId: String(currentId).trim() };
+                const payload = {
+                  ...formData,
+                  preferenceId: String(currentId).trim(),
+                  payment_method_id: selectedPaymentMethod
+                };
                 fetch("/api/process_payment", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -148,10 +165,10 @@ export default function CheckoutClient() {
 
             // Garantia de que o container tem largura antes de criar o Brick (evita erro de SVG)
             const checkContainer = async () => {
-              for (let i = 0; i < 20; i++) {
+              for (let i = 0; i < 30; i++) {
                 const el = document.getElementById('payment-brick-container');
-                if (el && el.clientWidth > 0) return true;
-                await new Promise(r => setTimeout(r, 100));
+                if (el && el.clientWidth > 100) return true; // Espera ter pelo menos 100px
+                await new Promise(r => setTimeout(r, 150));
               }
               return false;
             };
@@ -174,7 +191,7 @@ export default function CheckoutClient() {
     };
 
     renderPaymentBrick();
-  }, [preferenceId, isMpReady, cartTotal, itemCount, clearCart, step]);
+  }, [preferenceId, isMpReady, step]);
 
   if (itemCount === 0 && !preferenceId) {
     return (
@@ -478,9 +495,10 @@ export default function CheckoutClient() {
 
                     <div>
                       <div
+                        key={preferenceId || 'no-id'}
                         id="payment-brick-container"
                         className="w-full relative"
-                        style={{ minHeight: '600px', width: '100%', display: 'block' }}
+                        style={{ height: '600px', width: '100%', display: 'block', overflow: 'hidden' }}
                       >
                         {loading && (
                           <div className="flex flex-col items-center justify-center py-20 text-blue-300 gap-4">
