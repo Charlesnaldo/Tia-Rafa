@@ -52,10 +52,7 @@ export default function CheckoutClient() {
       await new Promise(r => setTimeout(r, 1000));
 
       const container = document.getElementById('payment-brick-container');
-      if (!container || container.clientWidth < 100) {
-        console.warn("Container não está pronto ou visível.");
-        return;
-      }
+      if (!container) return;
 
       try {
         const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
@@ -64,11 +61,10 @@ export default function CheckoutClient() {
         const mp = new (window as any).MercadoPago(publicKey, { locale: 'pt-BR' });
         const bricksBuilder = mp.bricks();
 
-        // 3. Configurações Limpas (Checklist ponto 1 & 2)
+        // 3. Configuração Estável: Apenas amount para o cardPayment
         const settings = {
           initialization: {
-            amount: Number(cartTotal) / 100, // OBRIGATÓRIO PARA PAYMENT BRICK
-            preferenceId: String(preferenceId).trim(),
+            amount: Number(cartTotal) / 100,
           },
           mercadoPago: mp,
           customization: {
@@ -76,26 +72,30 @@ export default function CheckoutClient() {
               style: { theme: 'flat' }
             },
             paymentMethods: {
-              ticket: "all",
-              bankTransfer: "all",
-              creditCard: "all",
-              debitCard: "all",
+              maxInstallments: 12,
             }
           },
           callbacks: {
             onReady: () => {
-              console.log("MERCADO PAGO: Renderizado com sucesso!");
+              console.log("MERCADO PAGO: Card Brick pronto!");
               setLoading(false);
             },
-            onSubmit: ({ selectedPaymentMethod, formData }: any) => {
+            onSubmit: (cardFormData: any) => {
+              const currentId = preferenceIdRef.current;
               return new Promise((resolve, reject) => {
                 fetch("/api/process_payment", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
-                    ...formData,
-                    preferenceId: String(preferenceId).trim(),
-                    payment_method_id: selectedPaymentMethod
+                    ...cardFormData,
+                    preferenceId: currentId,
+                    payer: {
+                      email: email,
+                      identification: {
+                        type: "CPF",
+                        number: cpf.replace(/\D/g, ""),
+                      }
+                    }
                   }),
                 })
                   .then(async (res) => {
@@ -120,8 +120,8 @@ export default function CheckoutClient() {
           },
         };
 
-        // 4. Criação do Brick
-        controller = await bricksBuilder.create('payment', 'payment-brick-container', settings);
+        // 4. Criação do Brick específico de Cartão
+        controller = await bricksBuilder.create('cardPayment', 'payment-brick-container', settings);
         paymentBrickRef.current = controller;
 
       } catch (err) {
@@ -392,10 +392,8 @@ export default function CheckoutClient() {
 
       <style jsx global>{`
         #payment-brick-container svg {
-          width: 50px !important;
-          height: 50px !important;
-          min-width: 50px !important;
-          min-height: 50px !important;
+          width: auto !important;
+          height: auto !important;
         }
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
