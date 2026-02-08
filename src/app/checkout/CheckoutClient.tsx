@@ -85,14 +85,8 @@ export default function CheckoutClient() {
 
         const settings = {
           initialization: {
-            amount: Number(cartTotal) / 100, // IMPORTANTE: Valor real em Reais
+            amount: Number(cartTotal) / 100,
             preferenceId: preferenceId,
-            payer: {
-              email: email,
-              first_name: nome.split(' ')[0] || "Cliente",
-              last_name: nome.split(' ').slice(1).join(' ') || "Tia Rafaela",
-              entityType: 'individual'
-            }
           },
           customization: {
             visual: {
@@ -108,22 +102,18 @@ export default function CheckoutClient() {
           },
           callbacks: {
             onReady: () => {
-              console.log("MERCADO PAGO: Formulário renderizado com sucesso!");
+              console.log("MERCADO PAGO: Formulário pronto!");
               setLoading(false);
             },
             onSubmit: ({ formData }: any) => {
               const currentId = preferenceIdRef.current;
-              console.log("MERCADO PAGO: onSubmit disparado. ID encontrado:", currentId);
-
               if (!currentId || currentId === "undefined") {
-                alert("Erro: ID de preferência não encontrado. Por favor, recarregue a página.");
+                alert("Erro: ID de preferência não encontrado.");
                 return;
               }
 
               return new Promise((resolve, reject) => {
                 const payload = { ...formData, preferenceId: String(currentId).trim() };
-                console.log("MERCADO PAGO: Enviando payload:", payload);
-
                 fetch("/api/process_payment", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -142,8 +132,8 @@ export default function CheckoutClient() {
                     resolve(res);
                   })
                   .catch((err) => {
-                    console.error("MERCADO PAGO: Erro na finalização:", err);
-                    alert(`Erro: ${err.message}`);
+                    console.error("MERCADO PAGO: Erro final:", err);
+                    alert(`Não foi possível finalizar: ${err.message}`);
                     reject(err);
                   });
               });
@@ -157,7 +147,7 @@ export default function CheckoutClient() {
 
         const brickInstance = await bricksBuilder.create('payment', 'payment-brick-container', {
           ...settings,
-          mercadoPago: mp // CORREÇÃO VITAL
+          mercadoPago: mp
         });
         paymentBrickRef.current = brickInstance;
       } catch (err) {
