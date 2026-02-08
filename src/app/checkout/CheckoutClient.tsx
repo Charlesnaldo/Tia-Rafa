@@ -26,6 +26,8 @@ export default function CheckoutClient() {
   const { cartItems, cartTotal, itemCount, clearCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
+  const [nome, setNome] = useState("");
+  const [telefone, setTelefone] = useState("");
   const [preferenceId, setPreferenceId] = useState<string | null>(null);
   const [isMpReady, setIsMpReady] = useState(false);
   const [step, setStep] = useState(1); // 1: Email, 2: Payment
@@ -83,10 +85,13 @@ export default function CheckoutClient() {
 
         const settings = {
           initialization: {
+            amount: Number(cartTotal) / 100, // IMPORTANTE: Valor real em Reais
             preferenceId: preferenceId,
             payer: {
               email: email,
-              entity_type: 'individual' // Fix: Resolve erro "individual or association"
+              first_name: nome.split(' ')[0] || "Cliente",
+              last_name: nome.split(' ').slice(1).join(' ') || "Tia Rafaela",
+              entity_type: 'individual'
             }
           },
           customization: {
@@ -189,7 +194,13 @@ export default function CheckoutClient() {
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cartItems: cartItems, emailCliente: email, cartTotal: cartTotal }),
+        body: JSON.stringify({
+          cartItems: cartItems,
+          emailCliente: email,
+          nomeCliente: nome,
+          telefoneCliente: telefone,
+          cartTotal: cartTotal
+        }),
       });
 
       const data = await response.json();
@@ -344,6 +355,23 @@ export default function CheckoutClient() {
                     </div>
 
                     <div className="space-y-6">
+                      {/* Nome Completo */}
+                      <div className="space-y-3">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">
+                          Nome Completo
+                        </label>
+                        <div className="relative group">
+                          <input
+                            type="text"
+                            placeholder="Seu nome"
+                            value={nome}
+                            onChange={(e) => setNome(e.target.value)}
+                            className="w-full px-8 py-5 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg"
+                          />
+                        </div>
+                      </div>
+
+                      {/* E-mail */}
                       <div className="space-y-3">
                         <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">
                           E-mail para entrega
@@ -357,9 +385,25 @@ export default function CheckoutClient() {
                               placeholder="seu-email@exemplo.com"
                               value={email}
                               onChange={(e) => setEmail(e.target.value)}
-                              className="w-full pl-16 pr-8 py-6 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg placeholder:text-gray-300"
+                              className="w-full pl-16 pr-8 py-5 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg placeholder:text-gray-300"
                             />
                           </div>
+                        </div>
+                      </div>
+
+                      {/* Telefone */}
+                      <div className="space-y-3">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">
+                          WhatsApp / Telefone
+                        </label>
+                        <div className="relative group">
+                          <input
+                            type="tel"
+                            placeholder="(00) 00000-0000"
+                            value={telefone}
+                            onChange={(e) => setTelefone(e.target.value)}
+                            className="w-full px-8 py-5 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg"
+                          />
                         </div>
                       </div>
 
@@ -375,7 +419,7 @@ export default function CheckoutClient() {
 
                       <button
                         onClick={handleCheckout}
-                        disabled={loading || !email.includes("@")}
+                        disabled={loading || !email.includes("@") || nome.length < 3}
                         className="w-full bg-blue-400 hover:bg-blue-500 disabled:bg-gray-100 disabled:text-gray-300 text-white font-black py-7 rounded-[2.5rem] text-xl shadow-xl shadow-blue-100 transition-all flex items-center justify-center gap-3 active:scale-95 group relative overflow-hidden"
                       >
                         {loading ? <Loader2 className="animate-spin" /> : (
