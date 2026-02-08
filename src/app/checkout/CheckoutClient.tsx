@@ -67,7 +67,7 @@ export default function CheckoutClient() {
         // 3. Configurações Limpas (Checklist ponto 1 & 2)
         const settings = {
           initialization: {
-            // USAR APENAS preferenceId (sem amount) para evitar o erro de conflito nos logs
+            amount: Number(cartTotal) / 100, // OBRIGATÓRIO PARA PAYMENT BRICK
             preferenceId: String(preferenceId).trim(),
           },
           mercadoPago: mp,
@@ -137,7 +137,7 @@ export default function CheckoutClient() {
         try { controller.unmount(); } catch (e) { }
       }
     };
-  }, [step, preferenceId, isMpReady]);
+  }, [step, preferenceId, isMpReady, cartTotal]);
 
   if (itemCount === 0 && !preferenceId) {
     return (
