@@ -22,8 +22,13 @@ export async function POST(request: Request) {
     let expectedAmount = 0;
 
     try {
-      // No SDK v2, passamos o ID dentro de um objeto
-      const preferenceDetails = await preferenceClient.get({ preferenceId: id });
+      // Usamos a chave preferenceId conforme exigido pelo SDK v2
+      // e fazemos cast para any para o TypeScript aceitar (visto que o tipo PreferenceGetData varia)
+      const preferenceDetails: any = await preferenceClient.get({
+        preferenceId: id
+      } as any);
+
+      console.log(`[MP BACKEND] Preferência encontrada. Detalhes: ${JSON.stringify(preferenceDetails?.items?.[0] || {})}`);
 
       if (preferenceDetails.items) {
         for (const item of preferenceDetails.items) {
@@ -31,10 +36,14 @@ export async function POST(request: Request) {
         }
       }
       expectedAmount = Math.round(expectedAmount * 100) / 100;
+      console.log(`[MP BACKEND] Preferência encontrada. Valor total esperado: ${expectedAmount}`);
     } catch (err: any) {
       console.error("[MP ERROR] Falha ao buscar preferência:", err.message);
-      // Se falhar aqui com "undefined", o ID enviado no creation foi inválido ou o token é de outro ambiente (sandbox vs prod)
-      return NextResponse.json({ error: "Preferência não encontrada no Mercado Pago.", details: err.message }, { status: 404 });
+      return NextResponse.json({
+        error: "ID de compra expirado ou inválido no MP.",
+        details: err.message,
+        id_received: id
+      }, { status: 404 });
     }
 
     // 2. Criar o Pagamento

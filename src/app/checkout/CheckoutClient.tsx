@@ -85,6 +85,9 @@ export default function CheckoutClient() {
           initialization: {
             amount: Number(cartTotal) / 100,
             preferenceId: preferenceId,
+            payer: {
+              email: email // Ajuda o PIX
+            }
           },
           customization: {
             visual: {
@@ -122,7 +125,7 @@ export default function CheckoutClient() {
                   preferenceId: String(currentId).trim()
                 };
 
-                console.log("MERCADO PAGO: Enviando payload final:", payload);
+                console.log("MERCADO PAGO: Enviando payload para processar:", payload);
 
                 fetch("/api/process_payment", {
                   method: "POST",
@@ -133,7 +136,7 @@ export default function CheckoutClient() {
                     const data = await res.json();
                     if (!res.ok) {
                       console.error("ERRO NO BACKEND:", data);
-                      throw new Error(data.details || data.error || "Erro ao processar pagamento");
+                      throw new Error(data.details || data.error || "Erro ao processar");
                     }
                     return data;
                   })
@@ -147,7 +150,6 @@ export default function CheckoutClient() {
                   })
                   .catch((err) => {
                     console.error("MERCADO PAGO: Erro na finalização:", err);
-                    alert(`Não foi possível finalizar: ${err.message}`);
                     reject(err);
                   });
               });
@@ -159,7 +161,10 @@ export default function CheckoutClient() {
           },
         };
 
-        const brickInstance = await bricksBuilder.create('payment', 'payment-brick-container', settings);
+        const brickInstance = await bricksBuilder.create('payment', 'payment-brick-container', {
+          ...settings,
+          mercadoPago: mp // CORREÇÃO VITAL
+        });
         paymentBrickRef.current = brickInstance;
       } catch (err) {
         console.error("Falha ao inicializar SDK:", err);
