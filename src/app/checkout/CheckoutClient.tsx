@@ -61,10 +61,11 @@ export default function CheckoutClient() {
         const mp = new (window as any).MercadoPago(publicKey, { locale: 'pt-BR' });
         const bricksBuilder = mp.bricks();
 
-        // 3. Configuração Estável: Apenas amount para o cardPayment
+        // 3. Configuração Multi-meios (Pix + Cartão)
         const settings = {
           initialization: {
             amount: Number(cartTotal) / 100,
+            preferenceId: String(preferenceId).trim(),
           },
           mercadoPago: mp,
           customization: {
@@ -72,23 +73,28 @@ export default function CheckoutClient() {
               style: { theme: 'flat' }
             },
             paymentMethods: {
-              maxInstallments: 12,
+              ticket: "all",
+              bankTransfer: "all",
+              creditCard: "all",
+              debitCard: "all",
             }
           },
           callbacks: {
             onReady: () => {
-              console.log("MERCADO PAGO: Card Brick pronto!");
+              console.log("MERCADO PAGO: Multi-meios pronto!");
               setLoading(false);
             },
-            onSubmit: (cardFormData: any) => {
+            onSubmit: ({ selectedPaymentMethod, formData }: any) => {
               const currentId = preferenceIdRef.current;
+
               return new Promise((resolve, reject) => {
                 fetch("/api/process_payment", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
-                    ...cardFormData,
+                    ...formData,
                     preferenceId: currentId,
+                    payment_method_id: selectedPaymentMethod,
                     payer: {
                       email: email,
                       identification: {
@@ -120,8 +126,8 @@ export default function CheckoutClient() {
           },
         };
 
-        // 4. Criação do Brick específico de Cartão
-        controller = await bricksBuilder.create('cardPayment', 'payment-brick-container', settings);
+        // 4. Criação do Brick Multi-Meios
+        controller = await bricksBuilder.create('payment', 'payment-brick-container', settings);
         paymentBrickRef.current = controller;
 
       } catch (err) {
