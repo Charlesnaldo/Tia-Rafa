@@ -2,16 +2,14 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
 
-// Define the structure of a product in the cart
-interface CartItem {
+export type CartItem = {
   id: string;
   nome: string;
-  preco: number; // Stored in cents, as per existing product structure
+  preco: number;
   imagem?: string;
   quantity: number;
-}
+};
 
-// Define the shape of the cart context
 interface CartContextType {
   cartItems: CartItem[];
   addToCart: (item: Omit<CartItem, 'quantity'>, quantity?: number) => void;
@@ -22,23 +20,23 @@ interface CartContextType {
   itemCount: number;
 }
 
-// Create the context
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-// Cart Provider component
-export const CartProvider = ({ children }: { children: ReactNode }) => {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-
-  // Load cart from localStorage on initial mount
-  useEffect(() => {
+const loadInitialCart = (): CartItem[] => {
+  if (typeof window === 'undefined') return [];
+  try {
     const storedCart = localStorage.getItem('cart');
-    if (storedCart) {
-      setCartItems(JSON.parse(storedCart));
-    }
-  }, []);
+    return storedCart ? JSON.parse(storedCart) : [];
+  } catch {
+    return [];
+  }
+};
 
-  // Save cart to localStorage whenever cartItems changes
+export const CartProvider = ({ children }: { children: ReactNode }) => {
+  const [cartItems, setCartItems] = useState<CartItem[]>(loadInitialCart);
+
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     localStorage.setItem('cart', JSON.stringify(cartItems));
   }, [cartItems]);
 

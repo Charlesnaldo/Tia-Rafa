@@ -17,7 +17,8 @@ export default function CheckoutWrapper() {
   const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
-    setHasMounted(true);
+    const frame = requestAnimationFrame(() => setHasMounted(true));
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   if (!hasMounted) {

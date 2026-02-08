@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Mail, MessageCircle, Instagram, Youtube, Heart, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
+import { Mail, MessageCircle, Instagram, Youtube, Heart, ShieldCheck, Sparkles } from 'lucide-react';
 
 export default function Footer() {
   return (

@@ -25,7 +25,7 @@ function CatalogContent() {
   const [paginaAtual, setPaginaAtual] = useState(1);
   const itensPorPagina = 10; // Exibe 10 produtos por página
 
-  const produtosArray = Object.values(PRODUTOS_LISTA);
+  const produtosArray = useMemo(() => Object.values(PRODUTOS_LISTA), []);
   const todasTags = ['Tudo', ...Array.from(new Set(produtosArray.flatMap(p => p.tags || [])))];
 
   // Filtro de produtos
@@ -37,7 +37,7 @@ function CatalogContent() {
       return matchesBusca && matchesCategoria && matchesTag;
     });
     return filtrados;
-  }, [busca, categoria, tagAtiva]);
+  }, [busca, categoria, tagAtiva, produtosArray]);
 
   // Cálculos de Paginação
   const totalPaginas = Math.ceil(produtosFiltrados.length / itensPorPagina);

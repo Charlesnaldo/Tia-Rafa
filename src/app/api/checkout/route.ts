@@ -7,7 +7,7 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { cartItems, emailCliente, nomeCliente, telefoneCliente, cpfCliente, cartTotal } = body;
+    const { cartItems, emailCliente, nomeCliente, cpfCliente } = body;
 
     if (!emailCliente || !emailRegex.test(emailCliente)) {
       return NextResponse.json({ error: "E-mail do cliente inválido." }, { status: 400 });
@@ -22,16 +22,7 @@ export async function POST(request: Request) {
     }
 
     // Validar produtos e calcular total
-    const processedItems: Array<{
-      id: string;
-      title: string;
-      unit_price: number;
-      quantity: number;
-      currency_id: string;
-    }> = [];
-
     let totalAmount = 0;
-    const metadataProductIds: string[] = [];
 
     for (const item of cartItems) {
       const produto = PRODUTOS_LISTA[item.id];
@@ -44,18 +35,9 @@ export async function POST(request: Request) {
 
       const valorNumerico = produto.preco / 100; // Assuming preco is in cents
 
-      processedItems.push({
-        id: produto.id,
-        title: produto.nome,
-        unit_price: valorNumerico,
-        quantity: item.quantity,
-        currency_id: "BRL",
-      });
       totalAmount += valorNumerico * item.quantity;
-      metadataProductIds.push(produto.id);
     }
 
-    const baseUrl = (process.env.NEXT_PUBLIC_URL || "http://localhost:3000").replace(/\/$/, "");
     const accessToken = process.env.MP_ACCESS_TOKEN;
 
     if (!accessToken) {
@@ -63,19 +45,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Configuração do Mercado Pago inválida." }, { status: 500 });
     }
 
-    // Criar Order usando a nova API
-    // IMPORTANTE: total_amount deve ser NUMBER, não STRING
+    // Criar Order usando a nova API (total_amount/transações aceitam strings)
     const finalAmount = Number(totalAmount.toFixed(2));
+
+    const amountString = finalAmount.toFixed(2);
 
     const orderBody = {
       type: "online",
-      total_amount: finalAmount,
+      total_amount: amountString,
       external_reference: `order_${Date.now()}`,
       description: `Compra - Tia Rafaela`,
       transactions: {
         payments: [
           {
-            amount: finalAmount,
+            amount: amountString,
             payment_method: {
               id: "pix",
               type: "bank_transfer"
@@ -128,10 +111,11 @@ export async function POST(request: Request) {
       externalReference: orderBody.external_reference
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("ERRO COMPLETO MP (Checkout):", error);
     return NextResponse.json(
-      { error: "Ocorreu um erro ao iniciar o checkout. Por favor, tente novamente.", details: error.message },
+      { error: "Ocorreu um erro ao iniciar o checkout. Por favor, tente novamente.", details: errorMessage },
       { status: 500 }
     );
   }

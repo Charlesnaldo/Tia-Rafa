@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, BookOpen, Heart, Info, ShoppingCart } from "lucide-react"; // Import ShoppingCart
+import { Home, BookOpen, Info, ShoppingCart } from "lucide-react"; // Import ShoppingCart
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/context/CartContext"; // Import useCart
 

@@ -4,9 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   Loader2,
   ChevronLeft,
-  Mail,
   Sparkles,
-  Heart,
   ShieldCheck,
   Lock,
   CheckCircle2,
@@ -17,7 +15,57 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import Script from 'next/script';
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+
+type PaymentBrickFormData = Record<string, string | number | boolean | undefined> & {
+  token?: string;
+  issuer_id?: string;
+  installments?: number;
+  transaction_amount?: string;
+};
+
+type BrickSubmitPayload = {
+  selectedPaymentMethod: string;
+  formData: PaymentBrickFormData;
+};
+
+interface PaymentBrickController {
+  unmount?: () => void;
+}
+
+interface MercadoPagoInstance {
+  bricks: () => MercadoPagoBrickBuilder;
+}
+
+interface MercadoPagoConstructor {
+  new (publicKey: string, options: { locale: string }): MercadoPagoInstance;
+}
+
+interface MercadoPagoBrickBuilder {
+  create: (type: "payment", container: string, settings: MercadoPagoBrickSettings) => Promise<PaymentBrickController>;
+}
+
+interface MercadoPagoBrickSettings {
+  initialization: {
+    amount: number;
+  };
+  customization: {
+    visual: {
+      theme: "flat";
+    };
+    paymentMethods: Record<string, "all">;
+  };
+  callbacks: {
+    onReady: () => void;
+    onSubmit: (payload: BrickSubmitPayload) => Promise<void>;
+    onError: (error: Error) => void;
+  };
+  mercadoPago: MercadoPagoInstance;
+}
+
+type MercadoPagoWindow = Window & {
+  MercadoPago?: MercadoPagoConstructor;
+};
 import { formatCurrency } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
 import { PRODUTOS_LISTA } from "@/constants/produtos";
@@ -32,7 +80,6 @@ export default function CheckoutClient() {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [isMpReady, setIsMpReady] = useState(false);
   const [step, setStep] = useState(1); // 1: Email, 2: Payment
-  const paymentBrickRef = useRef<any>(null);
   const orderIdRef = useRef<string | null>(null);
 
   // Sincroniza o ref sempre que o orderId muda para ser acessado dentro de callbacks
@@ -60,13 +107,12 @@ export default function CheckoutClient() {
   useEffect(() => {
     if (step !== 2 || !orderId || !isMpReady) return;
 
-    let controller: any = null;
+    let controller: PaymentBrickController | null = null;
     let observer: MutationObserver | null = null;
     let styleElement: HTMLStyleElement | null = null;
-    let intervalFix: any = null;
+    let intervalFix: ReturnType<typeof setInterval> | null = null;
 
     const renderBrick = async () => {
-      // Suprimir erros de console chatos do SVG
       const originalError = console.error;
       console.error = (...args) => {
         if (args[0] && typeof args[0] === 'string' && (args[0].includes('<svg> attribute width') || args[0].includes('<svg> attribute height'))) {
@@ -75,7 +121,6 @@ export default function CheckoutClient() {
         originalError.apply(console, args);
       };
 
-      // Injeta CSS global
       styleElement = document.createElement('style');
       styleElement.id = 'mp-svg-fix';
       styleElement.textContent = `
@@ -87,7 +132,7 @@ export default function CheckoutClient() {
         `;
       document.head.appendChild(styleElement);
 
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       const container = document.getElementById('payment-brick-container');
       if (!container) return;
 
@@ -97,23 +142,24 @@ export default function CheckoutClient() {
 
       try {
         const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
-        if (!publicKey || !(window as any).MercadoPago) return;
+        const MercadoPagoCtor = (window as MercadoPagoWindow).MercadoPago;
+        if (!publicKey || !MercadoPagoCtor) return;
 
-        const mp = new (window as any).MercadoPago(publicKey, { locale: 'pt-BR' });
+        const mp = new MercadoPagoCtor(publicKey, { locale: 'pt-BR' });
         const bricksBuilder = mp.bricks();
 
-        const settings = {
+        const settings: MercadoPagoBrickSettings = {
           initialization: {
             amount: Number(cartTotal) / 100,
           },
           mercadoPago: mp,
           customization: {
-            visual: { theme: 'flat' as any },
+            visual: { theme: 'flat' },
             paymentMethods: {
-              ticket: "all" as any,
-              bankTransfer: "all" as any,
-              creditCard: "all" as any,
-              debitCard: "all" as any,
+              ticket: "all",
+              bankTransfer: "all",
+              creditCard: "all",
+              debitCard: "all",
             }
           },
           callbacks: {
@@ -127,7 +173,7 @@ export default function CheckoutClient() {
               }, 100);
               setLoading(false);
             },
-            onSubmit: ({ selectedPaymentMethod, formData }: any) => {
+            onSubmit: ({ selectedPaymentMethod, formData }: BrickSubmitPayload) => {
               const currentOrderId = orderIdRef.current;
               return new Promise((resolve, reject) => {
                 fetch("/api/process_payment", {
@@ -137,6 +183,14 @@ export default function CheckoutClient() {
                     ...formData,
                     orderId: currentOrderId,
                     payment_method_id: selectedPaymentMethod,
+                    cartItems: cartItems.map(item => ({ id: item.id, quantity: item.quantity })),
+                    cartTotal,
+                    customerInfo: {
+                      email,
+                      nome,
+                      telefone,
+                      cpf,
+                    },
                     payer: {
                       email,
                       identification: {
@@ -155,13 +209,14 @@ export default function CheckoutClient() {
                     }
                     resolve(data);
                   })
-                  .catch((err) => {
-                    alert(`Erro: ${err.message}`);
-                    reject(err);
+                  .catch((error) => {
+                    const message = error instanceof Error ? error.message : "Erro ao processar";
+                    alert(`Erro: ${message}`);
+                    reject(error);
                   });
               });
             },
-            onError: (error: any) => {
+            onError: (error: Error) => {
               console.error("MERCADO PAGO ERRO:", error);
               setLoading(false);
             },
@@ -169,7 +224,6 @@ export default function CheckoutClient() {
         };
 
         controller = await bricksBuilder.create('payment', 'payment-brick-container', settings);
-        paymentBrickRef.current = controller;
       } catch (err) {
         console.error("Falha ao criar Brick:", err);
       }
@@ -180,14 +234,14 @@ export default function CheckoutClient() {
     return () => {
       if (observer) observer.disconnect();
       if (controller && typeof controller.unmount === 'function') {
-        try { controller.unmount(); } catch (e) { }
+        try { controller.unmount(); } catch { }
       }
       if (styleElement && styleElement.parentNode) {
         styleElement.parentNode.removeChild(styleElement);
       }
       if (intervalFix) clearInterval(intervalFix);
     };
-  }, [step, orderId, isMpReady, cartTotal, email, cpf, clearCart]);
+  }, [step, orderId, isMpReady, cartTotal, email, cpf, clearCart, cartItems, nome, telefone]);
 
   if (itemCount === 0 && !orderId) {
     return (
@@ -215,7 +269,6 @@ export default function CheckoutClient() {
           cartItems,
           emailCliente: email,
           nomeCliente: nome,
-          telefoneCliente: telefone,
           cpfCliente: cpf,
           cartTotal
         }),
@@ -228,9 +281,10 @@ export default function CheckoutClient() {
       } else {
         throw new Error(data.error || "Erro ao criar order");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setLoading(false);
-      alert(`Erro: ${error.message || "Ocorreu um erro ao processar o checkout."}`);
+      const errorMessage = error instanceof Error ? error.message : "Ocorreu um erro ao processar o checkout.";
+      alert(`Erro: ${errorMessage}`);
     }
   };
 

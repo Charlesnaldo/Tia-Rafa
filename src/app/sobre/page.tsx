@@ -211,7 +211,7 @@ function SobreContent() {
                   </div>
                   <div>
                     <p className="text-xl text-blue-600 font-bold italic leading-relaxed">
-                      "Transformando o aprendizado em uma experiência mágica e significativa."
+                      &ldquo;Transformando o aprendizado em uma experiência mágica e significativa.&rdquo;
                     </p>
                     <p className="text-gray-600 leading-relaxed mt-4 text-lg">
                       Com mais de 15 anos de experiência em educação infantil, crio materiais que unem fundamentos neurocientíficos com design encantador.

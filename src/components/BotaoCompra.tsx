@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { Download, Package, Loader2 } from "lucide-react";
+import { Download, Package } from "lucide-react";
 import { Produto } from "@/constants/produtos";
 
 export default function BotaoCompra({ produto }: { produto: Produto }) {
