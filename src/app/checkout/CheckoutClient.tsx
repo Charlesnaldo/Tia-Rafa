@@ -88,11 +88,10 @@ export default function CheckoutClient() {
           initialization: {
             amount: Number(cartTotal) / 100,
             preferenceId: preferenceId,
-            mercadoPago: mp, // Colocado aqui para garantir que andem juntos
             payer: {
               email: email,
-              first_name: nome.split(' ')[0] || "Cliente",
-              last_name: nome.split(' ').slice(1).join(' ') || "Tia Rafaela",
+              firstName: nome.split(' ')[0] || "Cliente",
+              lastName: nome.split(' ').slice(1).join(' ') || "Tia Rafaela",
               entityType: 'individual',
               identification: {
                 type: 'CPF',
@@ -100,6 +99,7 @@ export default function CheckoutClient() {
               }
             }
           },
+          mercadoPago: mp, // Colocado na raiz do objeto de settings conforme v2
           customization: {
             visual: {
               style: { theme: 'default' }
@@ -157,14 +157,30 @@ export default function CheckoutClient() {
           },
         };
 
-        // Renderização imediata sem o delay que causava desync
-        try {
-          if (paymentBrickRef.current) return;
-          const brickInstance = await bricksBuilder.create('payment', 'payment-brick-container', settings);
-          paymentBrickRef.current = brickInstance;
-        } catch (e) {
-          console.error("Erro ao criar Brick:", e);
-        }
+        // Renderização com verificação de estabilidade do container
+        const initBrick = async () => {
+          try {
+            if (paymentBrickRef.current) return;
+
+            // Garantia de que o container tem largura antes de criar o Brick (evita erro de SVG)
+            const checkContainer = async () => {
+              for (let i = 0; i < 10; i++) {
+                const el = document.getElementById('payment-brick-container');
+                if (el && el.offsetWidth > 0) return true;
+                await new Promise(r => setTimeout(r, 100));
+              }
+              return false;
+            };
+
+            await checkContainer();
+            const brickInstance = await bricksBuilder.create('payment', 'payment-brick-container', settings);
+            paymentBrickRef.current = brickInstance;
+          } catch (e) {
+            console.error("Erro ao criar Brick:", e);
+          }
+        };
+
+        initBrick();
       } catch (err) {
         console.error("Falha ao inicializar SDK:", err);
         setLoading(false);
@@ -477,8 +493,8 @@ export default function CheckoutClient() {
                     <div>
                       <div
                         id="payment-brick-container"
-                        className="w-full"
-                        style={{ minHeight: '600px', display: 'block' }}
+                        className="w-full relative"
+                        style={{ minHeight: '600px', width: '100%', display: 'block' }}
                       >
                         {loading && (
                           <div className="flex flex-col items-center justify-center py-20 text-blue-300 gap-4">
