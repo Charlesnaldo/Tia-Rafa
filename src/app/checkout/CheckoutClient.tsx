@@ -85,7 +85,6 @@ export default function CheckoutClient() {
 
         const settings = {
           initialization: {
-            amount: Number(cartTotal) / 100,
             preferenceId: preferenceId,
           },
           customization: {
@@ -102,7 +101,7 @@ export default function CheckoutClient() {
           },
           callbacks: {
             onReady: () => {
-              console.log("MERCADO PAGO: Formulário pronto!");
+              console.log("MERCADO PAGO: Pronto!");
               setLoading(false);
             },
             onSubmit: ({ formData }: any) => {
@@ -145,11 +144,18 @@ export default function CheckoutClient() {
           },
         };
 
-        const brickInstance = await bricksBuilder.create('payment', 'payment-brick-container', {
-          ...settings,
-          mercadoPago: mp
-        });
-        paymentBrickRef.current = brickInstance;
+        // Delay de 500ms para garantir que o container existe e tem tamanho na tela
+        setTimeout(async () => {
+          try {
+            const brickInstance = await bricksBuilder.create('payment', 'payment-brick-container', {
+              ...settings,
+              mercadoPago: mp
+            });
+            paymentBrickRef.current = brickInstance;
+          } catch (e) {
+            console.error("Erro ao criar Brick após timeout:", e);
+          }
+        }, 500);
       } catch (err) {
         console.error("Falha ao inicializar SDK:", err);
         setLoading(false);
@@ -447,8 +453,8 @@ export default function CheckoutClient() {
                       <p className="text-gray-400 text-sm font-medium">Escolha a melhor forma de pagamento para você</p>
                     </div>
 
-                    <div className="animate-in fade-in duration-1000">
-                      <div id="payment-brick-container" className="min-h-[400px]">
+                    <div>
+                      <div id="payment-brick-container" className="min-h-[400px] w-full">
                         {loading && (
                           <div className="flex flex-col items-center justify-center py-20 text-blue-300 gap-4">
                             <Loader2 className="animate-spin" size={40} />
