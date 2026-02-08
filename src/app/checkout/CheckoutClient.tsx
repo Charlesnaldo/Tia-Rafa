@@ -47,34 +47,31 @@ export default function CheckoutClient() {
 
     const initBrick = async () => {
       try {
+        // Aguarda um pouco mais para o DOM e estilos estabilizarem (Checklist ponto 3)
+        await new Promise(r => setTimeout(r, 800));
+
         const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
-        console.log("Checking Public Key:", publicKey); // Checklist ponto 4
+        if (!publicKey) return;
 
-        if (!publicKey) {
-          console.error("ERRO: Public Key não encontrada!");
-          return;
-        }
-
-        // Checklist ponto 5: Usando window.MercadoPago
-        if (!(window as any).MercadoPago) {
-          console.warn("MercadoPago SDK não está no window.");
-          return;
-        }
+        if (!(window as any).MercadoPago) return;
 
         const mp = new (window as any).MercadoPago(publicKey, { locale: 'pt-BR' });
         const bricksBuilder = mp.bricks();
 
-        // Limpa instância anterior se houver
         if (paymentBrickRef.current) {
           try { await paymentBrickRef.current.unmount(); } catch (e) { }
           paymentBrickRef.current = null;
         }
 
+        // Sanitização do ID
+        const cleanPreferenceId = String(preferenceId).trim();
+
         const settings = {
           initialization: {
-            amount: Number(cartTotal) / 100,
-            preferenceId: preferenceId,
+            // Quando usar preferenceId, NÃO envie o amount para evitar conflito de parâmetros (Checklist ponto 1)
+            preferenceId: cleanPreferenceId,
           },
+          // Obrigatório passar a instância do MP para o Brick (Checklist ponto 2)
           mercadoPago: mp,
           customization: {
             visual: {
@@ -89,18 +86,17 @@ export default function CheckoutClient() {
           },
           callbacks: {
             onReady: () => {
-              console.log("MERCADO PAGO: Componente pronto!");
+              console.log("MERCADO PAGO: Pronto!");
               setLoading(false);
             },
             onSubmit: ({ selectedPaymentMethod, formData }: any) => {
-              const currentId = preferenceIdRef.current;
               return new Promise((resolve, reject) => {
                 fetch("/api/process_payment", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     ...formData,
-                    preferenceId: currentId,
+                    preferenceId: cleanPreferenceId,
                     payment_method_id: selectedPaymentMethod
                   }),
                 })
@@ -120,17 +116,16 @@ export default function CheckoutClient() {
               });
             },
             onError: (error: any) => {
-              console.error("Erro SDK Mercado Pago:", error);
+              console.error("Erro SDK:", error);
               setLoading(false);
             },
           },
         };
 
-        // Checklist ponto 1: Container com tamanho garantido via CSS
         const controller = await bricksBuilder.create('payment', 'payment-brick-container', settings);
         paymentBrickRef.current = controller;
       } catch (err) {
-        console.error("Erro na inicialização do Brick:", err);
+        console.error("Erro na inicialização:", err);
       }
     };
 
@@ -390,8 +385,10 @@ export default function CheckoutClient() {
 
       <style jsx global>{`
         #payment-brick-container svg {
-          width: auto !important;
-          height: auto !important;
+          width: 50px !important;
+          height: 50px !important;
+          min-width: 50px !important;
+          min-height: 50px !important;
         }
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
