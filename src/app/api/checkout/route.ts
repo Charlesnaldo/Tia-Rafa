@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 
     const orderBody = {
       type: "online",
-      processing_mode: "manual",
+      processing_mode: "aggregated",
       total_amount: amountString,
       external_reference: `order_${Date.now()}`,
       description: `Compra - Tia Rafaela`,
