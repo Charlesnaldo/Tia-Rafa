@@ -60,7 +60,6 @@ export async function POST(request: Request) {
         payments: [
           {
             amount: amountString,
-            processing_mode: "manual",
             payment_method: {
               id: "pix",
               type: "bank_transfer"
