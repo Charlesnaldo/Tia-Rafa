@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -9,6 +9,11 @@ import { useCart } from "@/context/CartContext"; // Import useCart
 
 function HeaderContent() {
   const { itemCount } = useCart(); // Get item count from cart context
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   return (
     <nav className="max-w-[90%] xl:max-w-7xl mx-auto relative">
@@ -83,7 +88,7 @@ function HeaderContent() {
           <Link href="/carrinho" className="flex flex-col items-center gap-1 text-purple-800 font-black hover:text-green-400 transition-all group relative">
             <ShoppingCart size={40} className="group-hover:scale-110 transition-transform" />
             <span className="text-[10px] uppercase tracking-[0.15em] font-fredoka">Carrinho</span>
-            {itemCount > 0 && (
+            {isMounted && itemCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                 {itemCount}
               </span>
