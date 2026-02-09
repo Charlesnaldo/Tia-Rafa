@@ -111,15 +111,37 @@ export default function CheckoutClient() {
     let observer: MutationObserver | null = null;
     let styleElement: HTMLStyleElement | null = null;
     let intervalFix: ReturnType<typeof setInterval> | null = null;
+    let originalConsoleError: typeof console.error | null = null;
 
     const renderBrick = async () => {
-      const originalError = console.error;
-      console.error = (...args) => {
-        if (args[0] && typeof args[0] === 'string' && (args[0].includes('<svg> attribute width') || args[0].includes('<svg> attribute height'))) {
-          return;
+      const shouldIgnoreSvgError = (value: unknown) => {
+        if (!value) return false;
+        if (typeof value === 'string') {
+          const text = value;
+          return text.includes('<svg> attribute width') || text.includes('<svg> attribute height');
         }
-        originalError.apply(console, args);
+        if (value instanceof Error) {
+          return value.message.includes('<svg> attribute width') || value.message.includes('<svg> attribute height');
+        }
+        if (typeof value === 'object' && value !== null) {
+          const message = (value as { message?: unknown }).message;
+          if (typeof message === 'string') {
+            return message.includes('<svg> attribute width') || message.includes('<svg> attribute height');
+          }
+        }
+        return false;
       };
+
+      if (!originalConsoleError) {
+        originalConsoleError = console.error;
+        const savedError = originalConsoleError;
+        console.error = (...args) => {
+          if (args.some((arg) => shouldIgnoreSvgError(arg))) {
+            return;
+          }
+          savedError.apply(console, args);
+        };
+      }
 
       styleElement = document.createElement('style');
       styleElement.id = 'mp-svg-fix';
@@ -240,6 +262,10 @@ export default function CheckoutClient() {
         styleElement.parentNode.removeChild(styleElement);
       }
       if (intervalFix) clearInterval(intervalFix);
+      if (originalConsoleError) {
+        console.error = originalConsoleError;
+        originalConsoleError = null;
+      }
     };
   }, [step, orderId, isMpReady, cartTotal, email, cpf, clearCart, cartItems, nome, telefone]);
 
