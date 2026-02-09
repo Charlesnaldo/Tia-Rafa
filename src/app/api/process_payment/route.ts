@@ -84,6 +84,7 @@ export async function POST(request: Request) {
   try {
     const body: ProcessPaymentRequest = await request.json();
     const orderId = String(body.orderId || "").trim();
+    console.log("[MP PROCESS] orderId recebido no endpoint:", orderId);
 
     console.log(`[MP PROCESS] Iniciando processamento da Order: "${orderId}"`);
     console.log(`[MP PROCESS] Método de pagamento:`, body.payment_method_id);

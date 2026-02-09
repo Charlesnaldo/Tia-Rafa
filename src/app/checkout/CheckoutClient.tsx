@@ -208,30 +208,39 @@ export default function CheckoutClient() {
             onSubmit: ({ selectedPaymentMethod, formData }: BrickSubmitPayload) => {
               const currentOrderId = orderIdRef.current;
               return new Promise((resolve, reject) => {
-                fetch("/api/process_payment", {
+                const payload = {
+                  ...formData,
+                  orderId: currentOrderId,
+                  payment_method_id: selectedPaymentMethod,
+                  cartItems: cartItems.map(item => ({ id: item.id, quantity: item.quantity })),
+                  cartTotal,
+                  customerInfo: {
+                    email,
+                    nome,
+                    telefone,
+                    cpf,
+                  },
+                  payer: {
+                    email,
+                    identification: {
+                      type: "CPF",
+                      number: cpf.replace(/\D/g, ""),
+                    }
+                  }
+                };
+
+                const request = fetch("/api/process_payment", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    ...formData,
-                    orderId: currentOrderId,
-                    payment_method_id: selectedPaymentMethod,
-                    cartItems: cartItems.map(item => ({ id: item.id, quantity: item.quantity })),
-                    cartTotal,
-                    customerInfo: {
-                      email,
-                      nome,
-                      telefone,
-                      cpf,
-                    },
-                    payer: {
-                      email,
-                      identification: {
-                        type: "CPF",
-                        number: cpf.replace(/\D/g, ""),
-                      }
-                    }
-                  }),
-                })
+                  body: JSON.stringify(payload),
+                });
+
+                console.log("[Checkout] orderId enviado para process_payment:", currentOrderId, {
+                  selectedPaymentMethod,
+                  payload,
+                });
+
+                request
                   .then(async (res) => {
                     const data = await res.json();
                     if (!res.ok) throw new Error(data.details || data.error || "Erro ao processar");
@@ -253,6 +262,7 @@ export default function CheckoutClient() {
                       window.location.href = `/sucesso?payment_id=${data.id}&status=${data.status}`;
                     }
 
+                    console.log("[Checkout] resposta process_payment:", data);
                     resolve(data);
                   })
                   .catch((error) => {
