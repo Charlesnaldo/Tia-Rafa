@@ -161,7 +161,7 @@ export async function POST(request: Request) {
 
       if (!pointOfInteraction) {
         console.log("[MP PROCESS] Buscando payment associado à order para QR");
-        const paymentsSearchResponse = await fetch(`https://api.mercadopago.com/v1/payments/search?order_id=${orderId}`, {
+        const paymentsSearchResponse = await fetch(`https://api.mercadopago.com/v1/payments/search?order.id=${orderId}`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${accessToken}`,
