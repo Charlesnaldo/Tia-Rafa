@@ -114,6 +114,31 @@ export async function POST(request: Request) {
     const paymentMethodId = transaction?.payment_method_id ?? transaction?.payment_method?.id;
     let pointOfInteraction = transaction?.point_of_interaction ?? processResult.point_of_interaction;
 
+    const fetchOrderWithPayments = async () => {
+      const response = await fetch(`https://api.mercadopago.com/v1/orders/${orderId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.warn("[MP PROCESS] Falha ao reconsultar order após processar:", errorData);
+        return null;
+      }
+      return response.json();
+    };
+
+    if (!pointOfInteraction) {
+      const refreshedOrder = await fetchOrderWithPayments();
+      const paymentFromOrder =
+        refreshedOrder?.transactions?.[0]?.payments?.[0];
+      if (paymentFromOrder) {
+        pointOfInteraction = paymentFromOrder.point_of_interaction;
+      }
+    }
+
     if (!pointOfInteraction) {
       if (paymentId) {
         console.log("[MP PROCESS] Buscando detalhes do pagamento para QR:", paymentId);
