@@ -52,6 +52,7 @@ export async function POST(request: Request) {
 
     const orderBody = {
       type: "online",
+      processing_mode: "manual",
       total_amount: amountString,
       external_reference: `order_${Date.now()}`,
       description: `Compra - Tia Rafaela`,
@@ -59,6 +60,7 @@ export async function POST(request: Request) {
         payments: [
           {
             amount: amountString,
+            processing_mode: "manual",
             payment_method: {
               id: "pix",
               type: "bank_transfer"
