@@ -114,22 +114,46 @@ export async function POST(request: Request) {
     const paymentMethodId = transaction?.payment_method_id ?? transaction?.payment_method?.id;
     let pointOfInteraction = transaction?.point_of_interaction ?? processResult.point_of_interaction;
 
-    if (!pointOfInteraction && paymentId) {
-      console.log("[MP PROCESS] Buscando detalhes do pagamento para QR:", paymentId);
-      const paymentDetailsResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-      });
+    if (!pointOfInteraction) {
+      if (paymentId) {
+        console.log("[MP PROCESS] Buscando detalhes do pagamento para QR:", paymentId);
+        const paymentDetailsResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        });
 
-      if (paymentDetailsResponse.ok) {
-        const paymentDetails = await paymentDetailsResponse.json();
-        pointOfInteraction = paymentDetails.point_of_interaction;
-      } else {
-        const paymentDetailsError = await paymentDetailsResponse.json().catch(() => ({}));
-        console.warn("[MP PROCESS] Falha ao buscar ponto de interação:", paymentDetailsError);
+        if (paymentDetailsResponse.ok) {
+          const paymentDetails = await paymentDetailsResponse.json();
+          pointOfInteraction = paymentDetails.point_of_interaction;
+        } else {
+          const paymentDetailsError = await paymentDetailsResponse.json().catch(() => ({}));
+          console.warn("[MP PROCESS] Falha ao buscar ponto de interação:", paymentDetailsError);
+        }
+      }
+
+      if (!pointOfInteraction) {
+        console.log("[MP PROCESS] Buscando payment associado à order para QR");
+        const paymentsSearchResponse = await fetch(`https://api.mercadopago.com/v1/payments/search?order_id=${orderId}`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (paymentsSearchResponse.ok) {
+          const paymentsSearchResult = await paymentsSearchResponse.json();
+          const firstPayment = paymentsSearchResult.results?.[0];
+          if (firstPayment) {
+            pointOfInteraction = firstPayment.point_of_interaction;
+          }
+        } else {
+          const searchError = await paymentsSearchResponse.json().catch(() => ({}));
+          console.warn("[MP PROCESS] Falha ao buscar pagamentos da order:", searchError);
+        }
       }
     }
 
