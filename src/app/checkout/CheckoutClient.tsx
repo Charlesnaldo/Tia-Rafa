@@ -69,6 +69,7 @@ type MercadoPagoWindow = Window & {
 import { formatCurrency } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
 import { PRODUTOS_LISTA } from "@/constants/produtos";
+import { LastPaymentSessionData } from "@/types/payment";
 
 export default function CheckoutClient() {
   const { cartItems, cartTotal, itemCount, clearCart } = useCart();
@@ -81,6 +82,15 @@ export default function CheckoutClient() {
   const [isMpReady, setIsMpReady] = useState(false);
   const [step, setStep] = useState(1); // 1: Email, 2: Payment
   const orderIdRef = useRef<string | null>(null);
+
+  const persistLastPayment = (payload: LastPaymentSessionData) => {
+    if (typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem("lastPayment", JSON.stringify(payload));
+    } catch (error) {
+      console.warn("Falha ao guardar pagamento recente:", error);
+    }
+  };
 
   // Sincroniza o ref sempre que o orderId muda para ser acessado dentro de callbacks
   useEffect(() => {
@@ -225,10 +235,24 @@ export default function CheckoutClient() {
                   .then(async (res) => {
                     const data = await res.json();
                     if (!res.ok) throw new Error(data.details || data.error || "Erro ao processar");
+
+                    const sessionPayload: LastPaymentSessionData = {
+                      id: data.id,
+                      status: data.status,
+                      payment_method_id: data.payment_method_id,
+                      point_of_interaction: data.point_of_interaction,
+                    };
+                    persistLastPayment(sessionPayload);
+
                     if (data.status === 'approved') {
                       clearCart();
-                      window.location.href = `/sucesso?payment_id=${data.id}&status=approved`;
                     }
+
+                    const shouldRedirectToSuccess = data.status === 'approved' || data.payment_method_id === 'pix';
+                    if (typeof window !== "undefined" && shouldRedirectToSuccess) {
+                      window.location.href = `/sucesso?payment_id=${data.id}&status=${data.status}`;
+                    }
+
                     resolve(data);
                   })
                   .catch((error) => {
