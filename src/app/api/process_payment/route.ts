@@ -5,55 +5,6 @@ type ProcessPaymentCartItem = {
   quantity?: number;
 };
 
-type ProcessPaymentCustomerInfo = {
-  email?: string;
-  nome?: string;
-  telefone?: string;
-  cpf?: string;
-};
-
-type ProcessPaymentRequest = {
-  cartItems?: ProcessPaymentCartItem[];
-  cartTotal?: number;
-  customerInfo?: ProcessPaymentCustomerInfo;
-  orderId?: string;
-  payment_method_id?: string;
-  transaction_amount?: number | string;
-  description?: string;
-  payer?: {
-    email?: string;
-    first_name?: string;
-    last_name?: string;
-    identification?: {
-      type?: string;
-      number?: string;
-    };
-  };
-  token?: string;
-  issuer_id?: string;
-  installments?: number | string;
-};
-
-type PaymentData = {
-  transaction_amount: number;
-  description: string;
-  payment_method_id?: string;
-  payer: {
-    email?: string;
-    first_name: string;
-    last_name: string;
-    identification?: {
-      type?: string;
-      number?: string;
-    };
-  };
-  token?: string;
-  issuer_id?: string;
-  installments?: number;
-  external_reference?: string;
-  metadata?: Record<string, string>;
-};
-
 type PointOfInteraction = {
   type?: string;
   transaction_data?: {
@@ -80,6 +31,42 @@ type ProcessPaymentResponse = {
   point_of_interaction?: PointOfInteraction;
 };
 
+type ProcessedOrderTransactionPayment = {
+  id: string;
+  status: string;
+  status_detail?: string;
+  payment_method_id?: string;
+  payment_method?: {
+    id?: string;
+  };
+  point_of_interaction?: PointOfInteraction;
+};
+
+type ProcessedOrderTransaction = {
+  payments?: ProcessedOrderTransactionPayment[];
+};
+
+type ProcessOrderResult = {
+  id: string;
+  status?: string;
+  status_detail?: string;
+  transactions?: ProcessedOrderTransaction[];
+  point_of_interaction?: PointOfInteraction;
+};
+
+type ProcessPaymentRequest = {
+  cartItems?: ProcessPaymentCartItem[];
+  cartTotal?: number;
+  customerInfo?: {
+    email?: string;
+    nome?: string;
+    telefone?: string;
+    cpf?: string;
+  };
+  orderId?: string;
+  payment_method_id?: string;
+};
+
 export async function POST(request: Request) {
   try {
     const body: ProcessPaymentRequest = await request.json();
@@ -99,139 +86,48 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Configuração do Mercado Pago inválida." }, { status: 500 });
     }
 
-    console.log("[MP PROCESS] Buscando detalhes da order...");
-    const orderResponse = await fetch(`https://api.mercadopago.com/v1/orders/${orderId}`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json"
-      }
-    });
-
-    if (!orderResponse.ok) {
-      const errorData = await orderResponse.json();
-      console.error("[MP ERROR] Falha ao buscar order:", errorData);
-      return NextResponse.json({
-        error: "Order não encontrada ou expirada.",
-        details: errorData
-      }, { status: 404 });
-    }
-
-    const orderData = await orderResponse.json();
-    console.log("[MP PROCESS] Order encontrada. Status:", orderData.status);
-
-    const cartItemsPayload = Array.isArray(body.cartItems) ? body.cartItems : [];
-    const productIds = cartItemsPayload
-      .map((item) => (item?.id ? item.id : ""))
-      .filter(Boolean);
-
-    const clientCartTotal = typeof body.cartTotal === "number" && Number.isFinite(body.cartTotal) ? body.cartTotal : 0;
-    const customerInfo = body.customerInfo || {};
-    const payerEmail = customerInfo.email || body.payer?.email || orderData.payer?.email;
-    const payerPhone = customerInfo.telefone || "";
-    const payerCpf =
-      customerInfo.cpf ||
-      body.payer?.identification?.number ||
-      orderData.payer?.identification?.number ||
-      "";
-    const payerFirstName = customerInfo.nome || body.payer?.first_name || orderData.payer?.first_name || "Cliente";
-    const payerLastName = body.payer?.last_name || orderData.payer?.last_name || "Tia Rafaela";
-
-    const expectedAmount = Number(orderData.total_amount ?? orderData.transactions?.[0]?.amount ?? 0);
-    const parsedTransactionAmount = Number(body.transaction_amount ?? orderData.total_amount ?? 0);
-    const transactionAmount = Number.isFinite(parsedTransactionAmount) ? parsedTransactionAmount : expectedAmount;
-
-    if (!Number.isFinite(parsedTransactionAmount)) {
-      console.warn("[MP PROCESS] transaction_amount inválido ou ausente, usando total da order", expectedAmount);
-    }
-
-    if (Math.abs(expectedAmount - transactionAmount) > 0.5) {
-      console.warn(`[MP WARN] Diferença de preço detectada: Esperado ${expectedAmount}, Recebido ${transactionAmount}`);
-    }
-
-    const paymentData: PaymentData = {
-      transaction_amount: transactionAmount,
-      description: body.description || orderData.description || "Compra em Tia Rafaela",
-      payment_method_id: body.payment_method_id,
-      payer: {
-        email: payerEmail,
-        first_name: payerFirstName,
-        last_name: payerLastName,
-      }
-    };
-
-    if (body.payer?.identification) {
-      paymentData.payer.identification = body.payer.identification;
-    } else if (orderData.payer?.identification) {
-      paymentData.payer.identification = orderData.payer.identification;
-    }
-
-    if (body.payment_method_id === 'pix') {
-      console.log("[MP PROCESS] Processando pagamento PIX");
-    } else {
-      if (body.token) paymentData.token = body.token;
-      if (body.issuer_id) paymentData.issuer_id = body.issuer_id;
-      if (body.installments) paymentData.installments = Number(body.installments);
-      console.log("[MP PROCESS] Processando pagamento com cartão");
-    }
-
-    if (orderData.external_reference) {
-      paymentData.external_reference = orderData.external_reference;
-    }
-
-    const orderAmountString = orderData.total_amount ?? (expectedAmount ? expectedAmount.toFixed(2) : "0");
-    const cartTotalString = clientCartTotal > 0 ? (clientCartTotal / 100).toFixed(2) : orderAmountString;
-    const metadataExtras: Record<string, string> = {
-      id_produtos: JSON.stringify(productIds),
-      cart_total: cartTotalString,
-    };
-
-    if (payerEmail) metadataExtras.email_comprador = payerEmail;
-    if (payerPhone) metadataExtras.telefone_comprador = payerPhone;
-    if (payerCpf) metadataExtras.cpf_comprador = payerCpf;
-
-    paymentData.metadata = {
-      order_id: orderId,
-      ...(orderData.metadata || {}),
-      ...metadataExtras,
-    };
-
-    console.log("[MP PROCESS] Criando pagamento...");
-
-    const paymentResponse = await fetch("https://api.mercadopago.com/v1/payments", {
+    const processOrderResponse = await fetch(`https://api.mercadopago.com/v1/orders/${orderId}/process`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${accessToken}`,
         "Content-Type": "application/json",
-        "X-Idempotency-Key": `payment_${orderId}_${Date.now()}`
+        "X-Idempotency-Key": `order_process_${orderId}_${Date.now()}`
       },
-      body: JSON.stringify(paymentData)
+      body: JSON.stringify({})
     });
 
-    const paymentResult: MercadoPagoPaymentResult = await paymentResponse.json();
+    const processResult: ProcessOrderResult = await processOrderResponse.json();
 
-    if (!paymentResponse.ok) {
-      console.error("[MP ERROR] Erro ao criar pagamento:", paymentResult);
+    if (!processOrderResponse.ok) {
+      console.error("[MP ERROR] Falha ao processar a order:", processResult);
       return NextResponse.json({
-        error: "Erro ao processar pagamento.",
-        details: paymentResult
-      }, { status: paymentResponse.status });
+        error: "Erro ao processar a order.",
+        details: processResult
+      }, { status: processOrderResponse.status });
     }
 
-    console.log("[MP PROCESS] Pagamento criado com sucesso:", paymentResult.id);
-    console.log("[MP PROCESS] Status:", paymentResult.status);
+    const payments = processResult.transactions?.[0]?.payments ?? [];
+    const transaction = payments[0];
+
+    const paymentId = transaction?.id ?? processResult.id;
+    const status = transaction?.status ?? processResult.status ?? "pending";
+    const paymentMethodId = transaction?.payment_method_id ?? transaction?.payment_method?.id;
+    const pointOfInteraction = transaction?.point_of_interaction ?? processResult.point_of_interaction;
+
+    console.log("[MP PROCESS] Order processada com sucesso:", paymentId);
+    console.log("[MP PROCESS] Status:", status);
 
     const response: ProcessPaymentResponse = {
-      id: paymentResult.id,
-      status: paymentResult.status,
-      status_detail: paymentResult.status_detail,
-      payment_method_id: paymentResult.payment_method_id,
-      order_id: orderId
+      id: paymentId,
+      status,
+      status_detail: transaction?.status_detail ?? processResult.status_detail,
+      payment_method_id: paymentMethodId,
+      order_id: orderId,
+      point_of_interaction: pointOfInteraction
     };
 
-    if (paymentResult.payment_method_id === 'pix' && paymentResult.point_of_interaction) {
-      response.point_of_interaction = paymentResult.point_of_interaction;
-      console.log("[MP PROCESS] PIX QR Code gerado com sucesso");
+    if (paymentMethodId === 'pix' && pointOfInteraction) {
+      console.log("[MP PROCESS] PIX QR Code pronto", paymentId);
     }
 
     return NextResponse.json(response);
