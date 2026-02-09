@@ -54,6 +54,32 @@ type PaymentData = {
   metadata?: Record<string, string>;
 };
 
+type PointOfInteraction = {
+  type?: string;
+  transaction_data?: {
+    qr_code?: string;
+    qr_code_base64?: string;
+    ticket_url?: string;
+  };
+};
+
+type MercadoPagoPaymentResult = {
+  id: string;
+  status: string;
+  status_detail?: string;
+  payment_method_id?: string;
+  point_of_interaction?: PointOfInteraction;
+};
+
+type ProcessPaymentResponse = {
+  id: string;
+  status: string;
+  status_detail?: string;
+  payment_method_id?: string;
+  order_id: string;
+  point_of_interaction?: PointOfInteraction;
+};
+
 export async function POST(request: Request) {
   try {
     const body: ProcessPaymentRequest = await request.json();
@@ -181,7 +207,7 @@ export async function POST(request: Request) {
       body: JSON.stringify(paymentData)
     });
 
-    const paymentResult = await paymentResponse.json();
+    const paymentResult: MercadoPagoPaymentResult = await paymentResponse.json();
 
     if (!paymentResponse.ok) {
       console.error("[MP ERROR] Erro ao criar pagamento:", paymentResult);
@@ -194,7 +220,7 @@ export async function POST(request: Request) {
     console.log("[MP PROCESS] Pagamento criado com sucesso:", paymentResult.id);
     console.log("[MP PROCESS] Status:", paymentResult.status);
 
-    const response: Record<string, any> = {
+    const response: ProcessPaymentResponse = {
       id: paymentResult.id,
       status: paymentResult.status,
       status_detail: paymentResult.status_detail,
@@ -203,13 +229,7 @@ export async function POST(request: Request) {
     };
 
     if (paymentResult.payment_method_id === 'pix' && paymentResult.point_of_interaction) {
-      response.point_of_interaction = {
-        transaction_data: {
-          qr_code: paymentResult.point_of_interaction?.transaction_data?.qr_code,
-          qr_code_base64: paymentResult.point_of_interaction?.transaction_data?.qr_code_base64,
-          ticket_url: paymentResult.point_of_interaction?.transaction_data?.ticket_url
-        }
-      };
+      response.point_of_interaction = paymentResult.point_of_interaction;
       console.log("[MP PROCESS] PIX QR Code gerado com sucesso");
     }
 
