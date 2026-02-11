@@ -91,7 +91,6 @@ export default function CheckoutClient() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [nome, setNome] = useState("");
-  const [telefone, setTelefone] = useState("");
   const [cpf, setCpf] = useState("");
   const [orderId, setOrderId] = useState<string | null>(null);
   const [isMpReady, setIsMpReady] = useState(false);
@@ -231,7 +230,6 @@ export default function CheckoutClient() {
                   customerInfo: {
                     email,
                     nome,
-                    telefone,
                     cpf,
                   },
                   payer: {
@@ -320,7 +318,7 @@ export default function CheckoutClient() {
       }
       if (intervalFix) clearInterval(intervalFix);
     };
-  }, [step, orderId, isMpReady, cartTotal, email, cpf, clearCart, cartItems, nome, telefone]);
+  }, [step, orderId, isMpReady, cartTotal, email, cpf, clearCart, cartItems, nome]);
 
   if (itemCount === 0 && !orderId) {
     return (
@@ -483,14 +481,10 @@ export default function CheckoutClient() {
                       <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">E-mail para entrega</label>
                       <input type="email" placeholder="seu-email@exemplo.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-8 py-5 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg" />
                     </div>
-                    <div className="space-y-3">
-                      <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">WhatsApp / Telefone</label>
-                      <input type="tel" placeholder="(00) 00000-0000" value={telefone} onChange={(e) => setTelefone(e.target.value)} className="w-full px-8 py-5 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg" />
-                    </div>
-                    <div className="space-y-3">
-                      <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">CPF (Obrigatório para PIX)</label>
-                      <input type="text" placeholder="000.000.000-00" value={cpf} onChange={(e) => setCpf(e.target.value)} className="w-full px-8 py-5 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg" />
-                    </div>
+                  <div className="space-y-3">
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-2 block">CPF (para gerar o Pix)</label>
+                    <input type="text" placeholder="000.000.000-00" value={cpf} onChange={(e) => setCpf(e.target.value)} className="w-full px-8 py-5 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg" />
+                  </div>
                     <button onClick={handleCheckout} disabled={loading} className="w-full bg-blue-400 hover:bg-blue-500 disabled:bg-gray-100 disabled:text-gray-300 text-white font-black py-7 rounded-[2.5rem] text-xl transition-all flex items-center justify-center gap-3">
                       {loading ? <Loader2 className="animate-spin" /> : <>CONTINUAR PARA PAGAMENTO <ArrowRight size={22} /></>}
                     </button>
