@@ -153,8 +153,12 @@ export async function POST(request: Request) {
     };
 
     const ensurePointOfInteraction = async () => {
-      const maxAttempts = 3;
-      for (let attempt = 0; attempt < maxAttempts && !pointOfInteraction; attempt += 1) {
+      const maxAttempts = 6;
+      for (let attempt = 1; attempt <= maxAttempts && !pointOfInteraction; attempt += 1) {
+        if (attempt > 1) {
+          await delay(500);
+        }
+        console.log(`[MP PROCESS] Tentativa ${attempt}/${maxAttempts} para obter point_of_interaction`);
         const refreshedOrder = await fetchOrderWithPayments();
         const paymentFromOrder = refreshedOrder?.transactions?.[0]?.payments?.[0];
         if (paymentFromOrder) {
@@ -165,6 +169,7 @@ export async function POST(request: Request) {
           }
           if (paymentFromOrder.point_of_interaction) {
             pointOfInteraction = paymentFromOrder.point_of_interaction;
+            console.log("[MP PROCESS] Encontrado point_of_interaction via order GET");
           }
         }
 
@@ -181,6 +186,7 @@ export async function POST(request: Request) {
           if (firstPayment.point_of_interaction) {
             pointOfInteraction = firstPayment.point_of_interaction;
           }
+          console.log("[MP PROCESS] Encontrado point_of_interaction via payments/search");
         }
 
         if (pointOfInteraction) break;
