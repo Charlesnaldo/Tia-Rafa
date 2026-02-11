@@ -86,6 +86,20 @@ const shouldIgnoreSvgError = (value: unknown) => {
   return message.includes('<svg> attribute width') || message.includes('<svg> attribute height');
 };
 
+if (typeof window !== "undefined") {
+  const consoleAsAny = console as Console & { __mpSvgIgnorePatched?: boolean };
+  if (!consoleAsAny.__mpSvgIgnorePatched) {
+    const originalConsoleError = console.error;
+    console.error = (...args) => {
+      if (args.some((arg) => shouldIgnoreSvgError(arg))) {
+        return;
+      }
+      originalConsoleError.apply(console, args);
+    };
+    consoleAsAny.__mpSvgIgnorePatched = true;
+  }
+}
+
 export default function CheckoutClient() {
   const { cartItems, cartTotal, itemCount, clearCart } = useCart();
   const [loading, setLoading] = useState(false);
@@ -106,19 +120,6 @@ export default function CheckoutClient() {
       console.warn("Falha ao guardar pagamento recente:", error);
     }
   };
-
-  useEffect(() => {
-    const originalError = console.error;
-    console.error = (...args) => {
-      if (args.some((arg) => shouldIgnoreSvgError(arg))) {
-        return;
-      }
-      originalError.apply(console, args);
-    };
-    return () => {
-      console.error = originalError;
-    };
-  }, []);
 
   // Sincroniza o ref sempre que o orderId muda para ser acessado dentro de callbacks
   useEffect(() => {
