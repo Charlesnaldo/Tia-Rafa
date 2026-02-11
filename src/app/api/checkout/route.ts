@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 
     const orderBody = {
       type: "online",
-      processing_mode: "aggregated",
+      processing_mode: "manual", // Orders process manually via /orders/{id}/process
       total_amount: amountString,
       external_reference: `order_${Date.now()}`,
       description: `Compra - Tia Rafaela`,
