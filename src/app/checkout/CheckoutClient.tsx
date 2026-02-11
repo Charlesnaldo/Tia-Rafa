@@ -19,7 +19,7 @@ import { motion } from "framer-motion";
 import { formatCurrency } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
 import { PRODUTOS_LISTA } from "@/constants/produtos";
-import { LastPaymentSessionData } from "@/types/payment";
+import { LastPaymentSessionData, PaymentPointOfInteraction } from "@/types/payment";
 
 type PaymentBrickFormData = Record<string, string | number | boolean | undefined> & {
   token?: string;
@@ -111,6 +111,9 @@ export default function CheckoutClient() {
   const [isMpReady, setIsMpReady] = useState(false);
   const [step, setStep] = useState(1); // 1: Email, 2: Payment
   const orderIdRef = useRef<string | null>(null);
+  const [pixPointOfInteraction, setPixPointOfInteraction] = useState<PaymentPointOfInteraction | null>(null);
+  const [pixPaymentStatus, setPixPaymentStatus] = useState<string | null>(null);
+  const [pixCodeCopied, setPixCodeCopied] = useState(false);
 
   const persistLastPayment = (payload: LastPaymentSessionData) => {
     if (typeof window === "undefined") return;
@@ -118,6 +121,18 @@ export default function CheckoutClient() {
       window.sessionStorage.setItem("lastPayment", JSON.stringify(payload));
     } catch (error) {
       console.warn("Falha ao guardar pagamento recente:", error);
+    }
+  };
+
+  const handleCopyPixCode = async () => {
+    const pixCode = pixPointOfInteraction?.transaction_data?.qr_code;
+    if (!pixCode || typeof navigator === "undefined" || !navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(pixCode);
+      setPixCodeCopied(true);
+      setTimeout(() => setPixCodeCopied(false), 1800);
+    } catch (error) {
+      console.error("Falha ao copiar o código Pix:", error);
     }
   };
 
@@ -228,6 +243,10 @@ export default function CheckoutClient() {
                   }
                 };
 
+                setPixPointOfInteraction(null);
+                setPixPaymentStatus(null);
+                setPixCodeCopied(false);
+
                 const request = fetch("/api/process_payment", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -256,8 +275,13 @@ export default function CheckoutClient() {
                       clearCart();
                     }
 
-                    const shouldRedirectToSuccess = data.status === 'approved' || data.payment_method_id === 'pix';
-                    if (typeof window !== "undefined" && shouldRedirectToSuccess) {
+                    if (data.payment_method_id === 'pix' && data.point_of_interaction) {
+                      setPixPointOfInteraction(data.point_of_interaction);
+                      setPixPaymentStatus(data.status);
+                    }
+
+                    const shouldRedirectToSuccess = data.status === 'approved';
+                    if (shouldRedirectToSuccess && typeof window !== "undefined") {
                       window.location.href = `/sucesso?payment_id=${data.id}&status=${data.status}`;
                     }
 
@@ -342,6 +366,12 @@ export default function CheckoutClient() {
       alert(`Erro: ${errorMessage}`);
     }
   };
+
+  const pixTransactionData = pixPointOfInteraction?.transaction_data;
+  const pixQrImageSrc = pixTransactionData?.qr_code_base64 ? `data:image/jpeg;base64,${pixTransactionData.qr_code_base64}` : undefined;
+  const pixCode = pixTransactionData?.qr_code;
+  const pixTicketUrl = pixTransactionData?.ticket_url;
+  const pixStatusLabel = pixPaymentStatus ? pixPaymentStatus.replace(/_/g, " ").toUpperCase() : "AGUARDANDO";
 
   return (
     <div className="min-h-screen bg-[#F8FAFF] font-fredoka py-8 px-4 sm:px-6 lg:px-8">
@@ -467,11 +497,21 @@ export default function CheckoutClient() {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between mb-4 px-2">
-                    <button onClick={() => setStep(1)} className="flex items-center gap-1 text-gray-400 hover:text-blue-500 font-bold transition-colors text-sm"><ChevronLeft size={16} /> Mudar e-mail</button>
-                    <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full text-green-600 text-[10px] font-black uppercase"><CheckCircle2 size={12} /> E-mail Identificado</div>
-                  </div>
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between mb-4 px-2">
+                      <button
+                        onClick={() => {
+                          setStep(1);
+                          setPixPointOfInteraction(null);
+                          setPixPaymentStatus(null);
+                          setPixCodeCopied(false);
+                        }}
+                        className="flex items-center gap-1 text-gray-400 hover:text-blue-500 font-bold transition-colors text-sm"
+                      >
+                        <ChevronLeft size={16} /> Mudar e-mail
+                      </button>
+                      <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full text-green-600 text-[10px] font-black uppercase"><CheckCircle2 size={12} /> E-mail Identificado</div>
+                    </div>
                   <div className="text-center mb-8">
                     <h2 className="text-xl font-black text-gray-800">Finalizar Compra Segura</h2>
                     <p className="text-gray-400 text-sm font-medium">Escolha a melhor forma de pagamento para você</p>
@@ -484,6 +524,66 @@ export default function CheckoutClient() {
                       </div>
                     )}
                   </div>
+                  {pixPointOfInteraction && (
+                    <div className="bg-white mt-6 rounded-[3rem] border border-dashed border-green-100 shadow-[0_20px_60px_rgba(72,211,153,0.25)] p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <p className="text-xs uppercase text-gray-500 font-semibold">Pagamento Pix</p>
+                          <h4 className="text-2xl font-black text-gray-900">Escolha como pagar</h4>
+                        </div>
+                        <span className="text-xs uppercase tracking-[0.4em] font-black text-emerald-600">
+                          {pixStatusLabel}
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-center gap-4">
+                        {pixQrImageSrc ? (
+                          <div className="rounded-[2rem] border border-dashed border-gray-200 bg-gray-50 p-6">
+                            <img
+                              src={pixQrImageSrc}
+                              alt="QR Code Pix"
+                              className="w-64 h-64 object-contain rounded-[1.5rem]"
+                              loading="lazy"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-64 h-64 flex items-center justify-center rounded-[1.5rem] border border-dashed border-gray-200 bg-gray-50 text-gray-400 text-xs text-center px-4">
+                            QR Code sendo gerado. Atualize ou aguarde alguns segundos.
+                          </div>
+                        )}
+
+                        {pixCode && (
+                          <div className="w-full max-w-2xl flex flex-col gap-3">
+                            <p className="text-xs text-gray-500 text-center">Código Pix</p>
+                            <div className="rounded-[1.5rem] border border-gray-200 bg-gray-100 p-4 text-[11px] sm:text-xs text-gray-700 font-mono break-words">
+                              {pixCode}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleCopyPixCode}
+                              className="mx-auto mt-2 bg-emerald-600 hover:bg-emerald-500 text-white uppercase text-[10px] tracking-[0.4em] font-black px-6 py-3 rounded-full transition"
+                            >
+                              {pixCodeCopied ? "Copiado!" : "Copiar código Pix"}
+                            </button>
+                          </div>
+                        )}
+
+                        {pixTicketUrl && (
+                          <a
+                            href={pixTicketUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs font-black uppercase tracking-[0.3em] text-blue-500 hover:text-blue-400"
+                          >
+                            Abrir comprovante Pix
+                          </a>
+                        )}
+
+                        <p className="text-[11px] text-gray-500 text-center px-4">
+                          O QR code expira em cerca de 30 minutos. Após a confirmação, liberamos o material automaticamente.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
