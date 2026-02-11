@@ -14,8 +14,12 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import Script from 'next/script';
+import Script from "next/script";
 import { motion } from "framer-motion";
+import { formatCurrency } from "@/lib/utils";
+import { useCart } from "@/context/CartContext";
+import { PRODUTOS_LISTA } from "@/constants/produtos";
+import { LastPaymentSessionData } from "@/types/payment";
 
 type PaymentBrickFormData = Record<string, string | number | boolean | undefined> & {
   token?: string;
@@ -66,10 +70,21 @@ interface MercadoPagoBrickSettings {
 type MercadoPagoWindow = Window & {
   MercadoPago?: MercadoPagoConstructor;
 };
-import { formatCurrency } from "@/lib/utils";
-import { useCart } from "@/context/CartContext";
-import { PRODUTOS_LISTA } from "@/constants/produtos";
-import { LastPaymentSessionData } from "@/types/payment";
+
+const shouldIgnoreSvgError = (value: unknown) => {
+  if (!value) return false;
+  const message =
+    typeof value === "string"
+      ? value
+      : value instanceof Error
+        ? value.message
+        : typeof value === "object" && value !== null
+          ? (value as { message?: unknown }).message
+          : undefined;
+
+  if (typeof message !== "string") return false;
+  return message.includes('<svg> attribute width') || message.includes('<svg> attribute height');
+};
 
 export default function CheckoutClient() {
   const { cartItems, cartTotal, itemCount, clearCart } = useCart();
@@ -91,6 +106,19 @@ export default function CheckoutClient() {
       console.warn("Falha ao guardar pagamento recente:", error);
     }
   };
+
+  useEffect(() => {
+    const originalError = console.error;
+    console.error = (...args) => {
+      if (args.some((arg) => shouldIgnoreSvgError(arg))) {
+        return;
+      }
+      originalError.apply(console, args);
+    };
+    return () => {
+      console.error = originalError;
+    };
+  }, []);
 
   // Sincroniza o ref sempre que o orderId muda para ser acessado dentro de callbacks
   useEffect(() => {
@@ -121,38 +149,8 @@ export default function CheckoutClient() {
     let observer: MutationObserver | null = null;
     let styleElement: HTMLStyleElement | null = null;
     let intervalFix: ReturnType<typeof setInterval> | null = null;
-    let originalConsoleError: typeof console.error | null = null;
 
     const renderBrick = async () => {
-      const shouldIgnoreSvgError = (value: unknown) => {
-        if (!value) return false;
-        if (typeof value === 'string') {
-          const text = value;
-          return text.includes('<svg> attribute width') || text.includes('<svg> attribute height');
-        }
-        if (value instanceof Error) {
-          return value.message.includes('<svg> attribute width') || value.message.includes('<svg> attribute height');
-        }
-        if (typeof value === 'object' && value !== null) {
-          const message = (value as { message?: unknown }).message;
-          if (typeof message === 'string') {
-            return message.includes('<svg> attribute width') || message.includes('<svg> attribute height');
-          }
-        }
-        return false;
-      };
-
-      if (!originalConsoleError) {
-        originalConsoleError = console.error;
-        const savedError = originalConsoleError;
-        console.error = (...args) => {
-          if (args.some((arg) => shouldIgnoreSvgError(arg))) {
-            return;
-          }
-          savedError.apply(console, args);
-        };
-      }
-
       styleElement = document.createElement('style');
       styleElement.id = 'mp-svg-fix';
       styleElement.textContent = `
@@ -296,10 +294,6 @@ export default function CheckoutClient() {
         styleElement.parentNode.removeChild(styleElement);
       }
       if (intervalFix) clearInterval(intervalFix);
-      if (originalConsoleError) {
-        console.error = originalConsoleError;
-        originalConsoleError = null;
-      }
     };
   }, [step, orderId, isMpReady, cartTotal, email, cpf, clearCart, cartItems, nome, telefone]);
 
