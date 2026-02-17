@@ -33,6 +33,10 @@ type MercadoPagoCreatePreferenceResponse = {
 };
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isPublicHost = (hostname: string) =>
+  hostname !== "localhost"
+  && hostname !== "127.0.0.1"
+  && hostname !== "::1";
 
 export async function POST(request: Request) {
   try {
@@ -84,6 +88,18 @@ export async function POST(request: Request) {
       email_comprador: emailCliente,
       id_produtos: JSON.stringify(idsProdutos),
     };
+    const baseUrl = process.env.NEXT_PUBLIC_URL?.trim();
+    let notificationUrl: string | undefined;
+    if (baseUrl) {
+      try {
+        const parsed = new URL(baseUrl);
+        if ((parsed.protocol === "https:" || parsed.protocol === "http:") && isPublicHost(parsed.hostname)) {
+          notificationUrl = `${parsed.origin}/api/webhook/mercadopago`;
+        }
+      } catch {
+        notificationUrl = undefined;
+      }
+    }
 
     if (paymentMethod === "credit_card") {
       const requestOrigin = new URL(request.url).origin;
@@ -101,6 +117,7 @@ export async function POST(request: Request) {
         payer,
         external_reference: `card_${Date.now()}`,
         metadata,
+        ...(notificationUrl ? { notification_url: notificationUrl } : {}),
         back_urls: {
           success: `${requestOrigin}/sucesso`,
           pending: `${requestOrigin}/sucesso`,
@@ -146,6 +163,7 @@ export async function POST(request: Request) {
       payment_method_id: "pix",
       payer,
       metadata,
+      ...(notificationUrl ? { notification_url: notificationUrl } : {}),
     };
 
     const mpResponse = await fetch("https://api.mercadopago.com/v1/payments", {
