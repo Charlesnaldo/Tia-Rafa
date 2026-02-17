@@ -24,6 +24,7 @@ export default function CheckoutClient() {
   const [email, setEmail] = useState("");
   const [cpf, setCpf] = useState("");
   const [loading, setLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card">("pix");
   const [pixPointOfInteraction, setPixPointOfInteraction] = useState<PaymentPointOfInteraction | null>(null);
   const [pixPaymentStatus, setPixPaymentStatus] = useState<string | null>(null);
   const [pixCodeCopied, setPixCodeCopied] = useState(false);
@@ -71,11 +72,22 @@ export default function CheckoutClient() {
           emailCliente: email,
           nomeCliente: nome,
           cpfCliente: cpf,
+          paymentMethod,
         }),
       });
       const paymentData = await processResponse.json();
       if (!processResponse.ok) {
-        throw new Error(paymentData.error || "Erro ao gerar o Pix.");
+        throw new Error(paymentData.error || "Erro ao processar pagamento.");
+      }
+
+      if (paymentMethod === "credit_card") {
+        if (!paymentData.checkout_url) {
+          throw new Error("Nao foi possivel iniciar o checkout do cartao.");
+        }
+        if (typeof window !== "undefined") {
+          window.location.href = paymentData.checkout_url;
+          return;
+        }
       }
 
       const sessionPayload: LastPaymentSessionData = {
@@ -200,11 +212,35 @@ export default function CheckoutClient() {
               <div className="space-y-6">
                 <div className="text-center space-y-2">
                   <div className="inline-block bg-pink-50 p-3 rounded-2xl mb-2"><Sparkles className="text-pink-400" size={32} /></div>
-                  <h2 className="text-3xl font-black text-gray-800">Gerar Pix instantâneo</h2>
-                  <p className="text-gray-500 font-medium">Informe os dados mínimos para criar o pagamento.</p>
+                  <h2 className="text-3xl font-black text-gray-800">Escolha como pagar</h2>
+                  <p className="text-gray-500 font-medium">Pix instantaneo ou cartao de credito pelo Mercado Pago.</p>
                 </div>
 
                 <div className="space-y-5">
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("pix")}
+                      className={`rounded-2xl border px-4 py-3 text-xs font-black uppercase tracking-[0.2em] transition ${
+                        paymentMethod === "pix"
+                          ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                          : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
+                      }`}
+                    >
+                      Pix
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("credit_card")}
+                      className={`rounded-2xl border px-4 py-3 text-xs font-black uppercase tracking-[0.2em] transition ${
+                        paymentMethod === "credit_card"
+                          ? "border-blue-300 bg-blue-50 text-blue-700"
+                          : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
+                      }`}
+                    >
+                      Cartao
+                    </button>
+                  </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 block">Nome completo</label>
                     <input
@@ -245,7 +281,7 @@ export default function CheckoutClient() {
                       <Loader2 className="animate-spin" />
                     ) : (
                       <>
-                        Gerar Pix
+                        {paymentMethod === "pix" ? "Gerar Pix" : "Pagar com cartao"}
                         <ArrowRight size={22} />
                       </>
                     )}
@@ -321,4 +357,5 @@ export default function CheckoutClient() {
     </div>
   );
 }
+
 

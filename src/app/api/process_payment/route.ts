@@ -15,6 +15,7 @@ type ProcessPaymentRequest = {
   emailCliente?: string;
   nomeCliente?: string;
   cpfCliente?: string;
+  paymentMethod?: "pix" | "credit_card";
 };
 
 type MercadoPagoCreatePaymentResponse = {
@@ -23,6 +24,12 @@ type MercadoPagoCreatePaymentResponse = {
   status_detail?: string;
   payment_method_id?: string;
   point_of_interaction?: PointOfInteraction;
+};
+
+type MercadoPagoCreatePreferenceResponse = {
+  id: string;
+  init_point?: string;
+  sandbox_init_point?: string;
 };
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -34,6 +41,7 @@ export async function POST(request: Request) {
     const emailCliente = body.emailCliente?.trim() ?? "";
     const nomeCliente = body.nomeCliente?.trim() ?? "Cliente";
     const cpfLimpo = (body.cpfCliente ?? "").replace(/\D/g, "");
+    const paymentMethod = body.paymentMethod === "credit_card" ? "credit_card" : "pix";
 
     if (!emailRegex.test(emailCliente)) {
       return NextResponse.json({ error: "E-mail do cliente invalido." }, { status: 400 });
@@ -64,22 +72,80 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Configuracao do Mercado Pago invalida." }, { status: 500 });
     }
 
+    const payer = {
+      email: emailCliente,
+      first_name: nomeCliente,
+      identification: {
+        type: "CPF",
+        number: cpfLimpo,
+      },
+    };
+    const metadata = {
+      email_comprador: emailCliente,
+      id_produtos: JSON.stringify(idsProdutos),
+    };
+
+    if (paymentMethod === "credit_card") {
+      const requestOrigin = new URL(request.url).origin;
+      const preferenceBody = {
+        items: cartItems.map((item) => {
+          const produto = PRODUTOS_LISTA[item.id];
+          return {
+            id: item.id,
+            title: produto.nome,
+            quantity: item.quantity,
+            currency_id: "BRL",
+            unit_price: Number((produto.preco / 100).toFixed(2)),
+          };
+        }),
+        payer,
+        external_reference: `card_${Date.now()}`,
+        metadata,
+        back_urls: {
+          success: `${requestOrigin}/sucesso`,
+          pending: `${requestOrigin}/sucesso`,
+          failure: `${requestOrigin}/checkout`,
+        },
+      };
+
+      const preferenceResponse = await fetch("https://api.mercadopago.com/checkout/preferences", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+          "X-Idempotency-Key": `card_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        },
+        body: JSON.stringify(preferenceBody),
+      });
+
+      const preferenceData = await preferenceResponse.json();
+      if (!preferenceResponse.ok) {
+        return NextResponse.json(
+          { error: "Erro ao iniciar checkout de cartao.", details: preferenceData },
+          { status: preferenceResponse.status }
+        );
+      }
+
+      const typedPreferenceData = preferenceData as MercadoPagoCreatePreferenceResponse;
+      const checkoutUrl = typedPreferenceData.init_point ?? typedPreferenceData.sandbox_init_point;
+      if (!checkoutUrl) {
+        return NextResponse.json({ error: "Checkout de cartao sem URL de redirecionamento." }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        id: typedPreferenceData.id,
+        status: "pending",
+        payment_method_id: "credit_card",
+        checkout_url: checkoutUrl,
+      });
+    }
+
     const createPaymentBody = {
       transaction_amount: Number(totalAmount.toFixed(2)),
       description: "Compra - Tia Rafaela",
       payment_method_id: "pix",
-      payer: {
-        email: emailCliente,
-        first_name: nomeCliente,
-        identification: {
-          type: "CPF",
-          number: cpfLimpo,
-        },
-      },
-      metadata: {
-        email_comprador: emailCliente,
-        id_produtos: JSON.stringify(idsProdutos),
-      },
+      payer,
+      metadata,
     };
 
     const mpResponse = await fetch("https://api.mercadopago.com/v1/payments", {
