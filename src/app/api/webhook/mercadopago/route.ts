@@ -4,6 +4,7 @@ import { Resend } from "resend";
 import { readFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { PRODUTOS_LISTA } from "@/constants/produtos";
+import { persistApprovedSale } from "@/lib/supabase/sales";
 
 // Force dynamic rendering - não gerar estaticamente
 export const dynamic = 'force-dynamic';
@@ -85,11 +86,33 @@ export async function POST(request: Request) {
         // Pegamos os da
         // dos que guardamos no 'metadata' lá no checkout
         const emailCliente = paymentData.metadata.email_comprador;
+        const nomeCliente = paymentData.metadata.nome_comprador;
+        const cpfCliente = paymentData.metadata.cpf_comprador;
+        const telefoneCliente = paymentData.metadata.telefone_comprador;
         const idsProdutosRaw = paymentData.metadata.id_produtos;
+        const cartItemsRaw = paymentData.metadata.cart_items;
         const idsProdutos: string[] = JSON.parse(idsProdutosRaw || "[]");
+        const cartItems: { id: string; quantity: number }[] = JSON.parse(cartItemsRaw || "[]");
         const enderecoEntrega = paymentData.metadata.endereco_entrega;
 
         console.log(`✅ Pagamento aprovado! Itens: ${idsProdutos.join(", ")} para: ${emailCliente}`);
+
+        try {
+          await persistApprovedSale({
+            mpPaymentId: String(paymentData.id),
+            status: paymentData.status || "approved",
+            paymentMethod: paymentData.payment_method_id || "pix",
+            totalAmount: Number(paymentData.transaction_amount || 0),
+            email: String(emailCliente || ""),
+            nome: nomeCliente ? String(nomeCliente) : undefined,
+            telefone: telefoneCliente ? String(telefoneCliente) : undefined,
+            cpf: cpfCliente ? String(cpfCliente) : undefined,
+            cartItems: Array.isArray(cartItems) ? cartItems : [],
+            rawPayload: paymentData,
+          });
+        } catch (dbError) {
+          console.error("Falha ao persistir venda no Supabase:", dbError);
+        }
 
         for (const produtoId of idsProdutos) {
           const produto = PRODUTOS_LISTA[produtoId];

@@ -24,6 +24,7 @@ export default function CheckoutClient() {
   const { cartItems, cartTotal, itemCount, clearCart } = useCart();
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
+  const [telefone, setTelefone] = useState("");
   const [cpf, setCpf] = useState("");
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card">("pix");
@@ -55,6 +56,7 @@ export default function CheckoutClient() {
   const handleCheckout = async () => {
     if (!email.includes("@") || email.length < 5) return alert("Por favor, insira um e-mail válido.");
     if (cpf.replace(/\D/g, "").length < 11) return alert("CPF inválido.");
+    if (telefone.replace(/\D/g, "").length < 10) return alert("Telefone inválido.");
     if (!nome.trim()) return alert("Informe o nome completo.");
     if (itemCount === 0) {
       return alert("Seu carrinho está vazio.");
@@ -74,6 +76,7 @@ export default function CheckoutClient() {
           emailCliente: email,
           nomeCliente: nome,
           cpfCliente: cpf,
+          telefoneCliente: telefone,
           paymentMethod,
         }),
       });
@@ -282,6 +285,16 @@ export default function CheckoutClient() {
                       placeholder="000.000.000-00"
                       value={cpf}
                       onChange={(e) => setCpf(e.target.value)}
+                      className="w-full px-6 py-4 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 block">Telefone</label>
+                    <input
+                      type="tel"
+                      placeholder="(11) 99999-9999"
+                      value={telefone}
+                      onChange={(e) => setTelefone(e.target.value)}
                       className="w-full px-6 py-4 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg"
                     />
                   </div>

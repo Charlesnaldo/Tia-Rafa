@@ -15,6 +15,7 @@ type ProcessPaymentRequest = {
   emailCliente?: string;
   nomeCliente?: string;
   cpfCliente?: string;
+  telefoneCliente?: string;
   paymentMethod?: "pix" | "credit_card";
 };
 
@@ -45,6 +46,7 @@ export async function POST(request: Request) {
     const emailCliente = body.emailCliente?.trim() ?? "";
     const nomeCliente = body.nomeCliente?.trim() ?? "Cliente";
     const cpfLimpo = (body.cpfCliente ?? "").replace(/\D/g, "");
+    const telefoneLimpo = (body.telefoneCliente ?? "").replace(/\D/g, "");
     const paymentMethod = body.paymentMethod === "credit_card" ? "credit_card" : "pix";
 
     if (!emailRegex.test(emailCliente)) {
@@ -52,6 +54,9 @@ export async function POST(request: Request) {
     }
     if (cpfLimpo.length !== 11) {
       return NextResponse.json({ error: "CPF invalido." }, { status: 400 });
+    }
+    if (telefoneLimpo.length < 10 || telefoneLimpo.length > 11) {
+      return NextResponse.json({ error: "Telefone invalido." }, { status: 400 });
     }
     if (!Array.isArray(cartItems) || cartItems.length === 0) {
       return NextResponse.json({ error: "Carrinho vazio ou invalido." }, { status: 400 });
@@ -86,7 +91,11 @@ export async function POST(request: Request) {
     };
     const metadata = {
       email_comprador: emailCliente,
+      nome_comprador: nomeCliente,
+      cpf_comprador: cpfLimpo,
+      telefone_comprador: telefoneLimpo,
       id_produtos: JSON.stringify(idsProdutos),
+      cart_items: JSON.stringify(cartItems),
     };
     const baseUrl = process.env.NEXT_PUBLIC_URL?.trim();
     let notificationUrl: string | undefined;
