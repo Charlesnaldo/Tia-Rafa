@@ -13,9 +13,12 @@ const pathname = usePathname();
 
 
 
+
+
   return (
     <header className="absolute top-0 left-0 w-full z-50 bg-transparent">
       <div className="flex justify-center pt-5">
+        
         <Link href="/" aria-label="Home">
           <Image
             src="/logo.webp"

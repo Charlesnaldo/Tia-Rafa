@@ -63,7 +63,7 @@ export default function CheckoutClient() {
     setPixCodeCopied(false);
 
     try {
-      const checkoutResponse = await fetch("/api/checkout", {
+      const processResponse = await fetch("/api/process_payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -71,20 +71,6 @@ export default function CheckoutClient() {
           emailCliente: email,
           nomeCliente: nome,
           cpfCliente: cpf,
-          cartTotal
-        }),
-      });
-      const checkoutData = await checkoutResponse.json();
-      if (!checkoutResponse.ok || !checkoutData.orderId) {
-        throw new Error(checkoutData.error || "Não foi possível iniciar o checkout.");
-      }
-
-      const processResponse = await fetch("/api/process_payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId: checkoutData.orderId,
-          payment_method_id: "pix",
         }),
       });
       const paymentData = await processResponse.json();
@@ -335,3 +321,4 @@ export default function CheckoutClient() {
     </div>
   );
 }
+

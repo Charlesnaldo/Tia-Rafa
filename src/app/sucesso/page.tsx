@@ -1,27 +1,28 @@
  "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { CheckCircle, Mail, Download, ArrowRight, Sparkles } from "lucide-react";
 import { LastPaymentSessionData } from "@/types/payment";
 
 // 1. Criamos o conteúdo da página em um componente separado
 function SucessoContent() {
-  const [lastPayment, setLastPayment] = useState<LastPaymentSessionData | null>(null);
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  const [lastPayment] = useState<LastPaymentSessionData | null>(() => {
+    if (typeof window === "undefined") return null;
     const stored = window.sessionStorage.getItem("lastPayment");
-    if (!stored) return;
+    if (!stored) return null;
+
     try {
       const parsed = JSON.parse(stored) as LastPaymentSessionData;
-      setLastPayment(parsed);
+      window.sessionStorage.removeItem("lastPayment");
+      return parsed;
     } catch (error) {
       console.error("Falha ao ler os dados do pagamento recente:", error);
+      window.sessionStorage.removeItem("lastPayment");
+      return null;
     }
-    window.sessionStorage.removeItem("lastPayment");
-  }, []);
+  });
+  const [copied, setCopied] = useState(false);
 
   const pixTransaction = lastPayment?.point_of_interaction?.transaction_data;
   const pixCode = pixTransaction?.qr_code;

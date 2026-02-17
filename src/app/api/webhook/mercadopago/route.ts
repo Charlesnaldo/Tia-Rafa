@@ -32,7 +32,8 @@ export async function POST(request: Request) {
 
       // VERIFICAÇÃO: O pagamento foi aprovado?
       if (paymentData.status === "approved") {
-        // Pegamos os dados que guardamos no 'metadata' lá no checkout
+        // Pegamos os da
+        // dos que guardamos no 'metadata' lá no checkout
         const emailCliente = paymentData.metadata.email_comprador;
         const idsProdutosRaw = paymentData.metadata.id_produtos;
         const idsProdutos: string[] = JSON.parse(idsProdutosRaw || "[]");
