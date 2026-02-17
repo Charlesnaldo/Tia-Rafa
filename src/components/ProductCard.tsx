@@ -27,7 +27,7 @@ export default function ProductCard({
   tipo, 
   tags = [] 
 }: ProductCardProps) {
-  const imagemPrincipal = imagens[0] || imagem || "/img/placeholder.png";
+  const imagemPrincipal = imagens[0] || imagem || "/embreve.jpg";
   const temSegundaImagem = imagens.length > 1;
   const { addToCart } = useCart(); // Use the cart hook
 

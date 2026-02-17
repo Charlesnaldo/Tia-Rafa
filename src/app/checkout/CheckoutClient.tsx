@@ -158,7 +158,7 @@ export default function CheckoutClient() {
                   return (
                     <motion.div key={item.id} className="flex items-center gap-4 p-3 rounded-2xl bg-gray-50/50">
                       <div className="w-16 h-16 bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
-                        <Image src={produto?.imagens?.[0] || "/img/placeholder.png"} width={64} height={64} alt={item.nome} className="w-full h-full object-cover" />
+                        <Image src={produto?.imagens?.[0] || "/embreve.jpg"} width={64} height={64} alt={item.nome} className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-grow min-w-0">
                         <h4 className="font-bold text-gray-800 truncate text-sm">{item.nome}</h4>

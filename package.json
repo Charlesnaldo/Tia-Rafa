@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "email:test": "node scripts/send-test-email.cjs"
   },
   "dependencies": {
     "@react-email/render": "^2.0.4",

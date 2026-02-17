@@ -5,9 +5,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
 import { Trash2, PlusCircle, MinusCircle, XCircle } from "lucide-react";
+import { PRODUTOS_LISTA } from "@/constants/produtos";
 
 export default function CartPage() {
   const { cartItems, removeFromCart, updateQuantity, clearCart, cartTotal, itemCount } = useCart();
+  const getItemImage = (item: { id: string; imagem?: string }) => {
+    const produtoAtual = PRODUTOS_LISTA[item.id];
+    return item.imagem || produtoAtual?.imagens?.[0] || produtoAtual?.imagem || "/embreve.jpg";
+  };
 
   if (itemCount === 0) {
     return (
@@ -33,7 +38,7 @@ export default function CartPage() {
             {cartItems.map((item) => (
               <div key={item.id} className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl shadow-sm border border-gray-100 animate-in fade-in slide-in-from-left-4 duration-500">
                 <div className="relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
-                  <Image src={item.imagem || "/img/placeholder.png"} alt={item.nome} fill sizes="96px" className="object-cover" />
+                  <Image src={getItemImage(item)} alt={item.nome} fill sizes="96px" className="object-cover" />
                 </div>
                 <div className="flex-grow">
                   <h2 className="text-lg font-bold text-gray-800">{item.nome}</h2>

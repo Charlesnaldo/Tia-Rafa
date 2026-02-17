@@ -45,7 +45,7 @@ export default function ProdutoDetalhes({
 
   const listaImagens = produto.imagens && produto.imagens.length > 0
     ? produto.imagens
-    : [produto.imagem || "/img/placeholder.png"];
+    : [produto.imagem || "/embreve.jpg"];
 
   const handleAddToCart = () => {
     addToCart({

@@ -51,7 +51,7 @@ function CatalogContent() {
       id: produto.id,
       nome: produto.nome,
       preco: produto.preco,
-      imagem: produto.imagem || (produto.imagens && produto.imagens.length > 0 ? produto.imagens[0] : "/img/placeholder.png"),
+      imagem: produto.imagem || (produto.imagens && produto.imagens.length > 0 ? produto.imagens[0] : "/embreve.jpg"),
     }, 1); // Add 1 quantity by default
     // Optionally add a toast notification here
   };
@@ -61,7 +61,7 @@ function CatalogContent() {
       id: produto.id,
       nome: produto.nome,
       preco: produto.preco,
-      imagem: produto.imagem || (produto.imagens && produto.imagens.length > 0 ? produto.imagens[0] : "/img/placeholder.png"),
+      imagem: produto.imagem || (produto.imagens && produto.imagens.length > 0 ? produto.imagens[0] : "/embreve.jpg"),
     }, 1); // Add 1 quantity by default
     router.push('/carrinho'); // Redirect to cart page
   };
@@ -138,7 +138,7 @@ function CatalogContent() {
               {produtosExibidos.map((produto) => {
                 const imagemFinal = (produto.imagens && produto.imagens.length > 0)
                   ? produto.imagens[0]
-                  : (produto.imagem || "/img/placeholder.png");
+                  : (produto.imagem || "/embreve.jpg");
 
                 return (
                   <div
