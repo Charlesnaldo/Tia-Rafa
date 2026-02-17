@@ -8,7 +8,9 @@ import {
   Lock,
   Zap,
   ShoppingBag,
-  ArrowRight
+  ArrowRight,
+  CreditCard,
+  QrCode
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -140,11 +142,13 @@ export default function CheckoutClient() {
   const pixStatusLabel = pixPaymentStatus ? pixPaymentStatus.replace(/_/g, " ").toUpperCase() : "AGUARDANDO";
 
   return (
-    <div className="min-h-screen bg-[#F8FAFF] font-fredoka py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto">
+    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_right,#fde7f3_0%,#f8faff_40%,#ecfeff_100%)] font-fredoka py-8 px-4 sm:px-6 lg:px-8">
+      <div className="pointer-events-none absolute -left-24 top-24 h-56 w-56 rounded-full bg-pink-200/40 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 bottom-20 h-64 w-64 rounded-full bg-blue-200/40 blur-3xl" />
+      <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           <div className="lg:col-span-12 xl:col-span-5 space-y-6 order-2 lg:order-1">
-            <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-[0_8px_40px_rgba(0,0,0,0.03)] border border-blue-50 relative overflow-hidden">
+            <div className="bg-white/90 p-6 sm:p-8 rounded-[2.5rem] shadow-[0_20px_60px_rgba(2,8,23,0.08)] border border-white relative overflow-hidden backdrop-blur">
               <div className="flex items-center gap-3 mb-8">
                 <div className="bg-blue-100 p-2 rounded-xl text-blue-500">
                   <ShoppingBag size={24} />
@@ -192,11 +196,11 @@ export default function CheckoutClient() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white p-4 rounded-3xl border border-gray-100 flex flex-col items-center text-center gap-2 shadow-sm">
+              <div className="bg-white/90 p-4 rounded-3xl border border-white flex flex-col items-center text-center gap-2 shadow-[0_14px_32px_rgba(2,8,23,0.08)]">
                 <div className="bg-pink-50 p-2 rounded-full text-pink-400"><Lock size={20} /></div>
                 <span className="text-[10px] sm:text-xs font-bold text-gray-500 leading-tight">Pagamento 100% Seguro</span>
               </div>
-              <div className="bg-white p-4 rounded-3xl border border-gray-100 flex flex-col items-center text-center gap-2 shadow-sm">
+              <div className="bg-white/90 p-4 rounded-3xl border border-white flex flex-col items-center text-center gap-2 shadow-[0_14px_32px_rgba(2,8,23,0.08)]">
                 <div className="bg-blue-50 p-2 rounded-full text-blue-400"><ShieldCheck size={20} /></div>
                 <span className="text-[10px] sm:text-xs font-bold text-gray-500 leading-tight">Acesso Imediato ao Material</span>
               </div>
@@ -208,12 +212,16 @@ export default function CheckoutClient() {
           </div>
 
           <div className="lg:col-span-12 xl:col-span-7 order-1 lg:order-2">
-            <div className="bg-white p-6 sm:p-10 rounded-[3rem] shadow-[0_20px_60px_rgba(149,157,165,0.06)] border border-pink-50">
+            <div className="bg-white/95 p-6 sm:p-10 rounded-[3rem] shadow-[0_24px_70px_rgba(2,8,23,0.1)] border border-white backdrop-blur">
               <div className="space-y-6">
                 <div className="text-center space-y-2">
                   <div className="inline-block bg-pink-50 p-3 rounded-2xl mb-2"><Sparkles className="text-pink-400" size={32} /></div>
                   <h2 className="text-3xl font-black text-gray-800">Escolha como pagar</h2>
                   <p className="text-gray-500 font-medium">Pix instantaneo ou cartao de credito pelo Mercado Pago.</p>
+                  <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                    <span className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">Checkout protegido</span>
+                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Liberacao automatica</span>
+                  </div>
                 </div>
 
                 <div className="space-y-5">
@@ -221,24 +229,30 @@ export default function CheckoutClient() {
                     <button
                       type="button"
                       onClick={() => setPaymentMethod("pix")}
-                      className={`rounded-2xl border px-4 py-3 text-xs font-black uppercase tracking-[0.2em] transition ${
+                      className={`rounded-2xl border px-4 py-3 text-xs font-black uppercase tracking-[0.12em] transition ${
                         paymentMethod === "pix"
-                          ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                          ? "border-emerald-300 bg-emerald-50 text-emerald-700 shadow-[0_12px_30px_rgba(16,185,129,0.2)]"
                           : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
                       }`}
                     >
-                      Pix
+                      <span className="flex items-center justify-center gap-2">
+                        <QrCode size={16} />
+                        Pix
+                      </span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setPaymentMethod("credit_card")}
-                      className={`rounded-2xl border px-4 py-3 text-xs font-black uppercase tracking-[0.2em] transition ${
+                      className={`rounded-2xl border px-4 py-3 text-xs font-black uppercase tracking-[0.12em] transition ${
                         paymentMethod === "credit_card"
-                          ? "border-blue-300 bg-blue-50 text-blue-700"
+                          ? "border-blue-300 bg-blue-50 text-blue-700 shadow-[0_12px_30px_rgba(59,130,246,0.2)]"
                           : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
                       }`}
                     >
-                      Cartao
+                      <span className="flex items-center justify-center gap-2">
+                        <CreditCard size={16} />
+                        Cartao
+                      </span>
                     </button>
                   </div>
                   <div className="space-y-2">
