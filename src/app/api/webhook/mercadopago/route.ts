@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { MercadoPagoConfig, Payment } from "mercadopago";
 import { Resend } from "resend";
+import { readFile } from "node:fs/promises";
+import { basename, join } from "node:path";
 import { PRODUTOS_LISTA } from "@/constants/produtos";
 
 // Force dynamic rendering - não gerar estaticamente
@@ -17,6 +19,54 @@ function getResend() {
     resendInstance = new Resend(process.env.RESEND_API_KEY);
   }
   return resendInstance;
+}
+
+function getDownloadLink(request: Request, produto: { arquivoLocal?: string; downloadUrl?: string }) {
+  const origin = new URL(request.url).origin;
+
+  if (produto.arquivoLocal) {
+    return `${origin}${produto.arquivoLocal}`;
+  }
+
+  if (!produto.downloadUrl) {
+    return "";
+  }
+
+  if (produto.downloadUrl.startsWith("http://") || produto.downloadUrl.startsWith("https://")) {
+    return produto.downloadUrl;
+  }
+
+  return `${origin}${produto.downloadUrl.startsWith("/") ? "" : "/"}${produto.downloadUrl}`;
+}
+
+async function getDigitalAttachment(produto: { id: string; arquivoLocal?: string }) {
+  if (!produto.arquivoLocal) {
+    return null;
+  }
+
+  const arquivoSemQuery = produto.arquivoLocal.split("?")[0].split("#")[0];
+  const arquivoDecodificado = decodeURIComponent(arquivoSemQuery);
+  const caminhoRelativo = arquivoDecodificado.startsWith("/")
+    ? arquivoDecodificado.slice(1)
+    : arquivoDecodificado;
+
+  if (!caminhoRelativo || caminhoRelativo.includes("..")) {
+    return null;
+  }
+
+  const caminhoAbsoluto = join(process.cwd(), "public", caminhoRelativo);
+
+  try {
+    const content = await readFile(caminhoAbsoluto);
+    return {
+      filename: basename(caminhoAbsoluto),
+      content,
+      contentType: "application/pdf",
+    };
+  } catch (error) {
+    console.error(`Arquivo digital não encontrado para o produto ${produto.id}:`, error);
+    return null;
+  }
 }
 
 export async function POST(request: Request) {
@@ -48,19 +98,23 @@ export async function POST(request: Request) {
           if (produto.tipo === 'digital') {
             // ENVIAR E-MAIL COM O MATERIAL DIGITAL
             const resend = getResend();
+            const downloadLink = getDownloadLink(request, produto);
+            const attachment = await getDigitalAttachment(produto);
             if (resend) {
               await resend.emails.send({
-                from: 'Tia Rafa <pedidos@seudominio.com>',
+                from: 'Tia Rafa <charles.naldo@gmail.com>',
                 to: emailCliente,
                 subject: `🎉 Seu material "${produto.nome}" chegou!`,
+                attachments: attachment ? [attachment] : undefined,
                 html: `
                   <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
                     <h2 style="color: #7c3aed;">Olá! Ficamos felizes com sua compra.</h2>
-                    <p>O seu material <strong>${produto.nome}</strong> já está disponível para download.</p>
+                    <p>O seu material <strong>${produto.nome}</strong> já está disponível.</p>
+                    ${attachment ? `<p>O arquivo foi enviado em anexo neste e-mail.</p>` : ""}
                     <div style="text-align: center; margin: 30px 0;">
-                      <a href="${produto.downloadUrl || '#'}" style="background: #7c3aed; color: white; padding: 16px 32px; border-radius: 12px; text-decoration: none; display: inline-block; font-weight: bold; font-size: 18px;">BAIXAR MEU MATERIAL</a>
+                      <a href="${downloadLink || '#'}" style="background: #7c3aed; color: white; padding: 16px 32px; border-radius: 12px; text-decoration: none; display: inline-block; font-weight: bold; font-size: 18px;">BAIXAR MEU MATERIAL</a>
                     </div>
-                    <p style="font-size: 14px; color: #666;">Se o botão acima não funcionar, copie e cole este link no seu navegador: ${produto.downloadUrl}</p>
+                    <p style="font-size: 14px; color: #666;">Se o botão acima não funcionar, copie e cole este link no seu navegador: ${downloadLink || "Link indisponível no momento. Entre em contato com o suporte."}</p>
                     <br/>
                     <hr style="border: none; border-top: 1px solid #eee;" />
                     <p style="font-size: 12px; color: #999;">Tia Rafa - Transformando a educação com amor.</p>
@@ -73,7 +127,7 @@ export async function POST(request: Request) {
             const resend = getResend();
             if (resend) {
               await resend.emails.send({
-                from: 'Tia Rafa <pedidos@seudominio.com>',
+                from: 'Tia Rafa <charles.naldo@gmail.com>',
                 to: emailCliente,
                 subject: '📦 Seu pedido está sendo preparado!',
                 html: `

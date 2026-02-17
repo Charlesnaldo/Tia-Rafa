@@ -10,6 +10,7 @@ export type Produto = {
   descricao: string;
   tipo: 'digital' | 'fisico';
   downloadUrl?: string;
+  arquivoLocal?: string;
   tags?: string[];
   estrelas?: number;
   depoimento?: {
@@ -23,11 +24,11 @@ export const PRODUTOS_LISTA: Record<string, Produto> = {
     id: "boas-vindas",
     nome: "Painel de Boas Vindas",
     preco: 100,
-    imagens: ["/embreve.jpg"],
+    imagens: ["/img/boasvindas2.png"],
     cor: "bg-purple-100",
     descricao: "O Painel de Boas-Vindas Infantil foi criado para encantar e espalhar alegria logo na chegada! Com cores vibrantes, alegres e cheias de vida, ele transforma qualquer ambiente em um espaço divertido e acolhedor para as crianças",
     tipo: 'digital',
-    downloadUrl: '#',
+    arquivoLocal: '/materiais/BoasVindas.pdf',
     tags: ['Educação Infantil', 'Decoração'],
     estrelas: 5,
     depoimento: {
@@ -44,7 +45,7 @@ export const PRODUTOS_LISTA: Record<string, Produto> = {
     cor: "bg-blue-100",
     descricao: "A Páscoa na Tia Rafa já começou com muita fofura e aprendizado! Quer transformar o ensino sobre essa data especial em um momento mágico, lúdico e super prático? Conheça o nosso novo Arquivo na Lata de Páscoa!.",
     tipo: 'digital',
-    downloadUrl: '#',
+    arquivoLocal: '/materiais/alfabetiza%C3%A7%C3%A3o.pdf',
     tags: ['Educação Infantil', 'Ensino Fundamental'],
     estrelas: 4,
     depoimento: {

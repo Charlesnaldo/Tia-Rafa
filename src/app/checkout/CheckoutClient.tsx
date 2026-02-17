@@ -245,7 +245,7 @@ export default function CheckoutClient() {
                     <label className="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 block">Nome completo</label>
                     <input
                       type="text"
-                      placeholder="Ronaldo Charles"
+                      placeholder="Seu nome aqui"
                       value={nome}
                       onChange={(e) => setNome(e.target.value)}
                       className="w-full px-6 py-4 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg"
