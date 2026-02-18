@@ -135,7 +135,7 @@ for all using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists "admin read admin users" on public.admin_users;
 create policy "admin read admin users" on public.admin_users
-for select using (public.is_admin());
+for select using (auth.uid() = user_id);
 
 -- Importante:
 -- 1) Crie um usuário em Authentication > Users.
