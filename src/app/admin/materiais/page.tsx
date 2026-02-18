@@ -15,6 +15,7 @@ type ProductRow = {
   descricao: string | null;
   preco_cents: number;
   tipo: string;
+  is_active: boolean;
   imagem_url: string | null;
   material_path: string | null;
 };
@@ -29,6 +30,7 @@ type EditableProduct = {
   nome: string;
   descricao: string;
   tipo: "digital" | "fisico";
+  isActive: boolean;
   precoCents: number;
   imagemUrl: string | null;
   imagemPreviewUrl: string | null;
@@ -41,6 +43,7 @@ type NewProductForm = {
   nome: string;
   descricao: string;
   tipo: "digital" | "fisico";
+  isActive: boolean;
   preco: string;
 };
 
@@ -96,6 +99,7 @@ export default function AdminMateriaisPage() {
     nome: "",
     descricao: "",
     tipo: "digital",
+    isActive: true,
     preco: "",
   });
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
@@ -104,6 +108,7 @@ export default function AdminMateriaisPage() {
   const [editNome, setEditNome] = useState("");
   const [editDescricao, setEditDescricao] = useState("");
   const [editTipo, setEditTipo] = useState<"digital" | "fisico">("digital");
+  const [editIsActive, setEditIsActive] = useState(true);
   const [editPreco, setEditPreco] = useState("");
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editPdfFile, setEditPdfFile] = useState<File | null>(null);
@@ -121,6 +126,7 @@ export default function AdminMateriaisPage() {
     setEditNome(selectedProduct.nome);
     setEditDescricao(selectedProduct.descricao || "");
     setEditTipo(selectedProduct.tipo);
+    setEditIsActive(selectedProduct.isActive);
     setEditPreco((selectedProduct.precoCents / 100).toFixed(2));
   }, [selectedProduct]);
 
@@ -160,8 +166,7 @@ export default function AdminMateriaisPage() {
     const [productsResult, salesResult] = await Promise.all([
       supabase
         .from("products")
-        .select("id, nome, descricao, preco_cents, tipo, imagem_url, material_path")
-        .eq("is_active", true)
+        .select("id, nome, descricao, preco_cents, tipo, is_active, imagem_url, material_path")
         .order("created_at", { ascending: false }),
       supabase.from("order_items").select("product_id, quantity"),
     ]);
@@ -193,6 +198,7 @@ export default function AdminMateriaisPage() {
           descricao: row.descricao || "",
           precoCents: Number.isFinite(row.preco_cents) ? Number(row.preco_cents) : 0,
           tipo,
+          isActive: row.is_active !== false,
           imagemUrl: row.imagem_url,
           imagemPreviewUrl: await resolveImagePreviewUrl(supabase, row.imagem_url),
           materialPath: row.material_path,
@@ -245,14 +251,14 @@ export default function AdminMateriaisPage() {
           tipo: newProduct.tipo,
           imagem_url: imagemUrl,
           material_path: materialPath,
-          is_active: true,
+          is_active: newProduct.isActive,
         },
         { onConflict: "id" }
       );
 
       if (insertError) throw new Error(insertError.message);
 
-      setNewProduct({ id: "", nome: "", descricao: "", tipo: "digital", preco: "" });
+      setNewProduct({ id: "", nome: "", descricao: "", tipo: "digital", isActive: true, preco: "" });
       setNewImageFile(null);
       setNewPdfFile(null);
       setPanel("manage");
@@ -291,10 +297,10 @@ export default function AdminMateriaisPage() {
           nome,
           descricao: descricao || null,
           tipo: editTipo,
+          is_active: editIsActive,
           preco_cents: Math.round(preco * 100),
           imagem_url: selectedProduct.imagemUrl,
           material_path: selectedProduct.materialPath,
-          is_active: true,
         },
         { onConflict: "id" }
       );
@@ -437,6 +443,19 @@ export default function AdminMateriaisPage() {
                     </select>
                   </label>
                   <label className="block">
+                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Status</span>
+                    <select
+                      value={newProduct.isActive ? "ativo" : "inativo"}
+                      onChange={(event) =>
+                        setNewProduct((prev) => ({ ...prev, isActive: event.target.value === "ativo" }))
+                      }
+                      className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                    >
+                      <option value="ativo">Ativo</option>
+                      <option value="inativo">Inativo</option>
+                    </select>
+                  </label>
+                  <label className="block">
                     <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Preco (R$)</span>
                     <input
                       type="text"
@@ -500,7 +519,7 @@ export default function AdminMateriaisPage() {
                     >
                       {products.map((produto) => (
                         <option key={produto.id} value={produto.id}>
-                          {produto.nome}
+                          {produto.nome} {produto.isActive ? "" : "[Inativo]"}
                         </option>
                       ))}
                     </select>
@@ -521,6 +540,7 @@ export default function AdminMateriaisPage() {
                     </div>
                     <p className="mt-3 text-xs text-gray-500 break-all">Arquivo: {selectedProduct?.imagemUrl || "-"}</p>
                     <p className="mt-1 text-xs text-gray-500">Vendidos: {selectedProduct?.soldQuantity || 0}</p>
+                    <p className="mt-1 text-xs text-gray-500">Status: {selectedProduct?.isActive ? "Ativo" : "Inativo"}</p>
                   </div>
 
                   <div className="space-y-3">
@@ -542,6 +562,17 @@ export default function AdminMateriaisPage() {
                       >
                         <option value="digital">Digital</option>
                         <option value="fisico">Fisico</option>
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Status</span>
+                      <select
+                        value={editIsActive ? "ativo" : "inativo"}
+                        onChange={(event) => setEditIsActive(event.target.value === "ativo")}
+                        className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                      >
+                        <option value="ativo">Ativo</option>
+                        <option value="inativo">Inativo</option>
                       </select>
                     </label>
                     <label className="block">
