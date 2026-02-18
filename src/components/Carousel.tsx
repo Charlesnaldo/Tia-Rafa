@@ -4,11 +4,11 @@ import React from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
 import ProductCard from "./ProductCard";
-import { PRODUTOS_LISTA } from "@/constants/produtos";
 import { Sparkles } from "lucide-react";
+import { useProductsCatalog } from "@/lib/products/useProductsCatalog";
 
 export default function DualCarousel() {
-  const produtos = Object.values(PRODUTOS_LISTA);
+  const { productsArray: produtos } = useProductsCatalog();
   
 
   const metade = Math.ceil(produtos.length / 2);

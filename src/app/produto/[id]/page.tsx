@@ -1,7 +1,6 @@
 "use client"; // Convert to Client Component
 
 import React, { useState } from "react";
-import { PRODUTOS_LISTA } from "@/constants/produtos";
 import { formatCurrency } from "@/lib/utils";
 import { notFound, useRouter } from "next/navigation"; // Import useRouter
 import Galeria from "@/components/Galeria";
@@ -28,6 +27,7 @@ import {
 // import BotaoCompra from "@/components/BotaoCompra"; // Remove BotaoCompra
 import BotaoCompartilhar from "@/components/BotaoCompartilhar";
 import { useCart } from "@/context/CartContext"; // Import useCart
+import { useProductsCatalog } from "@/lib/products/useProductsCatalog";
 
 export default function ProdutoDetalhes({
   params
@@ -36,10 +36,11 @@ export default function ProdutoDetalhes({
 }) {
   const router = useRouter();
   const { addToCart } = useCart();
+  const { productsById } = useProductsCatalog();
   const [quantity, setQuantity] = useState(1); // State for quantity
 
   const { id } = React.use(params); // Unwrap the Promise using React.use()
-  const produto = PRODUTOS_LISTA[id];
+  const produto = productsById[id];
 
   if (!produto) notFound();
 

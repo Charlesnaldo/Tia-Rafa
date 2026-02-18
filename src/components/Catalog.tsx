@@ -5,15 +5,17 @@ import { ShoppingCart, FileText, SearchX, Zap, ChevronLeft, ChevronRight, Downlo
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation"; // Import useRouter
-import { PRODUTOS_LISTA, Produto } from "@/constants/produtos"; // Import Produto type
+import { type Produto } from "@/constants/produtos"; // Import Produto type
 import { formatCurrency } from "@/lib/utils";
 import { useCart } from "@/context/CartContext"; // Import useCart
+import { useProductsCatalog } from "@/lib/products/useProductsCatalog";
 
 function CatalogContent() {
   const searchParams = useSearchParams();
   const busca = searchParams.get("busca")?.toLowerCase() || "";
   const router = useRouter(); // Initialize useRouter
   const { addToCart } = useCart(); // Initialize useCart
+  const { productsArray: produtosArray } = useProductsCatalog();
 
   // CONFIGURAÇÃO DO FUNDO
   const bgImage = "/background.webp";
@@ -25,7 +27,6 @@ function CatalogContent() {
   const [paginaAtual, setPaginaAtual] = useState(1);
   const itensPorPagina = 10; // Exibe 10 produtos por página
 
-  const produtosArray = useMemo(() => Object.values(PRODUTOS_LISTA), []);
   const todasTags = ['Tudo', ...Array.from(new Set(produtosArray.flatMap(p => p.tags || [])))];
 
   // Filtro de produtos
