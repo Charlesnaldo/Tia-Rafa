@@ -38,6 +38,7 @@ export default function AdminPage() {
   const [sessionReady, setSessionReady] = useState(false);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
+  const [totalSoldItems, setTotalSoldItems] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
@@ -65,7 +66,7 @@ export default function AdminPage() {
 
     setSessionReady(true);
 
-    const [ordersResult, customersResult] = await Promise.all([
+    const [ordersResult, customersResult, orderItemsResult] = await Promise.all([
       supabase
         .from("orders")
         .select("id, mp_payment_id, status, payment_method, total_amount, created_at, customers(nome, email, telefone)")
@@ -76,6 +77,9 @@ export default function AdminPage() {
         .select("id, nome, email, telefone, created_at")
         .order("created_at", { ascending: false })
         .limit(50),
+      supabase
+        .from("order_items")
+        .select("product_id, quantity"),
     ]);
 
     if (ordersResult.error) {
@@ -111,6 +115,15 @@ export default function AdminPage() {
       setError(customersResult.error.message);
     } else {
       setCustomers(customersResult.data || []);
+    }
+
+    if (orderItemsResult.error) {
+      setError(orderItemsResult.error.message);
+    } else {
+      const totalQuantity = (orderItemsResult.data || []).reduce((sum, row) => {
+        return sum + Number(row.quantity || 0);
+      }, 0);
+      setTotalSoldItems(totalQuantity);
     }
 
     setLoading(false);
@@ -155,7 +168,7 @@ export default function AdminPage() {
                 href="/admin/materiais"
                 className="rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.15em] text-gray-600 transition hover:border-blue-300 hover:text-blue-700"
               >
-                Materiais
+                Produtos
               </Link>
               <button
                 onClick={() => void loadData()}
@@ -177,7 +190,7 @@ export default function AdminPage() {
 
         {error ? <p className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-600">{error}</p> : null}
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div className="rounded-2xl border border-white bg-white/90 p-5 shadow-[0_10px_35px_rgba(2,8,23,0.08)]">
             <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-500">Pedidos</p>
             <p className="mt-2 text-3xl font-black text-gray-900">{orders.length}</p>
@@ -189,6 +202,10 @@ export default function AdminPage() {
           <div className="rounded-2xl border border-white bg-white/90 p-5 shadow-[0_10px_35px_rgba(2,8,23,0.08)]">
             <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-500">Clientes</p>
             <p className="mt-2 text-3xl font-black text-gray-900">{customers.length}</p>
+          </div>
+          <div className="rounded-2xl border border-white bg-white/90 p-5 shadow-[0_10px_35px_rgba(2,8,23,0.08)]">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-pink-500">Itens vendidos</p>
+            <p className="mt-2 text-3xl font-black text-gray-900">{totalSoldItems}</p>
           </div>
         </div>
 

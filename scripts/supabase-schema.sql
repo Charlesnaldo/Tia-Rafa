@@ -141,4 +141,21 @@ for select using (public.is_admin());
 -- 1) Crie um usuário em Authentication > Users.
 -- 2) Pegue o UUID dele e rode:
 --    insert into public.admin_users (user_id) values ('UUID_DO_USUARIO');
--- 3) Crie um bucket chamado "materiais" (privado) no Storage.
+-- 3) Crie um bucket chamado "materiais" (privado) no Storage
+--    ou execute:
+--    insert into storage.buckets (id, name, public) values ('materiais', 'materiais', false);
+-- 4) Policies para upload/listagem de admins no bucket materiais:
+
+drop policy if exists "admin read materiais objects" on storage.objects;
+create policy "admin read materiais objects" on storage.objects
+for select using (
+  bucket_id = 'materiais' and public.is_admin()
+);
+
+drop policy if exists "admin write materiais objects" on storage.objects;
+create policy "admin write materiais objects" on storage.objects
+for all using (
+  bucket_id = 'materiais' and public.is_admin()
+) with check (
+  bucket_id = 'materiais' and public.is_admin()
+);

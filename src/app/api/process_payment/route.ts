@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { PRODUTOS_LISTA } from "@/constants/produtos";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
 type PointOfInteraction = {
   type?: string;
@@ -39,6 +40,59 @@ const isPublicHost = (hostname: string) =>
   && hostname !== "127.0.0.1"
   && hostname !== "::1";
 
+type ProductSnapshot = {
+  id: string;
+  nome: string;
+  preco: number;
+  tipo: "digital" | "fisico";
+};
+
+async function getProductSnapshots(ids: string[]): Promise<Record<string, ProductSnapshot>> {
+  const snapshots: Record<string, ProductSnapshot> = {};
+
+  for (const id of ids) {
+    const produto = PRODUTOS_LISTA[id];
+    if (!produto) continue;
+    snapshots[id] = {
+      id: produto.id,
+      nome: produto.nome,
+      preco: produto.preco,
+      tipo: produto.tipo,
+    };
+  }
+
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return snapshots;
+  }
+
+  try {
+    const supabase = getSupabaseAdminClient();
+    const { data, error } = await supabase
+      .from("products")
+      .select("id, nome, preco_cents, tipo, is_active")
+      .in("id", ids);
+
+    if (error || !data) {
+      return snapshots;
+    }
+
+    for (const product of data) {
+      if (!product.is_active) continue;
+      const base = snapshots[product.id];
+      snapshots[product.id] = {
+        id: product.id,
+        nome: product.nome || base?.nome || product.id,
+        preco: Number.isFinite(product.preco_cents) ? Number(product.preco_cents) : (base?.preco || 0),
+        tipo: product.tipo === "fisico" ? "fisico" : "digital",
+      };
+    }
+  } catch {
+    return snapshots;
+  }
+
+  return snapshots;
+}
+
 export async function POST(request: Request) {
   try {
     const body: ProcessPaymentRequest = await request.json();
@@ -62,10 +116,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Carrinho vazio ou invalido." }, { status: 400 });
     }
 
+    const idsCarrinho = cartItems.map((item) => item.id);
+    const productSnapshots = await getProductSnapshots(idsCarrinho);
+
     let totalAmount = 0;
     const idsProdutos: string[] = [];
     for (const item of cartItems) {
-      const produto = PRODUTOS_LISTA[item.id];
+      const produto = productSnapshots[item.id];
       if (!produto) {
         return NextResponse.json({ error: `Produto com ID ${item.id} nao encontrado.` }, { status: 404 });
       }
@@ -114,7 +171,10 @@ export async function POST(request: Request) {
       const requestOrigin = new URL(request.url).origin;
       const preferenceBody = {
         items: cartItems.map((item) => {
-          const produto = PRODUTOS_LISTA[item.id];
+          const produto = productSnapshots[item.id];
+          if (!produto) {
+            throw new Error(`Produto ${item.id} nao encontrado para checkout de cartao.`);
+          }
           return {
             id: item.id,
             title: produto.nome,
