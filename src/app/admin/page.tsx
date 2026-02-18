@@ -40,6 +40,9 @@ export default function AdminPage() {
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [totalSoldItems, setTotalSoldItems] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [testEmailTo, setTestEmailTo] = useState("");
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
+  const [testEmailMessage, setTestEmailMessage] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setError(null);
@@ -149,6 +152,46 @@ export default function AdminPage() {
     router.push("/admin/login");
   };
 
+  const handleSendTestEmail = async () => {
+    setTestEmailMessage(null);
+    setError(null);
+    setSendingTestEmail(true);
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        setSendingTestEmail(false);
+        router.push("/admin/login");
+        return;
+      }
+
+      const response = await fetch("/api/admin/test-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ to: testEmailTo.trim() || undefined }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Falha ao enviar e-mail de teste.");
+      }
+
+      setTestEmailMessage(`E-mail de teste enviado para ${data.to}.`);
+    } catch (sendError: unknown) {
+      const message = sendError instanceof Error ? sendError.message : String(sendError);
+      setError(message);
+    } finally {
+      setSendingTestEmail(false);
+    }
+  };
+
   const approvedRevenueInCents = orders
     .filter((order) => order.status === "approved")
     .reduce((sum, order) => sum + Math.round(Number(order.total_amount || 0) * 100), 0);
@@ -204,6 +247,20 @@ export default function AdminPage() {
               >
                 Produtos
               </Link>
+              <input
+                type="email"
+                value={testEmailTo}
+                onChange={(event) => setTestEmailTo(event.target.value)}
+                placeholder="email de teste (opcional)"
+                className="rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-600 outline-none"
+              />
+              <button
+                onClick={() => void handleSendTestEmail()}
+                disabled={sendingTestEmail}
+                className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-black uppercase tracking-[0.15em] text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-60"
+              >
+                {sendingTestEmail ? "Enviando..." : "Testar e-mail"}
+              </button>
               <button
                 onClick={() => void loadData()}
                 className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.15em] text-gray-600 transition hover:border-blue-300 hover:text-blue-700"
@@ -223,6 +280,7 @@ export default function AdminPage() {
         </div>
 
         {error ? <p className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-600">{error}</p> : null}
+        {testEmailMessage ? <p className="rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">{testEmailMessage}</p> : null}
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div className="rounded-2xl border border-white bg-white/90 p-5 shadow-[0_10px_35px_rgba(2,8,23,0.08)]">
