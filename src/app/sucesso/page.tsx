@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle, Mail, Download, ArrowRight, Sparkles } from "lucide-react";
@@ -24,9 +24,16 @@ function SucessoContent() {
     }
   });
   const [copied, setCopied] = useState(false);
+  const [liveStatus, setLiveStatus] = useState<string | null>(null);
+  const [liveMethod, setLiveMethod] = useState<string | null>(null);
+
+  const paymentIdFromUrl =
+    searchParams.get("payment_id")
+    || searchParams.get("collection_id")
+    || searchParams.get("id");
 
   const returnedStatus = searchParams.get("status") || searchParams.get("collection_status");
-  const effectiveStatus = lastPayment?.status ?? returnedStatus ?? "pending";
+  const effectiveStatus = liveStatus ?? lastPayment?.status ?? returnedStatus ?? "pending";
   const isApproved = effectiveStatus === "approved";
   const isPending = ["pending", "in_process", "action_required", "pending_waiting_transfer"].includes(effectiveStatus);
 
@@ -34,7 +41,7 @@ function SucessoContent() {
   const pixCode = pixTransaction?.qr_code;
   const qrImageSrc = pixTransaction?.qr_code_base64 ? `data:image/png;base64,${pixTransaction.qr_code_base64}` : undefined;
   const ticketUrl = pixTransaction?.ticket_url;
-  const isPix = lastPayment?.payment_method_id === "pix";
+  const isPix = (liveMethod ?? lastPayment?.payment_method_id) === "pix";
   const statusLabel = effectiveStatus.replace(/_/g, " ").toUpperCase();
   const heroTitle = isApproved
     ? "Pagamento Confirmado!"
@@ -46,6 +53,30 @@ function SucessoContent() {
     : isApproved
       ? "Oba! Seu material premium ja esta sendo preparado e sera enviado para o seu e-mail em instantes."
       : "Seu pagamento ainda nao foi concluido. Assim que for confirmado, enviaremos o material por e-mail.";
+
+  useEffect(() => {
+    if (!paymentIdFromUrl) return;
+    let cancelled = false;
+
+    const loadLiveStatus = async () => {
+      try {
+        const response = await fetch(`/api/payment_status?id=${encodeURIComponent(paymentIdFromUrl)}`, {
+          cache: "no-store",
+        });
+        const data = await response.json();
+        if (!response.ok || cancelled) return;
+        setLiveStatus(String(data.status || "pending"));
+        setLiveMethod(data.payment_method_id ? String(data.payment_method_id) : null);
+      } catch {
+        // Mantem status local
+      }
+    };
+
+    void loadLiveStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [paymentIdFromUrl]);
 
   const handleCopyPixCode = async () => {
     if (!pixCode || typeof navigator === "undefined" || !navigator.clipboard) return;
