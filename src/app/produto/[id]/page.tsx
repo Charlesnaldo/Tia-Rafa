@@ -203,7 +203,7 @@ export default function ProdutoDetalhes({
                 className="w-full py-4 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-2xl font-black text-lg transition-all flex items-center justify-center gap-3 shadow-md hover:shadow-lg active:scale-[0.98]"
               >
                 <ShoppingCart size={22} />
-                Adicionar ao carrinho
+                Adicionar +
               </button>
 
               {/* Comprar Agora */}
