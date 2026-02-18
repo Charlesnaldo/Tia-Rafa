@@ -47,7 +47,7 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_45%,#f5f3ff_100%)] px-4 py-14 font-fredoka">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_45%,#f5f3ff_100%)] px-4 py-14">
       <div className="mx-auto max-w-md rounded-[2rem] border border-white bg-white/95 p-8 shadow-[0_20px_70px_rgba(2,8,23,0.12)]">
         <Link
           href="/"
@@ -58,11 +58,11 @@ export default function AdminLoginPage() {
         </Link>
 
         <h1 className="text-3xl font-black text-gray-900">Painel Admin</h1>
-        <p className="mt-2 text-sm text-gray-500">Entre com seu usuário do Supabase Auth.</p>
+        <p className="mt-2 text-sm text-gray-500">Acesso somente com login e senha.</p>
 
         <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
           <label className="block">
-            <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Email</span>
+            <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Login</span>
             <div className="flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-3">
               <Mail size={16} className="text-gray-400" />
               <input
@@ -70,7 +70,7 @@ export default function AdminLoginPage() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 className="w-full bg-transparent text-sm font-bold text-gray-700 outline-none"
-                placeholder="admin@seudominio.com"
+                placeholder="seu login"
                 required
               />
             </div>

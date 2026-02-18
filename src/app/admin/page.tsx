@@ -153,8 +153,18 @@ export default function AdminPage() {
     .filter((order) => order.status === "approved")
     .reduce((sum, order) => sum + Math.round(Number(order.total_amount || 0) * 100), 0);
 
+  if (!sessionReady && loading) {
+    return (
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_40%,#f5f3ff_100%)] px-4 py-8">
+        <div className="mx-auto max-w-7xl rounded-[2rem] border border-white bg-white/90 p-6 text-sm font-bold text-gray-500 shadow-[0_20px_70px_rgba(2,8,23,0.1)]">
+          Validando login...
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_40%,#f5f3ff_100%)] px-4 py-8 font-fredoka">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_40%,#f5f3ff_100%)] px-4 py-8">
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_20px_70px_rgba(2,8,23,0.1)]">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

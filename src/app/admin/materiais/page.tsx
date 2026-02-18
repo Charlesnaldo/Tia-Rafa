@@ -51,6 +51,7 @@ function buildDefaultProducts(): EditableProduct[] {
 export default function AdminMateriaisPage() {
   const router = useRouter();
 
+  const [sessionReady, setSessionReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [products, setProducts] = useState<EditableProduct[]>(DEFAULT_PRODUCTS);
@@ -85,6 +86,7 @@ export default function AdminMateriaisPage() {
       return null;
     }
 
+    setSessionReady(true);
     return supabase;
   }, [router]);
 
@@ -275,9 +277,16 @@ export default function AdminMateriaisPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_45%,#f5f3ff_100%)] px-4 py-10 font-fredoka">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_45%,#f5f3ff_100%)] px-4 py-10">
       <div className="mx-auto max-w-5xl space-y-6">
-        <div className="rounded-[2rem] border border-white bg-white/95 p-8 shadow-[0_20px_70px_rgba(2,8,23,0.12)]">
+        {!sessionReady && loading ? (
+          <div className="rounded-[2rem] border border-white bg-white/95 p-8 text-sm font-bold text-gray-500 shadow-[0_20px_70px_rgba(2,8,23,0.12)]">
+            Validando login...
+          </div>
+        ) : null}
+
+        {sessionReady ? (
+          <div className="rounded-[2rem] border border-white bg-white/95 p-8 shadow-[0_20px_70px_rgba(2,8,23,0.12)]">
           <Link
             href="/admin"
             className="mb-6 inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-gray-500 transition hover:text-gray-700"
@@ -397,7 +406,8 @@ export default function AdminMateriaisPage() {
           {loading ? <p className="mt-6 text-sm text-gray-500">Carregando dados...</p> : null}
           {error ? <p className="mt-6 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-600">{error}</p> : null}
           {successMessage ? <p className="mt-6 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">{successMessage}</p> : null}
-        </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
