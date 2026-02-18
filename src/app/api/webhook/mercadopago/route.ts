@@ -82,35 +82,78 @@ async function getPurchasedProducts(idsProdutos: string[]) {
 }
 
 async function getDigitalAttachment(produto: { id: string; materialPath?: string | null }) {
-  if (!produto.materialPath || !produto.materialPath.startsWith("/")) {
+  if (!produto.materialPath) {
     return null;
   }
 
-  const arquivoSemQuery = produto.materialPath.split("?")[0].split("#")[0];
-  const arquivoDecodificado = decodeURIComponent(arquivoSemQuery);
-  const caminhoRelativo = arquivoDecodificado.startsWith("/")
-    ? arquivoDecodificado.slice(1)
-    : arquivoDecodificado;
+  if (produto.materialPath.startsWith("/")) {
+    const arquivoSemQuery = produto.materialPath.split("?")[0].split("#")[0];
+    const arquivoDecodificado = decodeURIComponent(arquivoSemQuery);
+    const caminhoRelativo = arquivoDecodificado.startsWith("/")
+      ? arquivoDecodificado.slice(1)
+      : arquivoDecodificado;
 
-  if (!caminhoRelativo || caminhoRelativo.includes("..")) {
-    return null;
+    if (!caminhoRelativo || caminhoRelativo.includes("..")) {
+      return null;
+    }
+
+    const caminhoAbsoluto = join(process.cwd(), "public", caminhoRelativo);
+
+    try {
+      const content = await readFile(caminhoAbsoluto);
+      return {
+        filename: basename(caminhoAbsoluto),
+        content,
+        contentType: "application/pdf",
+      };
+    } catch (error) {
+      console.error(`Arquivo digital nao encontrado para o produto ${produto.id}:`, error);
+      return null;
+    }
   }
 
-  const caminhoAbsoluto = join(process.cwd(), "public", caminhoRelativo);
+  if (produto.materialPath.startsWith("http://") || produto.materialPath.startsWith("https://")) {
+    try {
+      const response = await fetch(produto.materialPath);
+      if (!response.ok) return null;
+      const arrayBuffer = await response.arrayBuffer();
+      const fileBytes = Buffer.from(arrayBuffer);
+      const pathname = new URL(produto.materialPath).pathname;
+      const fileName = pathname.split("/").pop() || `${produto.id}.pdf`;
+      return {
+        filename: decodeURIComponent(fileName),
+        content: fileBytes,
+        contentType: "application/pdf",
+      };
+    } catch {
+      return null;
+    }
+  }
 
   try {
-    const content = await readFile(caminhoAbsoluto);
+    const supabase = getSupabaseAdminClient();
+    const signed = await supabase.storage
+      .from("materiais")
+      .createSignedUrl(produto.materialPath, 60 * 5);
+    const signedUrl = signed.data?.signedUrl;
+    if (!signedUrl) return null;
+
+    const fileResponse = await fetch(signedUrl);
+    if (!fileResponse.ok) return null;
+    const arrayBuffer = await fileResponse.arrayBuffer();
+    const fileBytes = Buffer.from(arrayBuffer);
+    const fileName = produto.materialPath.split("/").pop() || `${produto.id}.pdf`;
+
     return {
-      filename: basename(caminhoAbsoluto),
-      content,
+      filename: decodeURIComponent(fileName),
+      content: fileBytes,
       contentType: "application/pdf",
     };
   } catch (error) {
-    console.error(`Arquivo digital não encontrado para o produto ${produto.id}:`, error);
+    console.error(`Arquivo digital nao encontrado para o produto ${produto.id}:`, error);
     return null;
   }
 }
-
 export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -222,3 +265,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Webhook Error" }, { status: 500 });
   }
 }
+
+
