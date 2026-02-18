@@ -21,6 +21,7 @@ function getResend() {
   }
   return resendInstance;
 }
+const resendFrom = process.env.RESEND_FROM || "Tia Rafa <onboarding@resend.dev>";
 
 type PurchasedProduct = {
   id: string;
@@ -210,7 +211,7 @@ export async function POST(request: Request) {
             const attachment = await getDigitalAttachment(produto);
             if (resend) {
               await resend.emails.send({
-                from: 'Tia Rafa <charles.naldo@gmail.com>',
+                from: resendFrom,
                 to: emailCliente,
                 subject: `🎉 Seu material "${produto.nome}" chegou!`,
                 attachments: attachment ? [attachment] : undefined,
@@ -235,7 +236,7 @@ export async function POST(request: Request) {
             const resend = getResend();
             if (resend) {
               await resend.emails.send({
-                from: 'Tia Rafa <charles.naldo@gmail.com>',
+                from: resendFrom,
                 to: emailCliente,
                 subject: '📦 Seu pedido está sendo preparado!',
                 html: `
