@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import { Lock, Mail, Loader2, ArrowLeft } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
+export const dynamic = "force-dynamic";
+
 export default function AdminLoginPage() {
   const router = useRouter();
-  const supabase = getSupabaseBrowserClient();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,6 +20,15 @@ export default function AdminLoginPage() {
     event.preventDefault();
     setError(null);
     setLoading(true);
+
+    let supabase;
+    try {
+      supabase = getSupabaseBrowserClient();
+    } catch {
+      setLoading(false);
+      setError("Supabase nao configurado. Verifique as variaveis NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+      return;
+    }
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email,

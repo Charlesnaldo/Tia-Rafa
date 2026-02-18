@@ -1,15 +1,16 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Upload } from "lucide-react";
 import { PRODUTOS_LISTA } from "@/constants/produtos";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
+export const dynamic = "force-dynamic";
+
 export default function AdminMateriaisPage() {
   const router = useRouter();
-  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
 
   const [produtoId, setProdutoId] = useState(Object.keys(PRODUTOS_LISTA)[0] || "");
   const [file, setFile] = useState<File | null>(null);
@@ -28,6 +29,14 @@ export default function AdminMateriaisPage() {
     event.preventDefault();
     setError(null);
     setSuccessMessage(null);
+
+    let supabase;
+    try {
+      supabase = getSupabaseBrowserClient();
+    } catch {
+      setError("Supabase nao configurado. Verifique as variaveis NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+      return;
+    }
 
     const {
       data: { session },

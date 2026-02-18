@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogOut, Mail, Phone, RefreshCcw, ShoppingCart, Users } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+
+export const dynamic = "force-dynamic";
 
 type CustomerRow = {
   id: string;
@@ -31,7 +33,6 @@ type OrderRow = {
 
 export default function AdminPage() {
   const router = useRouter();
-  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
 
   const [loading, setLoading] = useState(true);
   const [sessionReady, setSessionReady] = useState(false);
@@ -42,6 +43,15 @@ export default function AdminPage() {
   const loadData = useCallback(async () => {
     setError(null);
     setLoading(true);
+
+    let supabase;
+    try {
+      supabase = getSupabaseBrowserClient();
+    } catch {
+      setError("Supabase nao configurado. Verifique as variaveis NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+      setLoading(false);
+      return;
+    }
 
     const {
       data: { session },
@@ -104,7 +114,7 @@ export default function AdminPage() {
     }
 
     setLoading(false);
-  }, [router, supabase]);
+  }, [router]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -114,6 +124,14 @@ export default function AdminPage() {
   }, [loadData]);
 
   const handleLogout = async () => {
+    let supabase;
+    try {
+      supabase = getSupabaseBrowserClient();
+    } catch {
+      router.push("/admin/login");
+      return;
+    }
+
     await supabase.auth.signOut();
     router.push("/admin/login");
   };
