@@ -33,6 +33,9 @@ function SucessoContent() {
     || searchParams.get("id");
 
   const returnedStatus = searchParams.get("status") || searchParams.get("collection_status");
+  const sessionMatchesCurrentPayment =
+    !paymentIdFromUrl || !lastPayment?.id || String(lastPayment.id) === String(paymentIdFromUrl);
+  const sessionMethod = sessionMatchesCurrentPayment ? lastPayment?.payment_method_id : undefined;
   const effectiveStatus = liveStatus ?? lastPayment?.status ?? returnedStatus ?? "pending";
   const isApproved = effectiveStatus === "approved";
   const isPending = ["pending", "in_process", "action_required", "pending_waiting_transfer"].includes(effectiveStatus);
@@ -41,7 +44,7 @@ function SucessoContent() {
   const pixCode = pixTransaction?.qr_code;
   const qrImageSrc = pixTransaction?.qr_code_base64 ? `data:image/png;base64,${pixTransaction.qr_code_base64}` : undefined;
   const ticketUrl = pixTransaction?.ticket_url;
-  const isPix = (liveMethod ?? lastPayment?.payment_method_id) === "pix";
+  const isPix = (liveMethod ?? sessionMethod) === "pix";
   const statusLabel = effectiveStatus.replace(/_/g, " ").toUpperCase();
   const heroTitle = isApproved
     ? "Pagamento Confirmado!"
@@ -123,7 +126,7 @@ function SucessoContent() {
           </div>
         </div>
 
-        {isPix && (
+        {isPix && isPending && (
           <div className="bg-white rounded-[3rem] border border-dashed border-green-100 shadow-[0_20px_60px_rgba(72,211,153,0.25)] p-6 mb-8">
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
