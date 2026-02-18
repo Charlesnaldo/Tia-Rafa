@@ -3,8 +3,8 @@ import { MercadoPagoConfig, Payment } from "mercadopago";
 import { Resend } from "resend";
 import { readFile } from "node:fs/promises";
 import { basename, join } from "node:path";
-import { PRODUTOS_LISTA } from "@/constants/produtos";
 import { persistApprovedSale } from "@/lib/supabase/sales";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
 // Force dynamic rendering - não gerar estaticamente
 export const dynamic = 'force-dynamic';
@@ -22,30 +22,71 @@ function getResend() {
   return resendInstance;
 }
 
-function getDownloadLink(request: Request, produto: { arquivoLocal?: string; downloadUrl?: string }) {
-  const origin = new URL(request.url).origin;
+type PurchasedProduct = {
+  id: string;
+  nome: string;
+  tipo: "digital" | "fisico";
+  materialPath?: string | null;
+};
 
-  if (produto.arquivoLocal) {
-    return `${origin}${produto.arquivoLocal}`;
+async function getDownloadLink(
+  request: Request,
+  produto: { materialPath?: string | null }
+) {
+  const origin = new URL(request.url).origin;
+  if (!produto.materialPath) return "";
+  if (produto.materialPath.startsWith("http://") || produto.materialPath.startsWith("https://")) {
+    return produto.materialPath;
+  }
+  if (produto.materialPath.startsWith("/")) {
+    return `${origin}${produto.materialPath}`;
   }
 
-  if (!produto.downloadUrl) {
+  try {
+    const supabase = getSupabaseAdminClient();
+    const signed = await supabase.storage
+      .from("materiais")
+      .createSignedUrl(produto.materialPath, 60 * 60 * 24 * 7);
+    return signed.data?.signedUrl || "";
+  } catch {
     return "";
   }
-
-  if (produto.downloadUrl.startsWith("http://") || produto.downloadUrl.startsWith("https://")) {
-    return produto.downloadUrl;
-  }
-
-  return `${origin}${produto.downloadUrl.startsWith("/") ? "" : "/"}${produto.downloadUrl}`;
 }
 
-async function getDigitalAttachment(produto: { id: string; arquivoLocal?: string }) {
-  if (!produto.arquivoLocal) {
+async function getPurchasedProducts(idsProdutos: string[]) {
+  const map = new Map<string, PurchasedProduct>();
+  if (idsProdutos.length === 0) return map;
+
+  try {
+    const supabase = getSupabaseAdminClient();
+    const { data } = await supabase
+      .from("products")
+      .select("id, nome, tipo, material_path, is_active")
+      .in("id", idsProdutos)
+      .eq("is_active", true);
+
+    for (const row of data || []) {
+      if (!row?.id) continue;
+      map.set(row.id, {
+        id: row.id,
+        nome: row.nome || row.id,
+        tipo: row.tipo === "fisico" ? "fisico" : "digital",
+        materialPath: row.material_path ?? null,
+      });
+    }
+  } catch {
+    return map;
+  }
+
+  return map;
+}
+
+async function getDigitalAttachment(produto: { id: string; materialPath?: string | null }) {
+  if (!produto.materialPath || !produto.materialPath.startsWith("/")) {
     return null;
   }
 
-  const arquivoSemQuery = produto.arquivoLocal.split("?")[0].split("#")[0];
+  const arquivoSemQuery = produto.materialPath.split("?")[0].split("#")[0];
   const arquivoDecodificado = decodeURIComponent(arquivoSemQuery);
   const caminhoRelativo = arquivoDecodificado.startsWith("/")
     ? arquivoDecodificado.slice(1)
@@ -114,14 +155,15 @@ export async function POST(request: Request) {
           console.error("Falha ao persistir venda no Supabase:", dbError);
         }
 
+        const purchasedProducts = await getPurchasedProducts(idsProdutos);
         for (const produtoId of idsProdutos) {
-          const produto = PRODUTOS_LISTA[produtoId];
+          const produto = purchasedProducts.get(produtoId);
           if (!produto) continue;
 
           if (produto.tipo === 'digital') {
             // ENVIAR E-MAIL COM O MATERIAL DIGITAL
             const resend = getResend();
-            const downloadLink = getDownloadLink(request, produto);
+            const downloadLink = await getDownloadLink(request, produto);
             const attachment = await getDigitalAttachment(produto);
             if (resend) {
               await resend.emails.send({

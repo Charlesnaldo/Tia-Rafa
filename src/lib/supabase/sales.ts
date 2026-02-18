@@ -1,7 +1,7 @@
-import { PRODUTOS_LISTA } from "@/constants/produtos";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
 type CartItem = { id: string; quantity: number };
+type ProductSnapshot = { id: string; nome: string; preco: number };
 
 type PersistApprovedSaleInput = {
   mpPaymentId: string;
@@ -65,10 +65,29 @@ export async function persistApprovedSale(input: PersistApprovedSaleInput) {
     throw new Error(`Falha ao limpar itens do pedido no Supabase: ${deleteItemsResult.error.message}`);
   }
 
+  const snapshots = new Map<string, ProductSnapshot>();
+
+  const ids = Array.from(new Set(input.cartItems.map((item) => item.id)));
+  if (ids.length > 0) {
+    const { data } = await supabase
+      .from("products")
+      .select("id, nome, preco_cents, is_active")
+      .in("id", ids);
+
+    for (const row of data || []) {
+      if (!row?.id || row?.is_active === false) continue;
+      snapshots.set(row.id, {
+        id: row.id,
+        nome: row.nome || row.id,
+        preco: Number.isFinite(row.preco_cents) ? Number(row.preco_cents) : 0,
+      });
+    }
+  }
+
   const normalizedItems = input.cartItems
-    .filter((item) => Number.isInteger(item.quantity) && item.quantity > 0 && Boolean(PRODUTOS_LISTA[item.id]))
+    .filter((item) => Number.isInteger(item.quantity) && item.quantity > 0 && snapshots.has(item.id))
     .map((item) => {
-      const product = PRODUTOS_LISTA[item.id];
+      const product = snapshots.get(item.id) as ProductSnapshot;
       const lineTotal = product.preco * item.quantity;
       return {
         order_id: orderId,

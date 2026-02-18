@@ -3,8 +3,7 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ImageIcon, Loader2, Save, Upload } from "lucide-react";
-import { PRODUTOS_LISTA } from "@/constants/produtos";
+import { ArrowLeft, ImageIcon, Loader2, Plus, Save, Upload } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { formatCurrency } from "@/lib/utils";
 
@@ -34,18 +33,22 @@ type EditableProduct = {
   soldQuantity: number;
 };
 
-const DEFAULT_PRODUCTS = buildDefaultProducts();
+type NewProductForm = {
+  id: string;
+  nome: string;
+  tipo: "digital" | "fisico";
+  preco: string;
+};
 
-function buildDefaultProducts(): EditableProduct[] {
-  return Object.values(PRODUTOS_LISTA).map((produto) => ({
-    id: produto.id,
-    nome: produto.nome,
-    tipo: produto.tipo,
-    precoCents: produto.preco,
-    imagemUrl: produto.imagens?.[0] || produto.imagem || null,
-    materialPath: produto.arquivoLocal || null,
-    soldQuantity: 0,
-  }));
+const DEFAULT_PRODUCTS: EditableProduct[] = [];
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 export default function AdminMateriaisPage() {
@@ -59,6 +62,12 @@ export default function AdminMateriaisPage() {
   const [priceInput, setPriceInput] = useState(DEFAULT_PRODUCTS[0] ? (DEFAULT_PRODUCTS[0].precoCents / 100).toFixed(2) : "");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [newProduct, setNewProduct] = useState<NewProductForm>({
+    id: "",
+    nome: "",
+    tipo: "digital",
+    preco: "",
+  });
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -127,21 +136,36 @@ export default function AdminMateriaisPage() {
       salesByProduct.set(row.product_id, current + Number(row.quantity || 0));
     }
 
-    const merged = buildDefaultProducts();
-    const overrideMap = new Map((productsResult.data || []).map((row) => [row.id, row as ProductOverrideRow]));
+    const normalizedMap = new Map<string, EditableProduct>();
 
-    const normalized = merged.map((product) => {
-      const override = overrideMap.get(product.id);
-      return {
-        ...product,
-        nome: override?.nome || product.nome,
-        precoCents: Number.isFinite(override?.preco_cents) ? Number(override?.preco_cents) : product.precoCents,
-        tipo: override?.tipo === "fisico" ? "fisico" : product.tipo,
-        imagemUrl: override?.imagem_url ?? product.imagemUrl,
-        materialPath: override?.material_path ?? product.materialPath,
-        soldQuantity: salesByProduct.get(product.id) || 0,
-      } as EditableProduct;
-    });
+    for (const row of (productsResult.data || []) as ProductOverrideRow[]) {
+      const existing = normalizedMap.get(row.id);
+      if (existing) {
+        normalizedMap.set(row.id, {
+          ...existing,
+          nome: row.nome || existing.nome,
+          precoCents: Number.isFinite(row.preco_cents) ? Number(row.preco_cents) : existing.precoCents,
+          tipo: row.tipo === "fisico" ? "fisico" : existing.tipo,
+          imagemUrl: row.imagem_url ?? existing.imagemUrl,
+          materialPath: row.material_path ?? existing.materialPath,
+        });
+      } else {
+        normalizedMap.set(row.id, {
+          id: row.id,
+          nome: row.nome || row.id,
+          precoCents: Number.isFinite(row.preco_cents) ? Number(row.preco_cents) : 0,
+          tipo: row.tipo === "fisico" ? "fisico" : "digital",
+          imagemUrl: row.imagem_url,
+          materialPath: row.material_path,
+          soldQuantity: 0,
+        });
+      }
+    }
+
+    const normalized = Array.from(normalizedMap.values()).map((product) => ({
+      ...product,
+      soldQuantity: salesByProduct.get(product.id) || 0,
+    }));
 
     setProducts(normalized);
     const selectedAfterLoad = normalized.find((product) => product.id === selectedProductId) || normalized[0];
@@ -192,6 +216,54 @@ export default function AdminMateriaisPage() {
       setPriceInput((nextProduct.precoCents / 100).toFixed(2));
     }
     return true;
+  };
+
+  const handleCreateProduct = async () => {
+    const nome = newProduct.nome.trim();
+    const id = (newProduct.id.trim() || slugify(nome));
+    const preco = Number(newProduct.preco.replace(",", "."));
+
+    if (!nome) {
+      setError("Informe o nome do produto.");
+      return;
+    }
+    if (!id) {
+      setError("Informe um slug valido para o produto.");
+      return;
+    }
+    if (!Number.isFinite(preco) || preco <= 0) {
+      setError("Informe um preco valido para o novo produto.");
+      return;
+    }
+    if (products.some((product) => product.id === id)) {
+      setError("Ja existe um produto com esse ID.");
+      return;
+    }
+
+    setError(null);
+    setSuccessMessage(null);
+    setSaving(true);
+
+    const baseProduct: EditableProduct = {
+      id,
+      nome,
+      tipo: newProduct.tipo,
+      precoCents: Math.round(preco * 100),
+      imagemUrl: null,
+      materialPath: null,
+      soldQuantity: 0,
+    };
+
+    const ok = await upsertProduct(baseProduct);
+    setSaving(false);
+
+    if (!ok) return;
+
+    setProducts((prev) => [...prev, baseProduct]);
+    setSelectedProductId(baseProduct.id);
+    setPriceInput((baseProduct.precoCents / 100).toFixed(2));
+    setNewProduct({ id: "", nome: "", tipo: "digital", preco: "" });
+    setSuccessMessage("Novo produto criado com sucesso. Agora voce pode subir imagem e PDF.");
   };
 
   const handleSavePrice = async () => {
@@ -297,6 +369,75 @@ export default function AdminMateriaisPage() {
 
           <h1 className="text-3xl font-black text-gray-900">Gerenciar produtos</h1>
           <p className="mt-2 text-sm text-gray-500">Altere preco, troque foto, envie PDF e acompanhe quantidade de vendas.</p>
+
+          <section className="mt-8 rounded-2xl border border-gray-100 bg-white p-5">
+            <h2 className="text-lg font-black text-gray-900">Novo produto</h2>
+            <p className="mt-1 text-xs text-gray-500">Crie o produto no banco e depois envie imagem/PDF pelo Supabase Storage.</p>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Nome</span>
+                <input
+                  type="text"
+                  value={newProduct.nome}
+                  onChange={(event) => {
+                    const nome = event.target.value;
+                    setNewProduct((prev) => ({
+                      ...prev,
+                      nome,
+                      id: prev.id || slugify(nome),
+                    }));
+                  }}
+                  className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                  placeholder="Nome do produto"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Slug (id)</span>
+                <input
+                  type="text"
+                  value={newProduct.id}
+                  onChange={(event) => setNewProduct((prev) => ({ ...prev, id: slugify(event.target.value) }))}
+                  className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                  placeholder="meu-produto-novo"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Tipo</span>
+                <select
+                  value={newProduct.tipo}
+                  onChange={(event) => setNewProduct((prev) => ({ ...prev, tipo: event.target.value === "fisico" ? "fisico" : "digital" }))}
+                  className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                >
+                  <option value="digital">Digital</option>
+                  <option value="fisico">Fisico</option>
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Preco (R$)</span>
+                <input
+                  type="text"
+                  value={newProduct.preco}
+                  onChange={(event) => setNewProduct((prev) => ({ ...prev, preco: event.target.value }))}
+                  className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                  placeholder="39.90"
+                />
+              </label>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void handleCreateProduct()}
+              disabled={saving}
+              className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-white transition hover:bg-indigo-700 disabled:bg-gray-300"
+            >
+              {saving ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
+              Criar produto
+            </button>
+          </section>
 
           <div className="mt-8 grid gap-4 md:grid-cols-2">
             <label className="block">

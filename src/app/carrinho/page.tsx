@@ -5,14 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
 import { Trash2, PlusCircle, MinusCircle, XCircle, ShoppingBag, ArrowRight } from "lucide-react";
-import { PRODUTOS_LISTA } from "@/constants/produtos";
 
 export default function CartPage() {
   const { cartItems, removeFromCart, updateQuantity, clearCart, cartTotal, itemCount } = useCart();
-  const getItemImage = (item: { id: string; imagem?: string }) => {
-    const produtoAtual = PRODUTOS_LISTA[item.id];
-    return item.imagem || produtoAtual?.imagens?.[0] || produtoAtual?.imagem || "/embreve.jpg";
-  };
+  const getItemImage = (item: { imagem?: string }) => item.imagem || "/embreve.jpg";
 
   if (itemCount === 0) {
     return (

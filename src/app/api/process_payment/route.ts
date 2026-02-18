@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { PRODUTOS_LISTA } from "@/constants/produtos";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
 type PointOfInteraction = {
@@ -49,45 +48,26 @@ type ProductSnapshot = {
 
 async function getProductSnapshots(ids: string[]): Promise<Record<string, ProductSnapshot>> {
   const snapshots: Record<string, ProductSnapshot> = {};
-
-  for (const id of ids) {
-    const produto = PRODUTOS_LISTA[id];
-    if (!produto) continue;
-    snapshots[id] = {
-      id: produto.id,
-      nome: produto.nome,
-      preco: produto.preco,
-      tipo: produto.tipo,
-    };
-  }
-
-  const hasSupabaseAdminConfig = Boolean(
-    (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL)
-    && (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)
-  );
-
-  if (!hasSupabaseAdminConfig) {
-    return snapshots;
-  }
+  const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
+  if (uniqueIds.length === 0) return snapshots;
 
   try {
     const supabase = getSupabaseAdminClient();
     const { data, error } = await supabase
       .from("products")
       .select("id, nome, preco_cents, tipo, is_active")
-      .in("id", ids);
+      .in("id", uniqueIds)
+      .eq("is_active", true);
 
     if (error || !data) {
       return snapshots;
     }
 
     for (const product of data) {
-      if (!product.is_active) continue;
-      const base = snapshots[product.id];
       snapshots[product.id] = {
         id: product.id,
-        nome: product.nome || base?.nome || product.id,
-        preco: Number.isFinite(product.preco_cents) ? Number(product.preco_cents) : (base?.preco || 0),
+        nome: product.nome || product.id,
+        preco: Number.isFinite(product.preco_cents) ? Number(product.preco_cents) : 0,
         tipo: product.tipo === "fisico" ? "fisico" : "digital",
       };
     }

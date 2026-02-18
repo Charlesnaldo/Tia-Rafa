@@ -17,7 +17,6 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { formatCurrency } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
-import { PRODUTOS_LISTA } from "@/constants/produtos";
 import { LastPaymentSessionData, PaymentPointOfInteraction } from "@/types/payment";
 
 export default function CheckoutClient() {
@@ -161,11 +160,10 @@ export default function CheckoutClient() {
 
               <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 {cartItems.map(item => {
-                  const produto = PRODUTOS_LISTA[item.id];
                   return (
                     <motion.div key={item.id} className="flex items-center gap-4 p-3 rounded-2xl bg-gray-50/50">
                       <div className="w-16 h-16 bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
-                        <Image src={produto?.imagens?.[0] || "/embreve.jpg"} width={64} height={64} alt={item.nome} className="w-full h-full object-cover" />
+                        <Image src={item.imagem || "/embreve.jpg"} width={64} height={64} alt={item.nome} className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-grow min-w-0">
                         <h4 className="font-bold text-gray-800 truncate text-sm">{item.nome}</h4>

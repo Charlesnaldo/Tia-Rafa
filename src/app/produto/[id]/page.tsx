@@ -36,13 +36,24 @@ export default function ProdutoDetalhes({
 }) {
   const router = useRouter();
   const { addToCart } = useCart();
-  const { productsById } = useProductsCatalog();
+  const { productsById, loaded } = useProductsCatalog();
   const [quantity, setQuantity] = useState(1); // State for quantity
 
   const { id } = React.use(params); // Unwrap the Promise using React.use()
   const produto = productsById[id];
 
-  if (!produto) notFound();
+  if (!produto && loaded) notFound();
+  if (!produto) {
+    return (
+      <main className="min-h-screen bg-[#FAFAFA] font-fredoka text-[#2D3748] pb-10 pt-10">
+        <section className="max-w-4xl mx-auto px-6">
+          <div className="rounded-3xl border border-gray-100 bg-white p-8 text-sm font-bold text-gray-500 shadow-sm">
+            Carregando produto...
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   const listaImagens = produto.imagens && produto.imagens.length > 0
     ? produto.imagens
