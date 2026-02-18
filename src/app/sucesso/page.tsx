@@ -1,11 +1,12 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle, Mail, Download, ArrowRight, Sparkles } from "lucide-react";
 import { LastPaymentSessionData } from "@/types/payment";
 import { formatPaymentStatus } from "@/lib/utils";
+import confetti from "canvas-confetti";
 
 function SucessoContent() {
   const searchParams = useSearchParams();
@@ -27,6 +28,7 @@ function SucessoContent() {
   const [copied, setCopied] = useState(false);
   const [liveStatus, setLiveStatus] = useState<string | null>(null);
   const [liveMethod, setLiveMethod] = useState<string | null>(null);
+  const confettiPlayedRef = useRef(false);
 
   const paymentIdFromUrl =
     searchParams.get("payment_id")
@@ -81,6 +83,25 @@ function SucessoContent() {
       cancelled = true;
     };
   }, [paymentIdFromUrl]);
+
+  useEffect(() => {
+    if (!isApproved || confettiPlayedRef.current) return;
+
+    const shoot = (particleRatio: number, options: confetti.Options) => {
+      confetti({
+        ...options,
+        origin: { y: 0.7 },
+        particleCount: Math.floor(140 * particleRatio),
+      });
+    };
+
+    shoot(0.25, { spread: 26, startVelocity: 55 });
+    shoot(0.2, { spread: 60 });
+    shoot(0.35, { spread: 100, decay: 0.92, scalar: 0.9 });
+    shoot(0.2, { spread: 120, startVelocity: 25, decay: 0.94, scalar: 1.2 });
+
+    confettiPlayedRef.current = true;
+  }, [isApproved]);
 
   const handleCopyPixCode = async () => {
     if (!pixCode || typeof navigator === "undefined" || !navigator.clipboard) return;
