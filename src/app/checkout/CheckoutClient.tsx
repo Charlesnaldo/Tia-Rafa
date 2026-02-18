@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Loader2,
   Sparkles,
@@ -28,6 +28,7 @@ export default function CheckoutClient() {
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card">("pix");
   const [pixPointOfInteraction, setPixPointOfInteraction] = useState<PaymentPointOfInteraction | null>(null);
+  const [pixPaymentId, setPixPaymentId] = useState<string | null>(null);
   const [pixPaymentStatus, setPixPaymentStatus] = useState<string | null>(null);
   const [pixCodeCopied, setPixCodeCopied] = useState(false);
 
@@ -111,6 +112,7 @@ export default function CheckoutClient() {
       }
 
       if (paymentData.payment_method_id === "pix") {
+        setPixPaymentId(String(paymentData.id));
         setPixPointOfInteraction(paymentData.point_of_interaction ?? null);
         setPixPaymentStatus(paymentData.status ?? "action_required");
       }
@@ -121,6 +123,44 @@ export default function CheckoutClient() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!pixPaymentId) return;
+    if (pixPaymentStatus === "approved") return;
+
+    let cancelled = false;
+    const pollStatus = async () => {
+      try {
+        const response = await fetch(`/api/payment_status?id=${encodeURIComponent(pixPaymentId)}`, {
+          cache: "no-store",
+        });
+        const data = await response.json();
+        if (!response.ok || cancelled) return;
+
+        const status = String(data.status || "pending");
+        setPixPaymentStatus(status);
+
+        if (status === "approved") {
+          clearCart();
+          if (typeof window !== "undefined") {
+            window.location.href = `/sucesso?payment_id=${encodeURIComponent(pixPaymentId)}&status=approved`;
+          }
+        }
+      } catch {
+        // segue polling
+      }
+    };
+
+    void pollStatus();
+    const interval = setInterval(() => {
+      void pollStatus();
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [pixPaymentId, pixPaymentStatus, clearCart]);
 
   if (itemCount === 0) {
     return (
