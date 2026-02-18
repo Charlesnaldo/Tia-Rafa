@@ -15,7 +15,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatPaymentStatus } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
 import { LastPaymentSessionData, PaymentPointOfInteraction } from "@/types/payment";
 
@@ -181,7 +181,7 @@ export default function CheckoutClient() {
   const pixQrImageSrc = pixTransactionData?.qr_code_base64 ? `data:image/jpeg;base64,${pixTransactionData.qr_code_base64}` : undefined;
   const pixCode = pixTransactionData?.qr_code;
   const pixTicketUrl = pixTransactionData?.ticket_url;
-  const pixStatusLabel = pixPaymentStatus ? pixPaymentStatus.replace(/_/g, " ").toUpperCase() : "AGUARDANDO";
+  const pixStatusLabel = formatPaymentStatus(pixPaymentStatus || "pending");
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_right,#fde7f3_0%,#f8faff_40%,#ecfeff_100%)] font-fredoka py-8 px-4 sm:px-6 lg:px-8">

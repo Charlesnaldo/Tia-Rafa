@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle, Mail, Download, ArrowRight, Sparkles } from "lucide-react";
 import { LastPaymentSessionData } from "@/types/payment";
+import { formatPaymentStatus } from "@/lib/utils";
 
 function SucessoContent() {
   const searchParams = useSearchParams();
@@ -45,7 +46,7 @@ function SucessoContent() {
   const qrImageSrc = pixTransaction?.qr_code_base64 ? `data:image/png;base64,${pixTransaction.qr_code_base64}` : undefined;
   const ticketUrl = pixTransaction?.ticket_url;
   const isPix = (liveMethod ?? sessionMethod) === "pix";
-  const statusLabel = effectiveStatus.replace(/_/g, " ").toUpperCase();
+  const statusLabel = formatPaymentStatus(effectiveStatus);
   const heroTitle = isApproved
     ? "Pagamento Confirmado!"
     : isPending
@@ -198,7 +199,7 @@ function SucessoContent() {
           <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
         </Link>
 
-        <p className="mt-8 text-gray-400 text-[10px] font-bold uppercase tracking-widest">
+        <p className="mt-8 text-gray-300 text-[10px] font-bold uppercase tracking-widest">
           Obrigado por confiar no trabalho da Tia Rafa!
         </p>
       </div>

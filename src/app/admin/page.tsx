@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogOut, Mail, Phone, RefreshCcw, ShoppingCart, Users } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatPaymentStatus } from "@/lib/utils";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 export const dynamic = "force-dynamic";
@@ -338,7 +338,7 @@ export default function AdminPage() {
                       <p className="text-xs text-gray-500">{order.customers[0]?.email || "E-mail nao informado"}</p>
                     </div>
                     <span className="rounded-full bg-blue-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-blue-700">
-                      {order.status}
+                      {formatPaymentStatus(order.status)}
                     </span>
                   </div>
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
