@@ -26,7 +26,7 @@ type OrderRow = {
     nome: string;
     email: string;
     telefone: string | null;
-  } | null;
+  }[];
 };
 
 export default function AdminPage() {
@@ -71,7 +71,30 @@ export default function AdminPage() {
     if (ordersResult.error) {
       setError(ordersResult.error.message);
     } else {
-      setOrders((ordersResult.data || []) as OrderRow[]);
+      const normalizedOrders: OrderRow[] = (ordersResult.data || []).map((order) => {
+        const rawCustomer = (order as { customers?: unknown }).customers;
+        const customers = Array.isArray(rawCustomer)
+          ? rawCustomer
+          : rawCustomer
+            ? [rawCustomer]
+            : [];
+
+        return {
+          id: String(order.id),
+          mp_payment_id: String(order.mp_payment_id),
+          status: String(order.status),
+          payment_method: String(order.payment_method),
+          total_amount: Number(order.total_amount || 0),
+          created_at: String(order.created_at),
+          customers: customers.map((customer) => ({
+            nome: String((customer as { nome?: unknown }).nome || "Cliente"),
+            email: String((customer as { email?: unknown }).email || ""),
+            telefone: (customer as { telefone?: string | null }).telefone ?? null,
+          })),
+        };
+      });
+
+      setOrders(normalizedOrders);
     }
 
     if (customersResult.error) {
@@ -164,8 +187,8 @@ export default function AdminPage() {
                 <div key={order.id} className="rounded-xl border border-gray-100 bg-gray-50 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <p className="text-sm font-black text-gray-900">{order.customers?.nome || "Cliente"}</p>
-                      <p className="text-xs text-gray-500">{order.customers?.email}</p>
+                      <p className="text-sm font-black text-gray-900">{order.customers[0]?.nome || "Cliente"}</p>
+                      <p className="text-xs text-gray-500">{order.customers[0]?.email || "E-mail nao informado"}</p>
                     </div>
                     <span className="rounded-full bg-blue-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-blue-700">
                       {order.status}
