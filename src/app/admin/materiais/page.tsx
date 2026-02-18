@@ -9,9 +9,10 @@ import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-type ProductOverrideRow = {
+type ProductRow = {
   id: string;
   nome: string;
+  descricao: string | null;
   preco_cents: number;
   tipo: string;
   imagem_url: string | null;
@@ -26,9 +27,11 @@ type OrderItemRow = {
 type EditableProduct = {
   id: string;
   nome: string;
+  descricao: string;
   tipo: "digital" | "fisico";
   precoCents: number;
   imagemUrl: string | null;
+  imagemPreviewUrl: string | null;
   materialPath: string | null;
   soldQuantity: number;
 };
@@ -36,11 +39,10 @@ type EditableProduct = {
 type NewProductForm = {
   id: string;
   nome: string;
+  descricao: string;
   tipo: "digital" | "fisico";
   preco: string;
 };
-
-const DEFAULT_PRODUCTS: EditableProduct[] = [];
 
 function slugify(value: string) {
   return value
@@ -51,23 +53,61 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+function isDirectUrl(value: string) {
+  return value.startsWith("http://") || value.startsWith("https://") || value.startsWith("/");
+}
+
+async function resolveImagePreviewUrl(
+  supabase: ReturnType<typeof getSupabaseBrowserClient>,
+  imagemUrl: string | null
+) {
+  if (!imagemUrl) return null;
+  if (isDirectUrl(imagemUrl)) return imagemUrl;
+  const signed = await supabase.storage.from("materiais").createSignedUrl(imagemUrl, 60 * 60 * 24);
+  return signed.data?.signedUrl || null;
+}
+
+async function uploadStorageFile(
+  supabase: ReturnType<typeof getSupabaseBrowserClient>,
+  productId: string,
+  file: File,
+  kind: "pdf" | "image"
+) {
+  const safeName = file.name.replace(/\s+/g, "-").toLowerCase();
+  const folder = kind === "pdf" ? "pdf" : "imagens";
+  const storagePath = `${productId}/${folder}/${Date.now()}-${safeName}`;
+  const uploadResult = await supabase.storage.from("materiais").upload(storagePath, file, { upsert: true });
+  if (uploadResult.error) throw new Error(uploadResult.error.message);
+  return storagePath;
+}
+
 export default function AdminMateriaisPage() {
   const router = useRouter();
 
   const [sessionReady, setSessionReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [products, setProducts] = useState<EditableProduct[]>(DEFAULT_PRODUCTS);
-  const [selectedProductId, setSelectedProductId] = useState(DEFAULT_PRODUCTS[0]?.id || "");
-  const [priceInput, setPriceInput] = useState(DEFAULT_PRODUCTS[0] ? (DEFAULT_PRODUCTS[0].precoCents / 100).toFixed(2) : "");
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [panel, setPanel] = useState<"create" | "manage">("create");
+  const [products, setProducts] = useState<EditableProduct[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState("");
+
   const [newProduct, setNewProduct] = useState<NewProductForm>({
     id: "",
     nome: "",
+    descricao: "",
     tipo: "digital",
     preco: "",
   });
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
+  const [newPdfFile, setNewPdfFile] = useState<File | null>(null);
+
+  const [editNome, setEditNome] = useState("");
+  const [editDescricao, setEditDescricao] = useState("");
+  const [editTipo, setEditTipo] = useState<"digital" | "fisico">("digital");
+  const [editPreco, setEditPreco] = useState("");
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editPdfFile, setEditPdfFile] = useState<File | null>(null);
+
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -75,6 +115,14 @@ export default function AdminMateriaisPage() {
     () => products.find((produto) => produto.id === selectedProductId) || null,
     [products, selectedProductId]
   );
+
+  useEffect(() => {
+    if (!selectedProduct) return;
+    setEditNome(selectedProduct.nome);
+    setEditDescricao(selectedProduct.descricao || "");
+    setEditTipo(selectedProduct.tipo);
+    setEditPreco((selectedProduct.precoCents / 100).toFixed(2));
+  }, [selectedProduct]);
 
   const ensureSupabaseSession = useCallback(async () => {
     let supabase;
@@ -112,10 +160,10 @@ export default function AdminMateriaisPage() {
     const [productsResult, salesResult] = await Promise.all([
       supabase
         .from("products")
-        .select("id, nome, preco_cents, tipo, imagem_url, material_path"),
-      supabase
-        .from("order_items")
-        .select("product_id, quantity"),
+        .select("id, nome, descricao, preco_cents, tipo, imagem_url, material_path")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false }),
+      supabase.from("order_items").select("product_id, quantity"),
     ]);
 
     if (productsResult.error) {
@@ -136,43 +184,26 @@ export default function AdminMateriaisPage() {
       salesByProduct.set(row.product_id, current + Number(row.quantity || 0));
     }
 
-    const normalizedMap = new Map<string, EditableProduct>();
-
-    for (const row of (productsResult.data || []) as ProductOverrideRow[]) {
-      const existing = normalizedMap.get(row.id);
-      if (existing) {
-        normalizedMap.set(row.id, {
-          ...existing,
-          nome: row.nome || existing.nome,
-          precoCents: Number.isFinite(row.preco_cents) ? Number(row.preco_cents) : existing.precoCents,
-          tipo: row.tipo === "fisico" ? "fisico" : existing.tipo,
-          imagemUrl: row.imagem_url ?? existing.imagemUrl,
-          materialPath: row.material_path ?? existing.materialPath,
-        });
-      } else {
-        normalizedMap.set(row.id, {
+    const normalized = await Promise.all(
+      ((productsResult.data || []) as ProductRow[]).map(async (row) => {
+        const tipo: "digital" | "fisico" = row.tipo === "fisico" ? "fisico" : "digital";
+        return {
           id: row.id,
           nome: row.nome || row.id,
+          descricao: row.descricao || "",
           precoCents: Number.isFinite(row.preco_cents) ? Number(row.preco_cents) : 0,
-          tipo: row.tipo === "fisico" ? "fisico" : "digital",
+          tipo,
           imagemUrl: row.imagem_url,
+          imagemPreviewUrl: await resolveImagePreviewUrl(supabase, row.imagem_url),
           materialPath: row.material_path,
-          soldQuantity: 0,
-        });
-      }
-    }
-
-    const normalized = Array.from(normalizedMap.values()).map((product) => ({
-      ...product,
-      soldQuantity: salesByProduct.get(product.id) || 0,
-    }));
+          soldQuantity: salesByProduct.get(row.id) || 0,
+        };
+      })
+    );
 
     setProducts(normalized);
-    const selectedAfterLoad = normalized.find((product) => product.id === selectedProductId) || normalized[0];
-    if (selectedAfterLoad) {
-      setSelectedProductId(selectedAfterLoad.id);
-      setPriceInput((selectedAfterLoad.precoCents / 100).toFixed(2));
-    }
+    const selectedAfterLoad = normalized.find((product) => product.id === selectedProductId) || normalized[0] || null;
+    setSelectedProductId(selectedAfterLoad?.id || "");
     setLoading(false);
   }, [ensureSupabaseSession, selectedProductId]);
 
@@ -183,174 +214,146 @@ export default function AdminMateriaisPage() {
     return () => clearTimeout(timer);
   }, [loadProducts]);
 
-  const updateProductState = (productId: string, updates: Partial<EditableProduct>) => {
-    setProducts((prev) => prev.map((product) => (product.id === productId ? { ...product, ...updates } : product)));
-  };
-
-  const upsertProduct = async (product: EditableProduct, updates?: Partial<EditableProduct>) => {
-    const supabase = await ensureSupabaseSession();
-    if (!supabase) return false;
-
-    const nextProduct = { ...product, ...updates };
-
-    const { error: upsertError } = await supabase.from("products").upsert(
-      {
-        id: nextProduct.id,
-        nome: nextProduct.nome,
-        preco_cents: nextProduct.precoCents,
-        tipo: nextProduct.tipo,
-        imagem_url: nextProduct.imagemUrl,
-        material_path: nextProduct.materialPath,
-        is_active: true,
-      },
-      { onConflict: "id" }
-    );
-
-    if (upsertError) {
-      setError(upsertError.message);
-      return false;
-    }
-
-    updateProductState(nextProduct.id, updates || {});
-    if (nextProduct.id === selectedProductId) {
-      setPriceInput((nextProduct.precoCents / 100).toFixed(2));
-    }
-    return true;
-  };
-
   const handleCreateProduct = async () => {
     const nome = newProduct.nome.trim();
     const id = (newProduct.id.trim() || slugify(nome));
+    const descricao = newProduct.descricao.trim();
     const preco = Number(newProduct.preco.replace(",", "."));
 
-    if (!nome) {
-      setError("Informe o nome do produto.");
-      return;
-    }
-    if (!id) {
-      setError("Informe um slug valido para o produto.");
-      return;
-    }
-    if (!Number.isFinite(preco) || preco <= 0) {
-      setError("Informe um preco valido para o novo produto.");
-      return;
-    }
-    if (products.some((product) => product.id === id)) {
-      setError("Ja existe um produto com esse ID.");
-      return;
-    }
+    if (!nome) return setError("Informe o nome do produto.");
+    if (!id) return setError("Informe um slug valido para o produto.");
+    if (!Number.isFinite(preco) || preco <= 0) return setError("Informe um preco valido para o novo produto.");
+    if (products.some((product) => product.id === id)) return setError("Ja existe um produto com esse ID.");
+
+    const supabase = await ensureSupabaseSession();
+    if (!supabase) return;
 
     setError(null);
     setSuccessMessage(null);
     setSaving(true);
 
-    const baseProduct: EditableProduct = {
-      id,
-      nome,
-      tipo: newProduct.tipo,
-      precoCents: Math.round(preco * 100),
-      imagemUrl: null,
-      materialPath: null,
-      soldQuantity: 0,
-    };
+    try {
+      const imagemUrl = newImageFile ? await uploadStorageFile(supabase, id, newImageFile, "image") : null;
+      const materialPath = newPdfFile ? await uploadStorageFile(supabase, id, newPdfFile, "pdf") : null;
 
-    const ok = await upsertProduct(baseProduct);
-    setSaving(false);
+      const { error: insertError } = await supabase.from("products").upsert(
+        {
+          id,
+          nome,
+          descricao: descricao || null,
+          preco_cents: Math.round(preco * 100),
+          tipo: newProduct.tipo,
+          imagem_url: imagemUrl,
+          material_path: materialPath,
+          is_active: true,
+        },
+        { onConflict: "id" }
+      );
 
-    if (!ok) return;
+      if (insertError) throw new Error(insertError.message);
 
-    setProducts((prev) => [...prev, baseProduct]);
-    setSelectedProductId(baseProduct.id);
-    setPriceInput((baseProduct.precoCents / 100).toFixed(2));
-    setNewProduct({ id: "", nome: "", tipo: "digital", preco: "" });
-    setSuccessMessage("Novo produto criado com sucesso. Agora voce pode subir imagem e PDF.");
+      setNewProduct({ id: "", nome: "", descricao: "", tipo: "digital", preco: "" });
+      setNewImageFile(null);
+      setNewPdfFile(null);
+      setPanel("manage");
+      await loadProducts();
+      setSelectedProductId(id);
+      setSuccessMessage("Produto criado com sucesso com todos os dados.");
+    } catch (createError: unknown) {
+      const message = createError instanceof Error ? createError.message : String(createError);
+      setError(message);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleSavePrice = async () => {
+  const handleSaveProductData = async () => {
     if (!selectedProduct) return;
+    const nome = editNome.trim();
+    const descricao = editDescricao.trim();
+    const preco = Number(editPreco.replace(",", "."));
 
-    const normalizedPrice = Number(priceInput.replace(",", "."));
-    if (!Number.isFinite(normalizedPrice) || normalizedPrice <= 0) {
-      setError("Informe um preco valido maior que zero.");
-      return;
-    }
+    if (!nome) return setError("Informe o nome do produto.");
+    if (!Number.isFinite(preco) || preco <= 0) return setError("Informe um preco valido.");
+
+    const supabase = await ensureSupabaseSession();
+    if (!supabase) return;
 
     setError(null);
     setSuccessMessage(null);
     setSaving(true);
 
-    const ok = await upsertProduct(selectedProduct, {
-      precoCents: Math.round(normalizedPrice * 100),
-    });
+    const { error: updateError } = await supabase
+      .from("products")
+      .upsert(
+        {
+          id: selectedProduct.id,
+          nome,
+          descricao: descricao || null,
+          tipo: editTipo,
+          preco_cents: Math.round(preco * 100),
+          imagem_url: selectedProduct.imagemUrl,
+          material_path: selectedProduct.materialPath,
+          is_active: true,
+        },
+        { onConflict: "id" }
+      );
 
     setSaving(false);
-    if (ok) {
-      setSuccessMessage("Preco atualizado com sucesso.");
+    if (updateError) {
+      setError(updateError.message);
+      return;
     }
+
+    await loadProducts();
+    setSuccessMessage("Dados do produto atualizados.");
   };
 
-  const handleUpload = async (kind: "pdf" | "image") => {
+  const handleUploadForSelected = async (kind: "pdf" | "image") => {
     if (!selectedProduct) return;
-
-    const file = kind === "pdf" ? pdfFile : imageFile;
+    const file = kind === "pdf" ? editPdfFile : editImageFile;
     if (!file) {
       setError(kind === "pdf" ? "Selecione um PDF para enviar." : "Selecione uma imagem para enviar.");
       return;
     }
 
+    const supabase = await ensureSupabaseSession();
+    if (!supabase) return;
+
     setError(null);
     setSuccessMessage(null);
     setSaving(true);
 
-    const supabase = await ensureSupabaseSession();
-    if (!supabase) {
+    try {
+      const storagePath = await uploadStorageFile(supabase, selectedProduct.id, file, kind);
+      const payload =
+        kind === "pdf"
+          ? { material_path: storagePath, imagem_url: selectedProduct.imagemUrl }
+          : { imagem_url: storagePath, material_path: selectedProduct.materialPath };
+
+      const { error: updateError } = await supabase
+        .from("products")
+        .update(payload)
+        .eq("id", selectedProduct.id);
+
+      if (updateError) throw new Error(updateError.message);
+
+      if (kind === "pdf") setEditPdfFile(null);
+      if (kind === "image") setEditImageFile(null);
+
+      await loadProducts();
+      setSuccessMessage(kind === "pdf" ? "PDF atualizado com sucesso." : "Imagem atualizada com sucesso.");
+    } catch (uploadError: unknown) {
+      const message = uploadError instanceof Error ? uploadError.message : String(uploadError);
+      setError(message);
+    } finally {
       setSaving(false);
-      return;
-    }
-
-    const safeName = file.name.replace(/\s+/g, "-").toLowerCase();
-    const folder = kind === "pdf" ? "pdf" : "imagens";
-    const storagePath = `${selectedProduct.id}/${folder}/${Date.now()}-${safeName}`;
-
-    const uploadResult = await supabase.storage
-      .from("materiais")
-      .upload(storagePath, file, { upsert: true });
-
-    if (uploadResult.error) {
-      setError(uploadResult.error.message);
-      setSaving(false);
-      return;
-    }
-
-    const ok = await upsertProduct(selectedProduct, {
-      materialPath: kind === "pdf" ? storagePath : selectedProduct.materialPath,
-      imagemUrl: kind === "image" ? storagePath : selectedProduct.imagemUrl,
-    });
-
-    setSaving(false);
-
-    if (ok) {
-      if (kind === "pdf") {
-        setPdfFile(null);
-        setSuccessMessage("PDF atualizado com sucesso.");
-      } else {
-        setImageFile(null);
-        setSuccessMessage("Imagem atualizada com sucesso.");
-      }
-    }
-  };
-
-  const handleSelectProduct = (productId: string) => {
-    setSelectedProductId(productId);
-    const product = products.find((item) => item.id === productId);
-    if (product) {
-      setPriceInput((product.precoCents / 100).toFixed(2));
     }
   };
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_45%,#f5f3ff_100%)] px-4 py-10">
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="mx-auto max-w-6xl space-y-6">
         {!sessionReady && loading ? (
           <div className="rounded-[2rem] border border-white bg-white/95 p-8 text-sm font-bold text-gray-500 shadow-[0_20px_70px_rgba(2,8,23,0.12)]">
             Validando login...
@@ -359,194 +362,264 @@ export default function AdminMateriaisPage() {
 
         {sessionReady ? (
           <div className="rounded-[2rem] border border-white bg-white/95 p-8 shadow-[0_20px_70px_rgba(2,8,23,0.12)]">
-          <Link
-            href="/admin"
-            className="mb-6 inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-gray-500 transition hover:text-gray-700"
-          >
-            <ArrowLeft size={14} />
-            Voltar para painel
-          </Link>
-
-          <h1 className="text-3xl font-black text-gray-900">Gerenciar produtos</h1>
-          <p className="mt-2 text-sm text-gray-500">Altere preco, troque foto, envie PDF e acompanhe quantidade de vendas.</p>
-
-          <section className="mt-8 rounded-2xl border border-gray-100 bg-white p-5">
-            <h2 className="text-lg font-black text-gray-900">Novo produto</h2>
-            <p className="mt-1 text-xs text-gray-500">Crie o produto no banco e depois envie imagem/PDF pelo Supabase Storage.</p>
-
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <label className="block">
-                <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Nome</span>
-                <input
-                  type="text"
-                  value={newProduct.nome}
-                  onChange={(event) => {
-                    const nome = event.target.value;
-                    setNewProduct((prev) => ({
-                      ...prev,
-                      nome,
-                      id: prev.id || slugify(nome),
-                    }));
-                  }}
-                  className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-700 outline-none"
-                  placeholder="Nome do produto"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Slug (id)</span>
-                <input
-                  type="text"
-                  value={newProduct.id}
-                  onChange={(event) => setNewProduct((prev) => ({ ...prev, id: slugify(event.target.value) }))}
-                  className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-700 outline-none"
-                  placeholder="meu-produto-novo"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Tipo</span>
-                <select
-                  value={newProduct.tipo}
-                  onChange={(event) => setNewProduct((prev) => ({ ...prev, tipo: event.target.value === "fisico" ? "fisico" : "digital" }))}
-                  className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 outline-none"
-                >
-                  <option value="digital">Digital</option>
-                  <option value="fisico">Fisico</option>
-                </select>
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Preco (R$)</span>
-                <input
-                  type="text"
-                  value={newProduct.preco}
-                  onChange={(event) => setNewProduct((prev) => ({ ...prev, preco: event.target.value }))}
-                  className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-700 outline-none"
-                  placeholder="39.90"
-                />
-              </label>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => void handleCreateProduct()}
-              disabled={saving}
-              className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-white transition hover:bg-indigo-700 disabled:bg-gray-300"
+            <Link
+              href="/admin"
+              className="mb-6 inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-gray-500 transition hover:text-gray-700"
             >
-              {saving ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
-              Criar produto
-            </button>
-          </section>
+              <ArrowLeft size={14} />
+              Voltar para painel
+            </Link>
 
-          <div className="mt-8 grid gap-4 md:grid-cols-2">
-            <label className="block">
-              <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Produto</span>
-              <select
-                value={selectedProductId}
-                onChange={(event) => handleSelectProduct(event.target.value)}
-                className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+            <h1 className="text-3xl font-black text-gray-900">Gerenciar produtos</h1>
+            <p className="mt-2 text-sm text-gray-500">Cadastro completo, uploads e edicao de nome, descricao, preco e arquivos.</p>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => setPanel("create")}
+                className={`rounded-2xl px-5 py-3 text-xs font-black uppercase tracking-[0.16em] transition ${
+                  panel === "create" ? "bg-indigo-600 text-white" : "border border-gray-200 bg-white text-gray-600"
+                }`}
               >
-                {products.map((produto) => (
-                  <option key={produto.id} value={produto.id}>
-                    {produto.nome}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-600">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Quantidade vendida</p>
-              <p className="mt-2 text-3xl font-black text-gray-900">{selectedProduct?.soldQuantity || 0}</p>
-              <p className="mt-1 text-xs text-gray-500">Baseado nos itens aprovados registrados.</p>
+                Criar Produto Completo
+              </button>
+              <button
+                type="button"
+                onClick={() => setPanel("manage")}
+                className={`rounded-2xl px-5 py-3 text-xs font-black uppercase tracking-[0.16em] transition ${
+                  panel === "manage" ? "bg-blue-600 text-white" : "border border-gray-200 bg-white text-gray-600"
+                }`}
+              >
+                Gerenciar Produto Existente
+              </button>
             </div>
-          </div>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-2">
-            <section className="rounded-2xl border border-gray-100 bg-white p-5">
-              <h2 className="text-lg font-black text-gray-900">Preco</h2>
-              <p className="mt-1 text-xs text-gray-500">Valor usado no checkout e no Mercado Pago.</p>
+            {panel === "create" ? (
+              <section className="mt-6 rounded-2xl border border-gray-100 bg-white p-6">
+                <h2 className="text-lg font-black text-gray-900">Novo produto</h2>
+                <p className="mt-1 text-xs text-gray-500">Defina nome, descricao, preco, foto e PDF em um fluxo unico.</p>
 
-              <div className="mt-4 space-y-3">
-                <label className="block">
-                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Preco em reais</span>
-                  <input
-                    type="text"
-                    value={priceInput}
-                    onChange={(event) => setPriceInput(event.target.value)}
-                    className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-700 outline-none"
-                    placeholder="39.90"
-                  />
-                </label>
-
-                <p className="text-xs text-gray-500">Preco atual: {selectedProduct ? formatCurrency(selectedProduct.precoCents) : "-"}</p>
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <label className="block md:col-span-2">
+                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Nome</span>
+                    <input
+                      type="text"
+                      value={newProduct.nome}
+                      onChange={(event) => {
+                        const nome = event.target.value;
+                        setNewProduct((prev) => ({ ...prev, nome, id: prev.id || slugify(nome) }));
+                      }}
+                      className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                      placeholder="Nome do produto"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Slug (id)</span>
+                    <input
+                      type="text"
+                      value={newProduct.id}
+                      onChange={(event) => setNewProduct((prev) => ({ ...prev, id: slugify(event.target.value) }))}
+                      className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                      placeholder="produto-novo"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Tipo</span>
+                    <select
+                      value={newProduct.tipo}
+                      onChange={(event) =>
+                        setNewProduct((prev) => ({ ...prev, tipo: event.target.value === "fisico" ? "fisico" : "digital" }))
+                      }
+                      className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                    >
+                      <option value="digital">Digital</option>
+                      <option value="fisico">Fisico</option>
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Preco (R$)</span>
+                    <input
+                      type="text"
+                      value={newProduct.preco}
+                      onChange={(event) => setNewProduct((prev) => ({ ...prev, preco: event.target.value }))}
+                      className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                      placeholder="39.90"
+                    />
+                  </label>
+                  <label className="block md:col-span-2">
+                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Descricao</span>
+                    <textarea
+                      value={newProduct.descricao}
+                      onChange={(event) => setNewProduct((prev) => ({ ...prev, descricao: event.target.value }))}
+                      className="min-h-28 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                      placeholder="Descricao do produto"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Foto do produto</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(event: ChangeEvent<HTMLInputElement>) => setNewImageFile(event.target.files?.[0] || null)}
+                      className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">PDF do material</span>
+                    <input
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      onChange={(event: ChangeEvent<HTMLInputElement>) => setNewPdfFile(event.target.files?.[0] || null)}
+                      className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                    />
+                  </label>
+                </div>
 
                 <button
                   type="button"
-                  onClick={handleSavePrice}
+                  onClick={() => void handleCreateProduct()}
+                  disabled={saving}
+                  className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-white transition hover:bg-indigo-700 disabled:bg-gray-300"
+                >
+                  {saving ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
+                  Criar Produto Completo
+                </button>
+              </section>
+            ) : (
+              <section className="mt-6 rounded-2xl border border-gray-100 bg-white p-6">
+                <h2 className="text-lg font-black text-gray-900">Gerenciar produto existente</h2>
+                <p className="mt-1 text-xs text-gray-500">Veja imagem atual, altere nome, descricao, preco e troque arquivos.</p>
+
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <label className="block md:col-span-2">
+                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Produto</span>
+                    <select
+                      value={selectedProductId}
+                      onChange={(event) => setSelectedProductId(event.target.value)}
+                      className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                    >
+                      {products.map((produto) => (
+                        <option key={produto.id} value={produto.id}>
+                          {produto.nome}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Foto atual</p>
+                    <div className="mt-3 flex min-h-48 items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-white">
+                      {selectedProduct?.imagemPreviewUrl ? (
+                        <img
+                          src={selectedProduct.imagemPreviewUrl}
+                          alt={selectedProduct.nome}
+                          className="max-h-48 w-auto object-contain"
+                        />
+                      ) : (
+                        <p className="text-xs font-bold text-gray-400">Sem imagem cadastrada</p>
+                      )}
+                    </div>
+                    <p className="mt-3 text-xs text-gray-500 break-all">Arquivo: {selectedProduct?.imagemUrl || "-"}</p>
+                    <p className="mt-1 text-xs text-gray-500">Vendidos: {selectedProduct?.soldQuantity || 0}</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Nome</span>
+                      <input
+                        type="text"
+                        value={editNome}
+                        onChange={(event) => setEditNome(event.target.value)}
+                        className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Tipo</span>
+                      <select
+                        value={editTipo}
+                        onChange={(event) => setEditTipo(event.target.value === "fisico" ? "fisico" : "digital")}
+                        className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                      >
+                        <option value="digital">Digital</option>
+                        <option value="fisico">Fisico</option>
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Preco (R$)</span>
+                      <input
+                        type="text"
+                        value={editPreco}
+                        onChange={(event) => setEditPreco(event.target.value)}
+                        className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">Preco atual: {selectedProduct ? formatCurrency(selectedProduct.precoCents) : "-"}</p>
+                    </label>
+                  </div>
+
+                  <label className="block md:col-span-2">
+                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Descricao</span>
+                    <textarea
+                      value={editDescricao}
+                      onChange={(event) => setEditDescricao(event.target.value)}
+                      className="min-h-28 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                    />
+                  </label>
+
+                  <div className="rounded-2xl border border-gray-100 bg-white p-4">
+                    <h3 className="text-sm font-black text-gray-900">Trocar imagem</h3>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(event: ChangeEvent<HTMLInputElement>) => setEditImageFile(event.target.files?.[0] || null)}
+                      className="mt-3 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void handleUploadForSelected("image")}
+                      disabled={saving || !selectedProduct}
+                      className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-white transition hover:bg-purple-700 disabled:bg-gray-300"
+                    >
+                      {saving ? <Loader2 size={14} className="animate-spin" /> : <ImageIcon size={14} />}
+                      Enviar imagem
+                    </button>
+                  </div>
+
+                  <div className="rounded-2xl border border-gray-100 bg-white p-4">
+                    <h3 className="text-sm font-black text-gray-900">Trocar PDF</h3>
+                    <input
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      onChange={(event: ChangeEvent<HTMLInputElement>) => setEditPdfFile(event.target.files?.[0] || null)}
+                      className="mt-3 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 outline-none"
+                    />
+                    <p className="mt-2 text-xs text-gray-500 break-all">Atual: {selectedProduct?.materialPath || "-"}</p>
+                    <button
+                      type="button"
+                      onClick={() => void handleUploadForSelected("pdf")}
+                      disabled={saving || !selectedProduct}
+                      className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-white transition hover:bg-emerald-700 disabled:bg-gray-300"
+                    >
+                      {saving ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                      Enviar PDF
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => void handleSaveProductData()}
                   disabled={saving || !selectedProduct}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-white transition hover:bg-blue-700 disabled:bg-gray-300"
+                  className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-white transition hover:bg-blue-700 disabled:bg-gray-300"
                 >
                   {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-                  Salvar preco
+                  Salvar dados do produto
                 </button>
-              </div>
-            </section>
+              </section>
+            )}
 
-            <section className="rounded-2xl border border-gray-100 bg-white p-5">
-              <h2 className="text-lg font-black text-gray-900">Imagem do produto</h2>
-              <p className="mt-1 text-xs text-gray-500">Suba uma nova imagem para usar no cadastro do produto.</p>
-
-              <div className="mt-4 space-y-3">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(event: ChangeEvent<HTMLInputElement>) => setImageFile(event.target.files?.[0] || null)}
-                  className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 outline-none"
-                />
-                <p className="text-xs text-gray-500 break-all">Atual: {selectedProduct?.imagemUrl || "Nao definida"}</p>
-                <button
-                  type="button"
-                  onClick={() => void handleUpload("image")}
-                  disabled={saving || !selectedProduct}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-white transition hover:bg-purple-700 disabled:bg-gray-300"
-                >
-                  {saving ? <Loader2 size={15} className="animate-spin" /> : <ImageIcon size={15} />}
-                  Enviar imagem
-                </button>
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-gray-100 bg-white p-5 lg:col-span-2">
-              <h2 className="text-lg font-black text-gray-900">PDF do material</h2>
-              <p className="mt-1 text-xs text-gray-500">Suba o PDF que sera associado ao produto.</p>
-
-              <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
-                <div>
-                  <input
-                    type="file"
-                    accept=".pdf,application/pdf"
-                    onChange={(event: ChangeEvent<HTMLInputElement>) => setPdfFile(event.target.files?.[0] || null)}
-                    className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 outline-none"
-                  />
-                  <p className="mt-2 text-xs text-gray-500 break-all">Atual: {selectedProduct?.materialPath || "Nao definido"}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void handleUpload("pdf")}
-                  disabled={saving || !selectedProduct}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-white transition hover:bg-emerald-700 disabled:bg-gray-300"
-                >
-                  {saving ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
-                  Enviar PDF
-                </button>
-              </div>
-            </section>
-          </div>
-
-          {loading ? <p className="mt-6 text-sm text-gray-500">Carregando dados...</p> : null}
-          {error ? <p className="mt-6 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-600">{error}</p> : null}
-          {successMessage ? <p className="mt-6 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">{successMessage}</p> : null}
+            {loading ? <p className="mt-6 text-sm text-gray-500">Carregando dados...</p> : null}
+            {error ? <p className="mt-6 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-600">{error}</p> : null}
+            {successMessage ? <p className="mt-6 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">{successMessage}</p> : null}
           </div>
         ) : null}
       </div>

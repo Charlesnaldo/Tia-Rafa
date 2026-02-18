@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 type ProductView = {
   id: string;
   nome: string;
+  descricao: string | null;
   preco_cents: number;
   tipo: "digital" | "fisico";
   imagem_url: string | null;
@@ -36,7 +37,7 @@ export async function GET() {
     const supabase = getSupabaseAdminClient();
     const { data, error } = await supabase
       .from("products")
-      .select("id, nome, preco_cents, tipo, imagem_url, material_path, is_active")
+      .select("id, nome, descricao, preco_cents, tipo, imagem_url, material_path, is_active")
       .eq("is_active", true);
 
     if (error || !data) {
@@ -53,6 +54,7 @@ export async function GET() {
         merged.set(row.id, {
           id: row.id,
           nome: row.nome || row.id,
+          descricao: row.descricao ?? null,
           preco_cents: Number.isFinite(row.preco_cents) ? Number(row.preco_cents) : 0,
           tipo: row.tipo === "fisico" ? "fisico" : "digital",
           imagem_url: resolvedImageUrl,
@@ -63,6 +65,7 @@ export async function GET() {
       merged.set(row.id, {
         id: row.id,
         nome: row.nome || base.nome,
+        descricao: row.descricao ?? base.descricao ?? null,
         preco_cents: Number.isFinite(row.preco_cents) ? Number(row.preco_cents) : base.preco_cents,
         tipo: row.tipo === "fisico" ? "fisico" : "digital",
         imagem_url: resolvedImageUrl ?? base.imagem_url,

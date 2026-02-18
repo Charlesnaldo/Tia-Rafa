@@ -16,6 +16,7 @@ create table if not exists public.customers (
 create table if not exists public.products (
   id text primary key,
   nome text not null,
+  descricao text,
   preco_cents integer not null default 0,
   tipo text not null default 'digital',
   imagem_url text,
@@ -24,6 +25,8 @@ create table if not exists public.products (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.products add column if not exists descricao text;
 
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),

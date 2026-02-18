@@ -6,6 +6,7 @@ import { type Produto } from "@/constants/produtos";
 type ProductOverride = {
   id: string;
   nome: string;
+  descricao: string | null;
   preco_cents: number;
   tipo: "digital" | "fisico";
   imagem_url: string | null;
@@ -31,7 +32,7 @@ function buildCatalogWithOverrides(overrides: ProductOverride[]): Record<string,
         imagens: override.imagem_url ? [override.imagem_url] : ["/embreve.jpg"],
         arquivoLocal: override.material_path || undefined,
         cor: "bg-blue-100",
-        descricao: "Material cadastrado no painel administrativo.",
+        descricao: override.descricao || "Material cadastrado no painel administrativo.",
         tags: ["Novo"],
         estrelas: 5,
       };
@@ -41,6 +42,7 @@ function buildCatalogWithOverrides(overrides: ProductOverride[]): Record<string,
     nextCatalog[override.id] = {
       ...current,
       nome: override.nome || current.nome,
+      descricao: override.descricao ?? current.descricao,
       preco: Number.isFinite(override.preco_cents) ? Number(override.preco_cents) : current.preco,
       tipo: override.tipo === "fisico" ? "fisico" : "digital",
       imagem: override.imagem_url ?? current.imagem,

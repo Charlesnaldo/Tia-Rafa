@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogOut, Mail, Phone, RefreshCcw, ShoppingCart, Users } from "lucide-react";
@@ -153,6 +153,30 @@ export default function AdminPage() {
     .filter((order) => order.status === "approved")
     .reduce((sum, order) => sum + Math.round(Number(order.total_amount || 0) * 100), 0);
 
+  const salesChart = useMemo(() => {
+    const now = new Date();
+    const days: { key: string; label: string; valueInCents: number }[] = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const day = new Date(now);
+      day.setDate(now.getDate() - i);
+      const key = day.toISOString().slice(0, 10);
+      const label = day.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+      days.push({ key, label, valueInCents: 0 });
+    }
+
+    for (const order of orders) {
+      if (order.status !== "approved") continue;
+      const key = order.created_at.slice(0, 10);
+      const match = days.find((day) => day.key === key);
+      if (!match) continue;
+      match.valueInCents += Math.round(Number(order.total_amount || 0) * 100);
+    }
+
+    const maxValue = Math.max(...days.map((day) => day.valueInCents), 1);
+    return { days, maxValue };
+  }, [orders]);
+
   if (!sessionReady && loading) {
     return (
       <div className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_40%,#f5f3ff_100%)] px-4 py-8">
@@ -218,6 +242,26 @@ export default function AdminPage() {
             <p className="mt-2 text-3xl font-black text-gray-900">{totalSoldItems}</p>
           </div>
         </div>
+
+        <section className="rounded-[2rem] border border-white bg-white/95 p-6 shadow-[0_20px_60px_rgba(2,8,23,0.09)]">
+          <h2 className="text-xl font-black text-gray-900">Grafico de vendas (7 dias)</h2>
+          <p className="mt-1 text-xs text-gray-500">Receita aprovada por dia.</p>
+          <div className="mt-5 flex items-end gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-4">
+            {salesChart.days.map((day) => (
+              <div key={day.key} className="flex min-w-0 flex-1 flex-col items-center gap-2">
+                <div className="flex h-40 w-full items-end rounded-xl bg-white p-1">
+                  <div
+                    className="w-full rounded-lg bg-gradient-to-t from-blue-500 to-cyan-400"
+                    style={{ height: `${Math.max(8, (day.valueInCents / salesChart.maxValue) * 100)}%` }}
+                    title={`${day.label}: ${formatCurrency(day.valueInCents)}`}
+                  />
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-gray-500">{day.label}</p>
+                <p className="text-[10px] font-bold text-gray-700">{formatCurrency(day.valueInCents)}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <section className="rounded-[2rem] border border-white bg-white/95 p-6 shadow-[0_20px_60px_rgba(2,8,23,0.09)]">
