@@ -10,6 +10,7 @@ type ProductView = {
   preco_cents: number;
   tipo: "digital" | "fisico";
   imagem_url: string | null;
+  imagem_urls: string[];
   material_path: string | null;
 };
 
@@ -30,6 +31,37 @@ async function resolveImageUrl(
   }
 }
 
+async function resolveProductImageUrls(
+  supabase: ReturnType<typeof getSupabaseAdminClient>,
+  productId: string,
+  imagemUrl: string | null
+) {
+  const imagePaths: string[] = [];
+  const folder = `${productId}/imagens`;
+  const listed = await supabase.storage.from("materiais").list(folder, {
+    limit: 100,
+    offset: 0,
+    sortBy: { column: "name", order: "asc" },
+  });
+
+  if (!listed.error && Array.isArray(listed.data)) {
+    for (const item of listed.data) {
+      if (!item?.name || item.id === null) continue;
+      imagePaths.push(`${folder}/${item.name}`);
+    }
+  }
+
+  if (imagemUrl && !imagePaths.includes(imagemUrl)) {
+    imagePaths.unshift(imagemUrl);
+  }
+
+  const urls = (
+    await Promise.all(imagePaths.map((path) => resolveImageUrl(supabase, path)))
+  ).filter((value): value is string => Boolean(value));
+
+  return urls;
+}
+
 export async function GET() {
   const fallback: ProductView[] = [];
 
@@ -48,7 +80,8 @@ export async function GET() {
 
     for (const row of data) {
       if (!row?.is_active) continue;
-      const resolvedImageUrl = await resolveImageUrl(supabase, row.imagem_url ?? null);
+      const resolvedImageUrls = await resolveProductImageUrls(supabase, row.id, row.imagem_url ?? null);
+      const resolvedImageUrl = resolvedImageUrls[0] || (await resolveImageUrl(supabase, row.imagem_url ?? null));
       const base = merged.get(row.id);
       if (!base) {
         merged.set(row.id, {
@@ -58,6 +91,7 @@ export async function GET() {
           preco_cents: Number.isFinite(row.preco_cents) ? Number(row.preco_cents) : 0,
           tipo: row.tipo === "fisico" ? "fisico" : "digital",
           imagem_url: resolvedImageUrl,
+          imagem_urls: resolvedImageUrls,
           material_path: row.material_path ?? null,
         });
         continue;
@@ -69,6 +103,7 @@ export async function GET() {
         preco_cents: Number.isFinite(row.preco_cents) ? Number(row.preco_cents) : base.preco_cents,
         tipo: row.tipo === "fisico" ? "fisico" : "digital",
         imagem_url: resolvedImageUrl ?? base.imagem_url,
+        imagem_urls: resolvedImageUrls.length > 0 ? resolvedImageUrls : base.imagem_urls,
         material_path: row.material_path ?? base.material_path,
       });
     }

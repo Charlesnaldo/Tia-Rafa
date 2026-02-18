@@ -33,7 +33,8 @@ type EditableProduct = {
   isActive: boolean;
   precoCents: number;
   imagemUrl: string | null;
-  imagemPreviewUrl: string | null;
+  imagePaths: string[];
+  imagePreviewUrls: string[];
   materialPath: string | null;
   soldQuantity: number;
 };
@@ -70,6 +71,33 @@ async function resolveImagePreviewUrl(
   return signed.data?.signedUrl || null;
 }
 
+async function resolveProductImagePaths(
+  supabase: ReturnType<typeof getSupabaseBrowserClient>,
+  productId: string,
+  imagemUrl: string | null
+) {
+  const imagePaths: string[] = [];
+  const folder = `${productId}/imagens`;
+  const listed = await supabase.storage.from("materiais").list(folder, {
+    limit: 100,
+    offset: 0,
+    sortBy: { column: "name", order: "asc" },
+  });
+
+  if (!listed.error && Array.isArray(listed.data)) {
+    for (const item of listed.data) {
+      if (!item?.name || item.id === null) continue;
+      imagePaths.push(`${folder}/${item.name}`);
+    }
+  }
+
+  if (imagemUrl && !imagePaths.includes(imagemUrl)) {
+    imagePaths.unshift(imagemUrl);
+  }
+
+  return imagePaths;
+}
+
 async function uploadStorageFile(
   supabase: ReturnType<typeof getSupabaseBrowserClient>,
   productId: string,
@@ -102,7 +130,7 @@ export default function AdminMateriaisPage() {
     isActive: true,
     preco: "",
   });
-  const [newImageFile, setNewImageFile] = useState<File | null>(null);
+  const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
   const [newPdfFile, setNewPdfFile] = useState<File | null>(null);
 
   const [editNome, setEditNome] = useState("");
@@ -110,7 +138,7 @@ export default function AdminMateriaisPage() {
   const [editTipo, setEditTipo] = useState<"digital" | "fisico">("digital");
   const [editIsActive, setEditIsActive] = useState(true);
   const [editPreco, setEditPreco] = useState("");
-  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImageFiles, setEditImageFiles] = useState<File[]>([]);
   const [editPdfFile, setEditPdfFile] = useState<File | null>(null);
 
   const [error, setError] = useState<string | null>(null);
@@ -192,6 +220,11 @@ export default function AdminMateriaisPage() {
     const normalized = await Promise.all(
       ((productsResult.data || []) as ProductRow[]).map(async (row) => {
         const tipo: "digital" | "fisico" = row.tipo === "fisico" ? "fisico" : "digital";
+        const imagePaths = await resolveProductImagePaths(supabase, row.id, row.imagem_url);
+        const imagePreviewUrls = (
+          await Promise.all(imagePaths.map((imagePath) => resolveImagePreviewUrl(supabase, imagePath)))
+        ).filter((url): url is string => Boolean(url));
+
         return {
           id: row.id,
           nome: row.nome || row.id,
@@ -200,7 +233,8 @@ export default function AdminMateriaisPage() {
           tipo,
           isActive: row.is_active !== false,
           imagemUrl: row.imagem_url,
-          imagemPreviewUrl: await resolveImagePreviewUrl(supabase, row.imagem_url),
+          imagePaths,
+          imagePreviewUrls,
           materialPath: row.material_path,
           soldQuantity: salesByProduct.get(row.id) || 0,
         };
@@ -239,7 +273,10 @@ export default function AdminMateriaisPage() {
     setSaving(true);
 
     try {
-      const imagemUrl = newImageFile ? await uploadStorageFile(supabase, id, newImageFile, "image") : null;
+      const uploadedImagePaths = await Promise.all(
+        newImageFiles.map((file) => uploadStorageFile(supabase, id, file, "image"))
+      );
+      const imagemUrl = uploadedImagePaths[0] || null;
       const materialPath = newPdfFile ? await uploadStorageFile(supabase, id, newPdfFile, "pdf") : null;
 
       const { error: insertError } = await supabase.from("products").upsert(
@@ -259,7 +296,7 @@ export default function AdminMateriaisPage() {
       if (insertError) throw new Error(insertError.message);
 
       setNewProduct({ id: "", nome: "", descricao: "", tipo: "digital", isActive: true, preco: "" });
-      setNewImageFile(null);
+      setNewImageFiles([]);
       setNewPdfFile(null);
       setPanel("manage");
       await loadProducts();
@@ -317,8 +354,8 @@ export default function AdminMateriaisPage() {
 
   const handleUploadForSelected = async (kind: "pdf" | "image") => {
     if (!selectedProduct) return;
-    const file = kind === "pdf" ? editPdfFile : editImageFile;
-    if (!file) {
+    const hasFile = kind === "pdf" ? Boolean(editPdfFile) : editImageFiles.length > 0;
+    if (!hasFile) {
       setError(kind === "pdf" ? "Selecione um PDF para enviar." : "Selecione uma imagem para enviar.");
       return;
     }
@@ -331,7 +368,14 @@ export default function AdminMateriaisPage() {
     setSaving(true);
 
     try {
-      const storagePath = await uploadStorageFile(supabase, selectedProduct.id, file, kind);
+      const uploadedImagePaths =
+        kind === "image"
+          ? await Promise.all(editImageFiles.map((file) => uploadStorageFile(supabase, selectedProduct.id, file, "image")))
+          : [];
+      const storagePath =
+        kind === "pdf"
+          ? await uploadStorageFile(supabase, selectedProduct.id, editPdfFile as File, "pdf")
+          : uploadedImagePaths[0] || selectedProduct.imagemUrl;
       const payload =
         kind === "pdf"
           ? { material_path: storagePath, imagem_url: selectedProduct.imagemUrl }
@@ -345,10 +389,10 @@ export default function AdminMateriaisPage() {
       if (updateError) throw new Error(updateError.message);
 
       if (kind === "pdf") setEditPdfFile(null);
-      if (kind === "image") setEditImageFile(null);
+      if (kind === "image") setEditImageFiles([]);
 
       await loadProducts();
-      setSuccessMessage(kind === "pdf" ? "PDF atualizado com sucesso." : "Imagem atualizada com sucesso.");
+      setSuccessMessage(kind === "pdf" ? "PDF atualizado com sucesso." : "Imagens atualizadas com sucesso.");
     } catch (uploadError: unknown) {
       const message = uploadError instanceof Error ? uploadError.message : String(uploadError);
       setError(message);
@@ -475,13 +519,19 @@ export default function AdminMateriaisPage() {
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Foto do produto</span>
+                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Fotos do produto</span>
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={(event: ChangeEvent<HTMLInputElement>) => setNewImageFile(event.target.files?.[0] || null)}
+                      multiple
+                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                        setNewImageFiles(Array.from(event.target.files || []))
+                      }
                       className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 outline-none"
                     />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Formatos: JPG, JPEG, PNG, WEBP, GIF, AVIF. Selecione uma ou mais imagens.
+                    </p>
                   </label>
                   <label className="block">
                     <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">PDF do material</span>
@@ -526,19 +576,20 @@ export default function AdminMateriaisPage() {
                   </label>
 
                   <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                    <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Foto atual</p>
-                    <div className="mt-3 flex min-h-48 items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-white">
-                      {selectedProduct?.imagemPreviewUrl ? (
-                        <img
-                          src={selectedProduct.imagemPreviewUrl}
-                          alt={selectedProduct.nome}
-                          className="max-h-48 w-auto object-contain"
-                        />
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Fotos atuais</p>
+                    <div className="mt-3 grid min-h-48 grid-cols-2 gap-2 overflow-hidden rounded-xl border border-gray-200 bg-white p-2">
+                      {selectedProduct?.imagePreviewUrls && selectedProduct.imagePreviewUrls.length > 0 ? (
+                        selectedProduct.imagePreviewUrls.map((imageUrl, index) => (
+                          <div key={imageUrl} className="relative overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
+                            <img src={imageUrl} alt={`${selectedProduct.nome} ${index + 1}`} className="h-24 w-full object-cover" />
+                          </div>
+                        ))
                       ) : (
-                        <p className="text-xs font-bold text-gray-400">Sem imagem cadastrada</p>
+                        <p className="col-span-2 self-center text-center text-xs font-bold text-gray-400">Sem imagem cadastrada</p>
                       )}
                     </div>
-                    <p className="mt-3 text-xs text-gray-500 break-all">Arquivo: {selectedProduct?.imagemUrl || "-"}</p>
+                    <p className="mt-3 text-xs text-gray-500 break-all">Principal: {selectedProduct?.imagemUrl || "-"}</p>
+                    <p className="mt-1 text-xs text-gray-500">Total de imagens: {selectedProduct?.imagePaths.length || 0}</p>
                     <p className="mt-1 text-xs text-gray-500">Vendidos: {selectedProduct?.soldQuantity || 0}</p>
                     <p className="mt-1 text-xs text-gray-500">Status: {selectedProduct?.isActive ? "Ativo" : "Inativo"}</p>
                   </div>
@@ -597,13 +648,17 @@ export default function AdminMateriaisPage() {
                   </label>
 
                   <div className="rounded-2xl border border-gray-100 bg-white p-4">
-                    <h3 className="text-sm font-black text-gray-900">Trocar imagem</h3>
+                    <h3 className="text-sm font-black text-gray-900">Adicionar imagens</h3>
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={(event: ChangeEvent<HTMLInputElement>) => setEditImageFile(event.target.files?.[0] || null)}
+                      multiple
+                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                        setEditImageFiles(Array.from(event.target.files || []))
+                      }
                       className="mt-3 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 outline-none"
                     />
+                    <p className="mt-2 text-xs text-gray-500">Você pode selecionar várias imagens de uma vez.</p>
                     <button
                       type="button"
                       onClick={() => void handleUploadForSelected("image")}
@@ -611,7 +666,7 @@ export default function AdminMateriaisPage() {
                       className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-white transition hover:bg-purple-700 disabled:bg-gray-300"
                     >
                       {saving ? <Loader2 size={14} className="animate-spin" /> : <ImageIcon size={14} />}
-                      Enviar imagem
+                      Enviar imagens
                     </button>
                   </div>
 
