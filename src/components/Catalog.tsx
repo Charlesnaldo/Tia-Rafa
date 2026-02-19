@@ -15,7 +15,7 @@ function CatalogContent() {
   const busca = searchParams.get("busca")?.toLowerCase() || "";
   const router = useRouter(); // Initialize useRouter
   const { addToCart } = useCart(); // Initialize useCart
-  const { productsArray: produtosArray } = useProductsCatalog();
+  const { productsArray: produtosArray, loaded } = useProductsCatalog();
 
   // CONFIGURAÇÃO DO FUNDO
   const bgImage = "/background.webp";
@@ -133,7 +133,18 @@ function CatalogContent() {
         </div>
 
         {/* Grid de Produtos */}
-        {produtosExibidos.length > 0 ? (
+        {!loaded ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
+            {Array.from({ length: 10 }).map((_, index) => (
+              <div key={index} className="rounded-2xl border border-white/60 bg-white/80 p-3">
+                <div className="aspect-square rounded-xl bg-gray-100 animate-pulse" />
+                <div className="mt-3 h-4 w-4/5 rounded bg-gray-100 animate-pulse" />
+                <div className="mt-2 h-3 w-2/5 rounded bg-gray-100 animate-pulse" />
+                <div className="mt-3 h-9 rounded-xl bg-gray-100 animate-pulse" />
+              </div>
+            ))}
+          </div>
+        ) : produtosExibidos.length > 0 ? (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
               {produtosExibidos.map((produto) => {
@@ -162,6 +173,7 @@ function CatalogContent() {
                           alt={produto.nome}
                           width={300}
                           height={300}
+                          unoptimized={imagemFinal.startsWith("http://") || imagemFinal.startsWith("https://")}
                           className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105 p-2"
                         />
                       </div>

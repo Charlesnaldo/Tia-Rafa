@@ -18,14 +18,22 @@ type ProductsApiResponse = {
   products?: ProductOverride[];
 };
 
+function normalizeImageUrl(value: string | null | undefined) {
+  if (!value) return "/embreve.jpg";
+  if (value.startsWith("/") || value.startsWith("http://") || value.startsWith("https://")) return value;
+  return "/embreve.jpg";
+}
+
 function buildCatalogWithOverrides(overrides: ProductOverride[]): Record<string, Produto> {
   const nextCatalog: Record<string, Produto> = {};
 
   for (const override of overrides) {
     const overrideImages = Array.isArray(override.imagem_urls)
-      ? override.imagem_urls.filter((img) => typeof img === "string" && img.length > 0)
+      ? override.imagem_urls
+          .filter((img) => typeof img === "string" && img.length > 0)
+          .map((img) => normalizeImageUrl(img))
       : [];
-    const primaryImage = overrideImages[0] || override.imagem_url || "/embreve.jpg";
+    const primaryImage = overrideImages[0] || normalizeImageUrl(override.imagem_url);
     const current = nextCatalog[override.id];
     if (!current) {
       nextCatalog[override.id] = {

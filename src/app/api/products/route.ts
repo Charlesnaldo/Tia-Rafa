@@ -22,12 +22,16 @@ async function resolveImageUrl(
   if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("/")) {
     return value;
   }
-  if (!supabase) return value;
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const fallbackPublicUrl = supabaseUrl
+    ? `${supabaseUrl}/storage/v1/object/public/materiais/${value.split("/").map(encodeURIComponent).join("/")}`
+    : null;
+  if (!supabase) return fallbackPublicUrl;
   try {
     const signed = await supabase.storage.from("materiais").createSignedUrl(value, 60 * 60 * 24);
-    return signed.data?.signedUrl || value;
+    return signed.data?.signedUrl || fallbackPublicUrl;
   } catch {
-    return value;
+    return fallbackPublicUrl;
   }
 }
 
