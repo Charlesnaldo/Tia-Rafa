@@ -9,6 +9,21 @@
     "lint": "eslint",
     "email:test": "node scripts/send-test-email.cjs"
   },
+  "browserslist": {
+    "production": [
+      "chrome >= 111",
+      "edge >= 111",
+      "firefox >= 111",
+      "safari >= 16.4",
+      "ios_saf >= 16.4",
+      "not dead"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
   "dependencies": {
     "@react-email/render": "^2.0.4",
     "@supabase/supabase-js": "^2.96.0",

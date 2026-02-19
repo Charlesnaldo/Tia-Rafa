@@ -27,7 +27,16 @@ function CatalogContent() {
   const [paginaAtual, setPaginaAtual] = useState(1);
   const itensPorPagina = 10; // Exibe 10 produtos por página
 
-  const todasTags = ['Tudo', ...Array.from(new Set(produtosArray.flatMap(p => p.tags || [])))];
+  const todasTags = useMemo(() => {
+    const uniqueTags = new Set<string>();
+    for (const produto of produtosArray) {
+      if (!produto.tags) continue;
+      for (const tag of produto.tags) {
+        uniqueTags.add(tag);
+      }
+    }
+    return ["Tudo", ...Array.from(uniqueTags)];
+  }, [produtosArray]);
 
   // Filtro de produtos
   const produtosFiltrados = useMemo(() => {
