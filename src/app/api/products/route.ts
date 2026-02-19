@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 type ProductView = {
   id: string;
@@ -59,9 +59,44 @@ async function resolveProductImageUrls(
     imagePaths.unshift(imagemUrl);
   }
 
-  const urls = (
-    await Promise.all(imagePaths.map((path) => resolveImageUrl(supabase, path)))
-  ).filter((value): value is string => Boolean(value));
+  if (imagePaths.length === 0) return [];
+
+  const directPaths = imagePaths.filter((path) => path.startsWith("http://") || path.startsWith("https://") || path.startsWith("/"));
+  const storagePaths = imagePaths.filter((path) => !directPaths.includes(path));
+
+  const resolvedByPath = new Map<string, string>();
+  for (const directPath of directPaths) {
+    resolvedByPath.set(directPath, directPath);
+  }
+
+  if (storagePaths.length > 0) {
+    try {
+      const signedBatch = await supabase.storage.from("materiais").createSignedUrls(storagePaths, 60 * 60 * 24);
+      if (!signedBatch.error && Array.isArray(signedBatch.data)) {
+        for (let i = 0; i < storagePaths.length; i += 1) {
+          const path = storagePaths[i];
+          const signedUrl = signedBatch.data[i]?.signedUrl || null;
+          const fallbackUrl = await resolveImageUrl(null, path);
+          if (signedUrl) resolvedByPath.set(path, signedUrl);
+          else if (fallbackUrl) resolvedByPath.set(path, fallbackUrl);
+        }
+      } else {
+        for (const path of storagePaths) {
+          const fallbackUrl = await resolveImageUrl(null, path);
+          if (fallbackUrl) resolvedByPath.set(path, fallbackUrl);
+        }
+      }
+    } catch {
+      for (const path of storagePaths) {
+        const fallbackUrl = await resolveImageUrl(null, path);
+        if (fallbackUrl) resolvedByPath.set(path, fallbackUrl);
+      }
+    }
+  }
+
+  const urls = imagePaths
+    .map((path) => resolvedByPath.get(path) || null)
+    .filter((value): value is string => Boolean(value));
 
   return urls;
 }
@@ -80,15 +115,13 @@ export async function GET() {
       return NextResponse.json({ products: fallback });
     }
 
-    const merged = new Map<string, ProductView>();
+    const activeRows = data.filter((row) => row?.is_active);
+    const products = await Promise.all(
+      activeRows.map(async (row): Promise<ProductView> => {
+        const resolvedImageUrls = await resolveProductImageUrls(supabase, row.id, row.imagem_url ?? null);
+        const resolvedImageUrl = resolvedImageUrls[0] || (await resolveImageUrl(supabase, row.imagem_url ?? null));
 
-    for (const row of data) {
-      if (!row?.is_active) continue;
-      const resolvedImageUrls = await resolveProductImageUrls(supabase, row.id, row.imagem_url ?? null);
-      const resolvedImageUrl = resolvedImageUrls[0] || (await resolveImageUrl(supabase, row.imagem_url ?? null));
-      const base = merged.get(row.id);
-      if (!base) {
-        merged.set(row.id, {
+        return {
           id: row.id,
           nome: row.nome || row.id,
           descricao: row.descricao ?? null,
@@ -97,22 +130,11 @@ export async function GET() {
           imagem_url: resolvedImageUrl,
           imagem_urls: resolvedImageUrls,
           material_path: row.material_path ?? null,
-        });
-        continue;
-      }
-      merged.set(row.id, {
-        id: row.id,
-        nome: row.nome || base.nome,
-        descricao: row.descricao ?? base.descricao ?? null,
-        preco_cents: Number.isFinite(row.preco_cents) ? Number(row.preco_cents) : base.preco_cents,
-        tipo: row.tipo === "fisico" ? "fisico" : "digital",
-        imagem_url: resolvedImageUrl ?? base.imagem_url,
-        imagem_urls: resolvedImageUrls.length > 0 ? resolvedImageUrls : base.imagem_urls,
-        material_path: row.material_path ?? base.material_path,
-      });
-    }
+        };
+      })
+    );
 
-    return NextResponse.json({ products: Array.from(merged.values()) });
+    return NextResponse.json({ products });
   } catch {
     return NextResponse.json({ products: fallback });
   }

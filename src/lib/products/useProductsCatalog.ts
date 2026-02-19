@@ -18,6 +18,9 @@ type ProductsApiResponse = {
   products?: ProductOverride[];
 };
 
+let productsCache: Record<string, Produto> | null = null;
+let productsCachePromise: Promise<Record<string, Produto>> | null = null;
+
 function normalizeImageUrl(value: string | null | undefined) {
   if (!value) return "/embreve.jpg";
   if (value.startsWith("/") || value.startsWith("http://") || value.startsWith("https://")) return value;
@@ -69,22 +72,37 @@ function buildCatalogWithOverrides(overrides: ProductOverride[]): Record<string,
   return nextCatalog;
 }
 
+async function fetchProductsFromApi() {
+  if (productsCache) return productsCache;
+  if (!productsCachePromise) {
+    productsCachePromise = (async () => {
+      const response = await fetch("/api/products");
+      if (!response.ok) return {};
+
+      const data = (await response.json()) as ProductsApiResponse;
+      const next = Array.isArray(data.products) ? buildCatalogWithOverrides(data.products) : {};
+      productsCache = next;
+      return next;
+    })().finally(() => {
+      productsCachePromise = null;
+    });
+  }
+
+  return productsCachePromise;
+}
+
 export function useProductsCatalog() {
   const [loaded, setLoaded] = useState(false);
-  const [productsById, setProductsById] = useState<Record<string, Produto>>({});
+  const [productsById, setProductsById] = useState<Record<string, Produto>>(productsCache || {});
 
   useEffect(() => {
     let cancelled = false;
 
     const loadProducts = async () => {
       try {
-        const response = await fetch("/api/products", { cache: "no-store" });
-        if (!response.ok) return;
-
-        const data = (await response.json()) as ProductsApiResponse;
-        if (cancelled || !Array.isArray(data.products)) return;
-
-        setProductsById(buildCatalogWithOverrides(data.products));
+        const products = await fetchProductsFromApi();
+        if (cancelled) return;
+        setProductsById(products);
       } catch {
         // sem fallback local
       } finally {
