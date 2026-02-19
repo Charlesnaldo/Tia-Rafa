@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Fredoka } from "next/font/google";
 import "./globals.css";
 
@@ -31,7 +32,9 @@ export default function RootLayout({
   return (
     <html lang="pt-br" className="scroll-smooth" data-scroll-behavior="smooth">
       <body className={`${fredoka.className} antialiased flex flex-col min-h-screen bg-white`}>
-        <GoogleAnalytics />
+        <Suspense fallback={null}>
+          <GoogleAnalytics />
+        </Suspense>
         <CartProvider>
           {/* HEADER DESKTOP */}
           <div className="hidden lg:block">
