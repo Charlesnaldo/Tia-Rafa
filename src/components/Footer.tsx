@@ -71,11 +71,16 @@ export default function Footer() {
               Explorar <Sparkles size={40} className="text-yellow-400" />
             </h4>
             <ul className="space-y-4">
-              {['Materiais PDF', 'Sobre a Tia', 'Blog', 'Área do Aluno'].map((link) => (
-                <li key={link}>
-                  <Link href="#" className="group text-gray-500 hover:text-purple-500 font-black transition-all flex items-center gap-2">
+              {[
+                { label: "Materiais PDF", href: "/#catalogo" },
+                { label: "Sobre a Tia", href: "/sobre" },
+                { label: "Blog", href: "/blog" },
+                { label: "Area do Aluno", href: "/area-do-aluno" },
+              ].map((link) => (
+                <li key={link.label}>
+                  <Link href={link.href} className="group text-gray-500 hover:text-purple-500 font-black transition-all flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-pink-300 group-hover:w-4 transition-all" />
-                    {link}
+                    {link.label}
                   </Link>
                 </li>
               ))}
@@ -138,3 +143,4 @@ export default function Footer() {
     </footer>
   );
 }
+
