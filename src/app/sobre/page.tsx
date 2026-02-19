@@ -34,14 +34,14 @@ function SobreContent() {
       color: 'pink' 
     },
     { 
-      title: "NeuroPsicopedagogia", 
-      description: "Conhecimento em desenvolvimento cognitivo infantil",
+      title: "Pós-Graduação em NeuroPsicopedagogia Clínica e Institucional ", 
+      description: "Conhecimento em desenvolvimento cognitivo infantil, Atendimento personalizado para dificuldades de aprendizagem",
       icon: Star, 
       color: 'blue' 
     },
     { 
-      title: "Psicopedagogia Clínica", 
-      description: "Atendimento personalizado para dificuldades de aprendizagem",
+      title: "Pós-Graduação em Especialização em Gestão,Coordenação e Supervisão Educacional", 
+      description: "liderança estratégica, organização de processos e desenvolvimento de equipes.",
       icon: BookOpen, 
       color: 'purple' 
     },
