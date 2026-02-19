@@ -155,7 +155,7 @@ function CatalogContent() {
                 return (
                   <div
                     key={produto.id}
-                    className="group bg-white/90 backdrop-blur-sm rounded-2xl border border-white/50 p-3 hover:shadow-xl hover:shadow-purple-100/30 transition-all duration-300 relative flex flex-col h-full hover:-translate-y-1"
+                    className="group bg-white/90 backdrop-blur-sm rounded-2xl border border-white/50 p-2.5 hover:shadow-xl hover:shadow-purple-100/30 transition-all duration-300 relative flex flex-col h-full hover:-translate-y-1"
                   >
                     {/* Product Type Tag */}
                     <div className={`absolute top-2 right-2 z-10 px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm ${produto.tipo === 'digital'
@@ -167,7 +167,7 @@ function CatalogContent() {
 
                     {/* Link to Product Details */}
                     <Link href={`/produto/${produto.id}`} className="flex flex-col flex-grow">
-                      <div className={`relative aspect-square rounded-xl overflow-hidden mb-3 shadow-inner ${produto.cor}`}>
+                      <div className={`relative aspect-[4/4.8] rounded-xl overflow-hidden mb-2.5 shadow-inner ${produto.cor}`}>
                         <Image
                           src={imagemFinal}
                           alt={produto.nome}
