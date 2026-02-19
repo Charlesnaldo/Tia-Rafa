@@ -9,19 +9,19 @@ const depoimentos = [
     nome: "Raniele",
     funcao: "Professora de Alfabetização",
     texto: "Os materiais da Tia Rafa transformaram minhas aulas! As crianças ficam encantadas com as cores e as atividades são super didáticas.",
-    foto: "/testimonials/raniele.png",
+    foto: "/testimonials/raniele.webp",
   },
   {
     nome: "Alessadra",
     funcao: "Professora Ensino infantil",
     texto: "Comprei o kit Historia da Luva foi a melhor escolha. Meus alunos adoraram!",
-    foto: "/testimonials/alessandra.png",
+    foto: "/testimonials/alessandra.webp",
   },
   {
     nome: "Ludmila Madureira",
     funcao: "Pedagoga",
     texto: "Arquivos de altíssima qualidade. O PDF chega na hora e a organização dos temas facilita muito o nosso planejamento escolar.",
-    foto: "/testimonials/lud.png",
+    foto: "/testimonials/lud.webp",
   },
 ];
 
