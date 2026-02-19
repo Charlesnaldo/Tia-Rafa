@@ -7,6 +7,7 @@ import HeaderMobile from "@/components/HeaderMobile";
 import HeaderMobileTop from "@/components/HeaderMobileTop";
 import Footer from "@/components/Footer";
 import { CartProvider } from "@/context/CartContext";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 
 const fredoka = Fredoka({
   subsets: ["latin"],
@@ -30,6 +31,7 @@ export default function RootLayout({
   return (
     <html lang="pt-br" className="scroll-smooth" data-scroll-behavior="smooth">
       <body className={`${fredoka.className} antialiased flex flex-col min-h-screen bg-white`}>
+        <GoogleAnalytics />
         <CartProvider>
           {/* HEADER DESKTOP */}
           <div className="hidden lg:block">
