@@ -9,13 +9,13 @@ const depoimentos = [
     nome: "Raniele",
     funcao: "Professora de Alfabetização",
     texto: "Os materiais da Tia Rafa transformaram minhas aulas! As crianças ficam encantadas com as cores e as atividades são super didáticas.",
-    foto: "/testimonials/raniele.webp",
+    foto: "/testimonials/raniele.jpg",
   },
   {
     nome: "Alessadra",
     funcao: "Professora Ensino infantil",
     texto: "Comprei o kit Historia da Luva foi a melhor escolha. Meus alunos adoraram!",
-    foto: "/testimonials/alessandra.webp",
+    foto: "/testimonials/alessandra.jpg",
   },
   {
     nome: "Ludmila Madureira",
@@ -27,11 +27,11 @@ const depoimentos = [
 
 export default function Testimonials() {
   return (
-    <section className="py-8 bg-white font-fredoka overflow-hidden">
+    <section className="py-8 bg-white font-fredoka overflow-hidden" aria-labelledby="depoimentos-heading">
       <div className="max-w-7xl mx-auto px-6">
         {/* Título da Seção */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-black text-gray-900 mb-4">
+          <h2 id="depoimentos-heading" className="text-4xl font-black text-gray-900 mb-4">
             Quem usa, <span className="text-pink-500">ama e recomenda!</span>
           </h2>
           <p className="text-gray-500 text-lg font-medium">
@@ -55,7 +55,7 @@ export default function Testimonials() {
               </div>
 
               {/* Estrelas */}
-              <div className="flex gap-1 mb-6 text-yellow-400">
+              <div className="flex gap-1 mb-6 text-yellow-500" aria-hidden="true">
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} size={18} fill="currentColor" />
                 ))}
@@ -92,17 +92,17 @@ export default function Testimonials() {
         </div>
 
         {/* Badge de Verificação Inferior */}
-        <div className="mt-16 flex flex-wrap justify-center gap-8 opacity-50 grayscale contrast-125">
-             <div className="flex items-center gap-2 font-black text-gray-500 text-sm uppercase">
+        <ul className="mt-16 flex flex-wrap justify-center gap-8">
+             <li className="flex items-center gap-2 font-black text-gray-700 text-sm uppercase">
                 <CheckCircle size={20} /> Compra 100% Segura
-             </div>
-             <div className="flex items-center gap-2 font-black text-gray-500 text-sm uppercase">
+             </li>
+             <li className="flex items-center gap-2 font-black text-gray-700 text-sm uppercase">
                 <CheckCircle size={20} /> Material Validado
-             </div>
-             <div className="flex items-center gap-2 font-black text-gray-500 text-sm uppercase">
+             </li>
+             <li className="flex items-center gap-2 font-black text-gray-700 text-sm uppercase">
                 <CheckCircle size={20} /> Acesso Instantâneo
-             </div>
-        </div>
+             </li>
+        </ul>
       </div>
     </section>
   );

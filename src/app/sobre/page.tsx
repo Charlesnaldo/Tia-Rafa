@@ -63,7 +63,7 @@ function SobreContent() {
       textColor: "text-white"
     },
     { 
-      href: "mailto:contato@professora.com", 
+      href: "mailto:vendaso@tiarafaela.com.br", 
       label: "Email", 
       icon: Mail,
       color: "bg-white border border-blue-100",

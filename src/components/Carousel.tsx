@@ -28,22 +28,22 @@ export default function DualCarousel() {
   );
 
   return (
-    <section className="flex flex-col gap-10 overflow-hidden bg-white py-20 [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] [-webkit-mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+    <section className="flex flex-col gap-10 overflow-hidden bg-white py-20 [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] [-webkit-mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]" aria-labelledby="destaques-heading">
       
       {/* Header */}
       <div className="flex flex-col items-center text-center px-4 mb-4">
         <div className="p-3 bg-purple-100 rounded-2xl text-purple-600 mb-4 animate-bounce">
           <Sparkles size={28} />
         </div>
-        <h3 className="text-4xl md:text-5xl font-black font-fredoka bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500">
+        <h3 id="destaques-heading" className="text-4xl md:text-5xl font-black font-fredoka bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500">
           Destaques Mágicos
         </h3>
-        <p className="text-gray-400 mt-2 font-medium">Toque e arraste para explorar os materiais!</p>
+        <p className="text-gray-600 mt-2 font-medium">Toque e arraste para explorar os materiais!</p>
       </div>
 
      
-      <div className="cursor-grab active:cursor-grabbing">
-        <div className="overflow-hidden" ref={emblaRefTop}>
+      <div className="cursor-grab active:cursor-grabbing" role="region" aria-label="Carrossel de materiais em destaque - linha superior">
+        <div className="overflow-hidden" ref={emblaRefTop} tabIndex={0}>
           <div className="flex gap-6 ml-6">
             {linhaSuperior.map((produto) => (
               <div key={produto.id} className="flex-[0_0_280px] md:flex-[0_0_350px] min-w-0">
@@ -55,8 +55,8 @@ export default function DualCarousel() {
       </div>
 
      
-      <div className="cursor-grab active:cursor-grabbing">
-        <div className="overflow-hidden" ref={emblaRefBottom} dir="rtl">
+      <div className="cursor-grab active:cursor-grabbing" role="region" aria-label="Carrossel de materiais em destaque - linha inferior">
+        <div className="overflow-hidden" ref={emblaRefBottom} dir="rtl" tabIndex={0}>
           <div className="flex gap-6 mr-6">
             {linhaInferior.map((produto) => (
               <div key={produto.id} className="flex-[0_0_280px] md:flex-[0_0_350px] min-w-0" dir="ltr">

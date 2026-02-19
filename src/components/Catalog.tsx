@@ -81,6 +81,7 @@ function CatalogContent() {
     <section
       className="relative py-16 font-fredoka scroll-mt-10 overflow-hidden"
       id="catalogo"
+      aria-labelledby="catalogo-heading"
     >
       {/* BACKGROUND DIRETO NO CÓDIGO */}
       <div
@@ -93,7 +94,7 @@ function CatalogContent() {
       <div className="max-w-[1400px] mx-auto px-4 relative z-10">
         {/* Cabeçalho */}
         <div className="text-center mb-5">
-          <h2 className="text-5xl md:text-6xl font-black tracking-tighter mb-6 leading-tight">
+          <h2 id="catalogo-heading" className="text-5xl md:text-6xl font-black tracking-tighter mb-6 leading-tight">
             {busca ? (
               <span className="text-gray-900 bg-white/80 px-4 py-1 rounded-2xl">🔍 Resultados para: {busca}</span>
             ) : (
@@ -104,7 +105,8 @@ function CatalogContent() {
           </h2>
 
           {/* Filtros de Tipo */}
-          <div className="flex flex-wrap justify-center gap-2 mb-6">
+          <fieldset className="flex flex-wrap justify-center gap-2 mb-6" aria-label="Filtrar por tipo de material">
+            <legend className="sr-only">Tipo de material</legend>
             {[
               { id: 'todos', label: 'Todos', icon: <ShoppingCart size={14} /> },
               { id: 'digital', label: 'Digital', icon: <FileText size={14} /> },
@@ -112,33 +114,44 @@ function CatalogContent() {
             ].map((filtro) => (
               <button
                 key={filtro.id}
-                onClick={() => setCategoria(filtro.id as 'todos' | 'digital' | 'fisico')}
+                type="button"
+                onClick={() => {
+                  setCategoria(filtro.id as 'todos' | 'digital' | 'fisico');
+                  setPaginaAtual(1);
+                }}
+                aria-pressed={categoria === filtro.id}
                 className={`flex items-center cursor-pointer gap-1 px-4 py-2 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all shadow-sm ${categoria === filtro.id
                   ? 'bg-purple-600 text-white shadow-lg shadow-purple-200 scale-105'
-                  : 'bg-white/90 text-gray-400 hover:bg-white hover:text-gray-600 border border-gray-100'
+                  : 'bg-white/90 text-gray-700 hover:bg-white hover:text-gray-800 border border-gray-100'
                   }`}
               >
                 {filtro.icon}
                 {filtro.label}
               </button>
             ))}
-          </div>
+          </fieldset>
 
           {/* Filtros de Tags */}
-          <div className="flex flex-wrap justify-center gap-1.5 max-w-4xl mx-auto mb-6">
+          <fieldset className="flex flex-wrap justify-center gap-1.5 max-w-4xl mx-auto mb-6" aria-label="Filtrar por tags">
+            <legend className="sr-only">Tags de material</legend>
             {todasTags.slice(0, 8).map((tag) => (
               <button
                 key={tag}
-                onClick={() => setTagAtiva(tag)}
-                className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all border ${tagAtiva === tag
+                type="button"
+                onClick={() => {
+                  setTagAtiva(tag);
+                  setPaginaAtual(1);
+                }}
+                aria-pressed={tagAtiva === tag}
+                className={`px-3 py-1 rounded-full text-[11px] font-bold transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 ${tagAtiva === tag
                   ? 'bg-pink-50 border-pink-200 text-pink-600 shadow-sm'
-                  : 'bg-white/80 border-gray-100 text-gray-400 hover:border-gray-200'
+                  : 'bg-white/80 border-gray-100 text-gray-700 hover:border-gray-200'
                   }`}
               >
                 {tag}
               </button>
             ))}
-          </div>
+          </fieldset>
         </div>
 
         {/* Grid de Produtos */}
@@ -167,12 +180,12 @@ function CatalogContent() {
                     className="group bg-white/90 backdrop-blur-sm rounded-2xl border border-white/50 p-2.5 hover:shadow-xl hover:shadow-purple-100/30 transition-all duration-300 relative flex flex-col h-full hover:-translate-y-1"
                   >
                     {/* Product Type Tag */}
-                    <div className={`absolute top-2 right-2 z-10 px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm ${produto.tipo === 'digital'
+                    <span className={`absolute top-2 right-2 z-10 px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm ${produto.tipo === 'digital'
                       ? 'bg-blue-500 text-white shadow-blue-200'
                       : 'bg-orange-500 text-white shadow-orange-200'
                       }`}>
                       {produto.tipo === 'digital' ? 'PDF' : 'Físico'}
-                    </div>
+                    </span>
 
                     {/* Link to Product Details */}
                     <Link href={`/produto/${produto.id}`} className="flex flex-col flex-grow">
@@ -214,8 +227,9 @@ function CatalogContent() {
                     <div className="mt-3 pt-3 border-t border-purple-100 flex gap-2">
                       {/* CARRINHO – SOMENTE ÍCONE */}
                       <button
+                        type="button"
                         onClick={() => handleAddToCart(produto)}
-                        aria-label="Adicionar ao carrinho"
+                        aria-label={`Adicionar ${produto.nome} ao carrinho`}
                         className="
       w-10 h-10
       cursor-pointer
@@ -224,6 +238,7 @@ function CatalogContent() {
       flex items-center justify-center
       transition-all
       active:scale-95
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2
       hover:bg-purple-200
       md:w-11 md:h-11
     "
@@ -233,7 +248,9 @@ function CatalogContent() {
 
                       {/* COMPRAR */}
                       <button
+                        type="button"
                         onClick={() => handleBuyNow(produto)}
+                        aria-label={`Comprar agora: ${produto.nome}`}
                         className="
       flex-1 h-10
       cursor-pointer
@@ -245,6 +262,7 @@ function CatalogContent() {
       shadow-md
       transition-all
       active:scale-95
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2
       md:text-xs md:h-11
     "
                       >
@@ -261,8 +279,10 @@ function CatalogContent() {
             {totalPaginas > 1 && (
               <div className="mt-12 flex justify-center items-center gap-2">
                 <button
+                  type="button"
                   onClick={() => setPaginaAtual(p => Math.max(p - 1, 1))}
                   disabled={paginaAtual === 1}
+                  aria-label="Ir para a página anterior"
                   className="p-2 rounded-xl bg-white border border-gray-100 text-purple-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-purple-50 transition-all"
                 >
                   <ChevronLeft size={20} />
@@ -271,10 +291,13 @@ function CatalogContent() {
                 {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((num) => (
                   <button
                     key={num}
+                    type="button"
                     onClick={() => setPaginaAtual(num)}
+                    aria-label={`Ir para a página ${num}`}
+                    aria-current={paginaAtual === num ? "page" : undefined}
                     className={`w-10 h-10 rounded-xl cursor-pointer  font-bold text-sm transition-all ${paginaAtual === num
                         ? "bg-purple-600 text-white shadow-md scale-110"
-                        : "bg-white text-gray-400 border border-gray-100 hover:text-purple-600"
+                        : "bg-white text-gray-700 border border-gray-100 hover:text-purple-600"
                       }`}
                   >
                     {num}
@@ -282,8 +305,10 @@ function CatalogContent() {
                 ))}
 
                 <button
+                  type="button"
                   onClick={() => setPaginaAtual(p => Math.min(p + 1, totalPaginas))}
                   disabled={paginaAtual === totalPaginas}
+                  aria-label="Ir para a próxima página"
                   className="p-2 rounded-xl bg-white border border-gray-100 text-purple-600 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-purple-50 transition-all"
                 >
                   <ChevronRight size={20} />
@@ -298,7 +323,8 @@ function CatalogContent() {
             </div>
             <p className="font-bold text-xl text-gray-500">Nenhum material mágico encontrado.</p>
             <button
-              onClick={() => { setCategoria('todos'); setTagAtiva('Tudo'); }}
+              type="button"
+              onClick={() => { setCategoria('todos'); setTagAtiva('Tudo'); setPaginaAtual(1); }}
               className="mt-3 text-purple-600 font-bold hover:underline text-sm cursor-pointer"
             >
               Limpar todos os filtros

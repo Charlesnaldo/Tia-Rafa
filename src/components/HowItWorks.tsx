@@ -1,5 +1,6 @@
 import { ShoppingCart, CreditCard, MailOpen, FileCheck, ArrowRight, Sparkles, Download, Printer, ShieldCheck, Smartphone } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function HowItWorks() {
   const steps = [
@@ -49,11 +50,11 @@ export default function HowItWorks() {
   ];
 
   return (
-    <section className="py-24 font-fredoka overflow-hidden relative bg-white" id="como-funciona">
+    <section className="py-24 font-fredoka overflow-hidden relative bg-white" id="como-funciona" aria-labelledby="como-funciona-heading">
       
       
     
-<div className="absolute top-0 left-0 w-full leading-[0] z-20">
+<div className="absolute top-0 left-0 w-full leading-[0] z-20" aria-hidden="true">
   <svg 
     viewBox="0 0 1440 320" 
     preserveAspectRatio="none" 
@@ -66,7 +67,7 @@ export default function HowItWorks() {
 </div>
       
       
-<div className="absolute top-0 left-0 w-full leading-[0] z-0 rotate-180">
+<div className="absolute top-0 left-0 w-full leading-[0] z-0 rotate-180" aria-hidden="true">
   <svg 
     viewBox="0 0 1200 120" 
     preserveAspectRatio="none" 
@@ -76,7 +77,7 @@ export default function HowItWorks() {
   </svg>
 </div>
 
-      <div className="absolute inset-0 z-0 opacity-25">
+      <div className="absolute inset-0 z-0 opacity-25" aria-hidden="true">
         <Image
           src="/background2.jpg"
           alt=""
@@ -87,15 +88,15 @@ export default function HowItWorks() {
       </div>
 
      
-       <div className="absolute bottom-0 left-0 w-full leading-[0]">
+       <div className="absolute bottom-0 left-0 w-full leading-[0]" aria-hidden="true">
         <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="relative block w-full h-16 md:h-24 fill-white">
           <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"></path>
         </svg>
       </div>
 
       
-      <div className="absolute top-0 left-0 w-64 h-64 bg-purple-100 rounded-full blur-3xl opacity-40 -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-orange-100 rounded-full blur-3xl opacity-40 translate-x-1/3 translate-y-1/3" />
+      <div className="absolute top-0 left-0 w-64 h-64 bg-purple-100 rounded-full blur-3xl opacity-40 -translate-x-1/2 -translate-y-1/2" aria-hidden="true" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-orange-100 rounded-full blur-3xl opacity-40 translate-x-1/3 translate-y-1/3" aria-hidden="true" />
 
       <div className="max-w-7xl mx-auto px-6 relative z-10">
 
@@ -107,7 +108,7 @@ export default function HowItWorks() {
               Passo a Passo
             </span>
           </div>
-          <h2 className="text-5xl md:text-7xl font-black tracking-tight leading-tight mb-12">
+          <h2 id="como-funciona-heading" className="text-5xl md:text-7xl font-black tracking-tight leading-tight mb-12">
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400">Como você recebe </span>
             <br className="hidden md:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400">
@@ -115,24 +116,24 @@ export default function HowItWorks() {
             </span>
           </h2>
 
-          <div className="flex flex-wrap justify-center gap-4 mb-12">
+          <ul className="flex flex-wrap justify-center gap-4 mb-12" aria-label="Benefícios da compra">
             {features.map((feature, idx) => (
-              <div key={idx} className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-gray-50 shadow-sm">
-                <div className={feature.color}>{feature.icon}</div>
+              <li key={idx} className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-gray-100 shadow-sm">
+                <div className={feature.color} aria-hidden="true">{feature.icon}</div>
                 <span className="text-sm font-bold text-gray-700">{feature.text}</span>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
 
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative">
+        <ol className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative" aria-label="Etapas de compra">
           {steps.map((step, index) => (
-            <div key={index} className="relative group">
+            <li key={index} className="relative group list-none">
               <div className={`${step.cardBg} p-8 rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-100/50 hover:shadow-2xl transition-all duration-500 relative z-10 h-full flex flex-col items-center text-center hover:-translate-y-4`}>
 
                 <div className={`w-20 h-20 bg-gradient-to-br ${step.color} rounded-3xl flex items-center justify-center mb-8 shadow-lg ${step.shadow} group-hover:rotate-6 transition-transform duration-500`}>
-                  <div className="text-white">
+                  <div className="text-white" aria-hidden="true">
                     {step.icon}
                   </div>
                 </div>
@@ -151,13 +152,13 @@ export default function HowItWorks() {
               </div>
 
               {index !== steps.length - 1 && (
-                <div className="hidden lg:flex absolute top-1/2 -right-6 z-20 translate-y-[-50%] text-gray-200">
+                <div className="hidden lg:flex absolute top-1/2 -right-6 z-20 translate-y-[-50%] text-gray-200" aria-hidden="true">
                   <ArrowRight size={32} strokeWidth={3} className="animate-pulse" />
                 </div>
               )}
-            </div>
+            </li>
           ))}
-        </div>
+        </ol>
 
         
         <div className="mt-24 mb-10 relative">
@@ -173,10 +174,10 @@ export default function HowItWorks() {
               </div>
             </div>
 
-            <button className="w-full lg:w-auto bg-purple-900 hover:bg-purple-600 text-white font-black px-8 py-3 rounded-3xl shadow-xl transition-all active:scale-95 group flex items-center justify-center gap-3">
+            <Link href="#catalogo" className="w-full lg:w-auto bg-purple-900 hover:bg-purple-600 text-white font-black px-8 py-3 rounded-3xl shadow-xl transition-all active:scale-95 group flex items-center justify-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2">
               EXPLORAR MATERIAIS
-              <ArrowRight className="group-hover:translate-x-2 transition-transform" />
-            </button>
+              <ArrowRight className="group-hover:translate-x-2 transition-transform" aria-hidden="true" />
+            </Link>
           </div>
         </div>
 
