@@ -249,7 +249,7 @@ function SobreContent() {
 
             <div className="text-center">
               <Link
-                href="/materiais"
+                href="/#catalogo"
                 className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-pink-400 via-pink-500 to-purple-500 text-white rounded-full font-bold text-lg hover:shadow-2xl transition-all hover:scale-105 active:scale-95 group"
               >
                 <BookOpen size={24} />
