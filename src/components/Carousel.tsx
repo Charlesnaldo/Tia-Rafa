@@ -28,7 +28,7 @@ export default function DualCarousel() {
   );
 
   return (
-    <section className="py-20 bg-white overflow-hidden flex flex-col gap-10">
+    <section className="flex flex-col gap-10 overflow-hidden bg-white py-20 [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] [-webkit-mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
       
       {/* Header */}
       <div className="flex flex-col items-center text-center px-4 mb-4">
@@ -66,19 +66,6 @@ export default function DualCarousel() {
           </div>
         </div>
       </div>
-
-      {/* Estilo para suavizar as bordas (efeito fade) */}
-      <style jsx>{`
-        section {
-          mask-image: linear-gradient(
-            to right,
-            transparent,
-            black 10%,
-            black 90%,
-            transparent
-          );
-        }
-      `}</style>
     </section>
   );
 }

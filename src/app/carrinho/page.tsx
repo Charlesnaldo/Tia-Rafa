@@ -61,7 +61,7 @@ export default function CartPage() {
             {cartItems.map((item) => (
               <div
                 key={item.id}
-                className="flex flex-col gap-4 rounded-[1.8rem] border border-white/80 bg-white/90 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.08)] animate-in fade-in slide-in-from-left-4 duration-500 sm:flex-row sm:items-center sm:gap-5 sm:p-5"
+                className="flex flex-col gap-4 rounded-[1.8rem] border border-white/80 bg-white/90 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.08)] sm:flex-row sm:items-center sm:gap-5 sm:p-5"
               >
                 <div className="relative h-24 w-full overflow-hidden rounded-2xl sm:w-24 sm:flex-shrink-0">
                   <Image src={getItemImage(item)} alt={item.nome} fill sizes="96px" className="object-cover" />
@@ -103,7 +103,7 @@ export default function CartPage() {
           </div>
 
           <div className="lg:col-span-1">
-            <div className="sticky top-24 flex flex-col rounded-[2rem] border border-blue-100 bg-white/95 p-6 shadow-[0_20px_60px_rgba(30,64,175,0.14)] animate-in fade-in slide-in-from-right-4 duration-500">
+            <div className="sticky top-24 flex flex-col rounded-[2rem] border border-blue-100 bg-white/95 p-6 shadow-[0_20px_60px_rgba(30,64,175,0.14)]">
               <h2 className="mb-6 text-2xl font-black text-gray-800">Resumo do Pedido</h2>
 
               <div className="mb-3 flex items-center justify-between text-gray-600">

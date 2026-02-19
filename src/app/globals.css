@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "tw-animate-css";
 
 @keyframes bounce-once {
   0%, 100% {

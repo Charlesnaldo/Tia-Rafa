@@ -12,7 +12,7 @@ function HeaderContent() {
 
   return (
     <nav className="max-w-[90%] xl:max-w-7xl mx-auto relative">
-      <div className="relative px-4 py-6 flex items-center justify-between animate-in fade-in slide-in-from-top-6 duration-1000">
+      <div className="relative flex items-center justify-between px-4 py-6">
 
         {/* LADO ESQUERDO: Redes Sociais */}
         <div className="flex items-center gap-4 flex-1">
@@ -62,7 +62,7 @@ function HeaderContent() {
         </div>
 
         {/* LADO DIREITO: Menu de Navegação */}
-        <div className="flex items-center gap-10 flex-1 justify-end animate-in fade-in slide-in-from-right-4 duration-700">
+        <div className="flex flex-1 items-center justify-end gap-10">
           <Link href="/#catalogo" className="flex flex-col items-center gap-1 text-purple-800 font-black hover:text-purple-600 transition-all group">
             <BookOpen size={40} className="group-hover:scale-110 group-hover:-rotate-6 transition-transform" />
             <span className="text-[10px] uppercase tracking-[0.15em] font-fredoka">Materiais</span>
