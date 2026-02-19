@@ -3,7 +3,7 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ImageIcon, Loader2, Plus, Save, Upload } from "lucide-react";
+import { ArrowLeft, ImageIcon, Loader2, Plus, Save, Trash2, Upload } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { formatCurrency } from "@/lib/utils";
 
@@ -34,7 +34,7 @@ type EditableProduct = {
   precoCents: number;
   imagemUrl: string | null;
   imagePaths: string[];
-  imagePreviewUrls: string[];
+  imagePreviewUrls: Array<string | null>;
   materialPath: string | null;
   soldQuantity: number;
 };
@@ -221,9 +221,7 @@ export default function AdminMateriaisPage() {
       ((productsResult.data || []) as ProductRow[]).map(async (row) => {
         const tipo: "digital" | "fisico" = row.tipo === "fisico" ? "fisico" : "digital";
         const imagePaths = await resolveProductImagePaths(supabase, row.id, row.imagem_url);
-        const imagePreviewUrls = (
-          await Promise.all(imagePaths.map((imagePath) => resolveImagePreviewUrl(supabase, imagePath)))
-        ).filter((url): url is string => Boolean(url));
+        const imagePreviewUrls = await Promise.all(imagePaths.map((imagePath) => resolveImagePreviewUrl(supabase, imagePath)));
 
         return {
           id: row.id,
@@ -395,6 +393,40 @@ export default function AdminMateriaisPage() {
       setSuccessMessage(kind === "pdf" ? "PDF atualizado com sucesso." : "Imagens atualizadas com sucesso.");
     } catch (uploadError: unknown) {
       const message = uploadError instanceof Error ? uploadError.message : String(uploadError);
+      setError(message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteImageForSelected = async (imagePath: string) => {
+    if (!selectedProduct) return;
+
+    const supabase = await ensureSupabaseSession();
+    if (!supabase) return;
+
+    setError(null);
+    setSuccessMessage(null);
+    setSaving(true);
+
+    try {
+      const { error: removeError } = await supabase.storage.from("materiais").remove([imagePath]);
+      if (removeError) throw new Error(removeError.message);
+
+      const nextImagePaths = selectedProduct.imagePaths.filter((path) => path !== imagePath);
+      const nextMainImage = selectedProduct.imagemUrl === imagePath ? nextImagePaths[0] || null : selectedProduct.imagemUrl;
+
+      const { error: updateError } = await supabase
+        .from("products")
+        .update({ imagem_url: nextMainImage })
+        .eq("id", selectedProduct.id);
+
+      if (updateError) throw new Error(updateError.message);
+
+      await loadProducts();
+      setSuccessMessage("Imagem removida com sucesso.");
+    } catch (deleteError: unknown) {
+      const message = deleteError instanceof Error ? deleteError.message : String(deleteError);
       setError(message);
     } finally {
       setSaving(false);
@@ -578,10 +610,29 @@ export default function AdminMateriaisPage() {
                   <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
                     <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Fotos atuais</p>
                     <div className="mt-3 grid min-h-48 grid-cols-2 gap-2 overflow-hidden rounded-xl border border-gray-200 bg-white p-2">
-                      {selectedProduct?.imagePreviewUrls && selectedProduct.imagePreviewUrls.length > 0 ? (
-                        selectedProduct.imagePreviewUrls.map((imageUrl, index) => (
-                          <div key={imageUrl} className="relative overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
-                            <img src={imageUrl} alt={`${selectedProduct.nome} ${index + 1}`} className="h-24 w-full object-cover" />
+                      {selectedProduct?.imagePaths && selectedProduct.imagePaths.length > 0 ? (
+                        selectedProduct.imagePaths.map((imagePath, index) => (
+                          <div key={imagePath} className="relative overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
+                            {selectedProduct.imagePreviewUrls[index] ? (
+                              <img
+                                src={selectedProduct.imagePreviewUrls[index] || ""}
+                                alt={`${selectedProduct.nome} ${index + 1}`}
+                                className="h-24 w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-24 w-full items-center justify-center text-[10px] font-bold text-gray-400">
+                                Preview indisponivel
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => void handleDeleteImageForSelected(imagePath)}
+                              disabled={saving}
+                              className="absolute right-1 top-1 inline-flex cursor-pointer items-center gap-1 rounded-md bg-red-600 px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-white transition hover:bg-red-700 disabled:bg-gray-300"
+                            >
+                              <Trash2 size={11} />
+                              Apagar
+                            </button>
                           </div>
                         ))
                       ) : (
