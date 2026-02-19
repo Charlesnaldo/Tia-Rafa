@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle, Mail, Download, ArrowRight, Sparkles } from "lucide-react";
 import { LastPaymentSessionData } from "@/types/payment";
@@ -164,11 +165,13 @@ function SucessoContent() {
               <div className="flex flex-col items-center gap-4">
                 {qrImageSrc ? (
                   <div className="rounded-[2rem] border border-dashed border-gray-200 bg-gray-50 p-6">
-                    <img
+                    <Image
                       src={qrImageSrc}
                       alt="QR Code Pix"
-                      className="w-64 h-64 object-contain rounded-[1.5rem]"
-                      loading="lazy"
+                      width={256}
+                      height={256}
+                      unoptimized
+                      className="h-64 w-64 object-contain rounded-[1.5rem]"
                     />
                   </div>
                 ) : (

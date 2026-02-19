@@ -24,7 +24,6 @@ import {
   ShoppingCart, // Import for Add to Cart button
   Download, // Import Download icon
 } from "lucide-react";
-// import BotaoCompra from "@/components/BotaoCompra"; // Remove BotaoCompra
 import BotaoCompartilhar from "@/components/BotaoCompartilhar";
 import { useCart } from "@/context/CartContext"; // Import useCart
 import { useProductsCatalog } from "@/lib/products/useProductsCatalog";

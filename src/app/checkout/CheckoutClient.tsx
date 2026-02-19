@@ -369,11 +369,13 @@ export default function CheckoutClient() {
                   <div className="flex flex-col items-center gap-4">
                     {pixQrImageSrc ? (
                       <div className="rounded-[2rem] border border-dashed border-gray-200 bg-gray-50 p-6">
-                        <img
+                        <Image
                           src={pixQrImageSrc}
                           alt="QR Code Pix"
-                          className="w-64 h-64 object-contain rounded-[1.5rem]"
-                          loading="lazy"
+                          width={256}
+                          height={256}
+                          unoptimized
+                          className="h-64 w-64 object-contain rounded-[1.5rem]"
                         />
                       </div>
                     ) : (

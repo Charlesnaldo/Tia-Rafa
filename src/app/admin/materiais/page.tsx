@@ -2,9 +2,11 @@
 
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ImageIcon, Loader2, Plus, Save, Trash2, Upload } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { listProductImagePaths, resolveStorageImageUrl } from "@/lib/supabase/storage-images";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -55,47 +57,6 @@ function slugify(value: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-}
-
-function isDirectUrl(value: string) {
-  return value.startsWith("http://") || value.startsWith("https://") || value.startsWith("/");
-}
-
-async function resolveImagePreviewUrl(
-  supabase: ReturnType<typeof getSupabaseBrowserClient>,
-  imagemUrl: string | null
-) {
-  if (!imagemUrl) return null;
-  if (isDirectUrl(imagemUrl)) return imagemUrl;
-  const signed = await supabase.storage.from("materiais").createSignedUrl(imagemUrl, 60 * 60 * 24);
-  return signed.data?.signedUrl || null;
-}
-
-async function resolveProductImagePaths(
-  supabase: ReturnType<typeof getSupabaseBrowserClient>,
-  productId: string,
-  imagemUrl: string | null
-) {
-  const imagePaths: string[] = [];
-  const folder = `${productId}/imagens`;
-  const listed = await supabase.storage.from("materiais").list(folder, {
-    limit: 100,
-    offset: 0,
-    sortBy: { column: "name", order: "asc" },
-  });
-
-  if (!listed.error && Array.isArray(listed.data)) {
-    for (const item of listed.data) {
-      if (!item?.name || item.id === null) continue;
-      imagePaths.push(`${folder}/${item.name}`);
-    }
-  }
-
-  if (imagemUrl && !imagePaths.includes(imagemUrl)) {
-    imagePaths.unshift(imagemUrl);
-  }
-
-  return imagePaths;
 }
 
 async function uploadStorageFile(
@@ -220,8 +181,8 @@ export default function AdminMateriaisPage() {
     const normalized = await Promise.all(
       ((productsResult.data || []) as ProductRow[]).map(async (row) => {
         const tipo: "digital" | "fisico" = row.tipo === "fisico" ? "fisico" : "digital";
-        const imagePaths = await resolveProductImagePaths(supabase, row.id, row.imagem_url);
-        const imagePreviewUrls = await Promise.all(imagePaths.map((imagePath) => resolveImagePreviewUrl(supabase, imagePath)));
+        const imagePaths = await listProductImagePaths(supabase, row.id, row.imagem_url);
+        const imagePreviewUrls = await Promise.all(imagePaths.map((imagePath) => resolveStorageImageUrl(supabase, imagePath)));
 
         return {
           id: row.id,
@@ -614,9 +575,12 @@ export default function AdminMateriaisPage() {
                         selectedProduct.imagePaths.map((imagePath, index) => (
                           <div key={imagePath} className="relative overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
                             {selectedProduct.imagePreviewUrls[index] ? (
-                              <img
+                              <Image
                                 src={selectedProduct.imagePreviewUrls[index] || ""}
                                 alt={`${selectedProduct.nome} ${index + 1}`}
+                                width={120}
+                                height={96}
+                                unoptimized
                                 className="h-24 w-full object-cover"
                               />
                             ) : (
