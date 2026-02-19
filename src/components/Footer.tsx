@@ -1,5 +1,3 @@
-"use client";
-
 import Link from 'next/link';
 import Image from 'next/image';
 import { Mail, MessageCircle, Instagram, Youtube, Heart, ShieldCheck, Sparkles } from 'lucide-react';
@@ -9,14 +7,15 @@ export default function Footer() {
     <footer className="relative pt-8 pb-12 overflow-hidden font-fredoka bg-[#FDFDFF]">
       {/* RESTAURADO: Background Layer original */}
       <div className="absolute inset-0 z-0">
-        <div 
-          className="absolute inset-0 opacity-90" 
-          style={{ 
-            backgroundImage: "url('/fundo-footer.webp')", 
-            backgroundSize: 'cover',      
-            backgroundPosition: 'center', 
-          }}
-        />
+        <div className="absolute inset-0 opacity-90">
+          <Image
+            src="/fundo-footer.webp"
+            alt=""
+            fill
+            sizes="100vw"
+            className="object-cover"
+          />
+        </div>
         <div className="absolute inset-0 bg-gradient-to-b from-white via-white/90 to-purple-50/50" />
       </div>
 
@@ -41,7 +40,6 @@ export default function Footer() {
                     width={240} 
                     height={80} 
                     className="object-contain transform group-hover:scale-120 transition-transform duration-600"
-                    priority
                   />
                 </div>
                 <div className="h-2.5 w-full bg-gradient-to-r from-purple-400 via-pink-300 to-orange-300 rounded-full mt-1 transform origin-left group-hover:scale-x-105 transition-transform" />

@@ -1,6 +1,5 @@
-"use client";
-
 import { ShoppingCart, CreditCard, MailOpen, FileCheck, ArrowRight, Sparkles, Download, Printer, ShieldCheck, Smartphone } from "lucide-react";
+import Image from "next/image";
 
 export default function HowItWorks() {
   const steps = [
@@ -77,10 +76,15 @@ export default function HowItWorks() {
   </svg>
 </div>
 
-      <div 
-        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-25" 
-        style={{ backgroundImage: "url('/background2.jpg')" }}
-      />
+      <div className="absolute inset-0 z-0 opacity-25">
+        <Image
+          src="/background2.jpg"
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover"
+        />
+      </div>
 
      
        <div className="absolute bottom-0 left-0 w-full leading-[0]">
