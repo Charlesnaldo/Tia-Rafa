@@ -17,15 +17,15 @@ function CatalogContent() {
   const { addToCart } = useCart(); // Initialize useCart
   const { productsArray: produtosArray, loaded } = useProductsCatalog();
 
-  // CONFIGURAÇÃO DO FUNDO
+  // CONFIGURAÃƒâ€¡ÃƒÆ’O DO FUNDO
   const bgImage = "/background.webp";
 
   const [categoria, setCategoria] = useState<'todos' | 'digital' | 'fisico'>('todos');
   const [tagAtiva, setTagAtiva] = useState<string>('Tudo');
 
-  // Lógica de Paginação
+  // LÃƒÂ³gica de PaginaÃƒÂ§ÃƒÂ£o
   const [paginaAtual, setPaginaAtual] = useState(1);
-  const itensPorPagina = 10; // Exibe 10 produtos por página
+  const itensPorPagina = 10; // Exibe 10 produtos por pÃƒÂ¡gina
 
   const todasTags = useMemo(() => {
     const uniqueTags = new Set<string>();
@@ -49,7 +49,7 @@ function CatalogContent() {
     return filtrados;
   }, [busca, categoria, tagAtiva, produtosArray]);
 
-  // Cálculos de Paginação
+  // CÃƒÂ¡lculos de PaginaÃƒÂ§ÃƒÂ£o
   const totalPaginas = Math.ceil(produtosFiltrados.length / itensPorPagina);
   const produtosExibidos = produtosFiltrados.slice(
     (paginaAtual - 1) * itensPorPagina,
@@ -83,7 +83,7 @@ function CatalogContent() {
       id="catalogo"
       aria-labelledby="catalogo-heading"
     >
-      {/* BACKGROUND DIRETO NO CÓDIGO */}
+      {/* BACKGROUND DIRETO NO CÃƒâ€œDIGO */}
       <div
         className="absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url('${bgImage}')` }}
@@ -92,14 +92,14 @@ function CatalogContent() {
       <div className="absolute inset-0 -z-10 bg-white/92 backdrop-blur-[2px]" />
 
       <div className="max-w-[1400px] mx-auto px-4 relative z-10">
-        {/* Cabeçalho */}
+        {/* CabeÃƒÂ§alho */}
         <div className="text-center mb-5">
           <h2 id="catalogo-heading" className="text-5xl md:text-6xl font-black tracking-tighter mb-6 leading-tight">
             {busca ? (
-              <span className="text-gray-900 bg-white/80 px-4 py-1 rounded-2xl">🔍 Resultados para: {busca}</span>
+              <span className="text-gray-900 bg-white/80 px-4 py-1 rounded-2xl">Ã°Å¸â€Â Resultados para: {busca}</span>
             ) : (
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400">
-                Nosso Catálogo Mágico
+                Nosso CatÃƒÂ¡logo MÃƒÂ¡gico
               </span>
             )}
           </h2>
@@ -110,7 +110,7 @@ function CatalogContent() {
             {[
               { id: 'todos', label: 'Todos', icon: <ShoppingCart size={14} /> },
               { id: 'digital', label: 'Digital', icon: <FileText size={14} /> },
-              { id: 'fisico', label: 'Físico', icon: <Zap size={14} /> },
+              { id: 'fisico', label: 'FÃƒÂ­sico', icon: <Zap size={14} /> },
             ].map((filtro) => (
               <button
                 key={filtro.id}
@@ -177,45 +177,47 @@ function CatalogContent() {
                 return (
                   <div
                     key={produto.id}
-                    className="group bg-white/90 backdrop-blur-sm rounded-2xl border border-white/50 p-2.5 hover:shadow-xl hover:shadow-purple-100/30 transition-all duration-300 relative flex flex-col h-full hover:-translate-y-1"
+                    className="group relative flex h-full flex-col overflow-hidden rounded-[1.65rem] border border-white/70 bg-white/95 p-3 shadow-[0_10px_30px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_22px_40px_rgba(147,51,234,0.16)]"
                   >
+                    <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-purple-100/40 to-transparent" />
+
                     {/* Product Type Tag */}
-                    <span className={`absolute top-2 right-2 z-10 px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm ${produto.tipo === 'digital'
-                      ? 'bg-blue-500 text-white shadow-blue-200'
-                      : 'bg-orange-500 text-white shadow-orange-200'
+                    <span className={`absolute right-3 top-3 z-10 rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.14em] shadow-sm ${produto.tipo === 'digital'
+                      ? 'bg-blue-500 text-white shadow-blue-200/60'
+                      : 'bg-orange-500 text-white shadow-orange-200/60'
                       }`}>
                       {produto.tipo === 'digital' ? 'PDF' : 'Físico'}
                     </span>
 
                     {/* Link to Product Details */}
                     <Link href={`/produto/${produto.id}`} className="flex flex-col flex-grow">
-                      <div className={`relative aspect-[4/4.8] rounded-xl overflow-hidden mb-2.5 shadow-inner ${produto.cor}`}>
+                      <div className={`relative mb-3 aspect-square overflow-hidden rounded-2xl border border-white/60 shadow-inner ${produto.cor}`}>
                         <Image
                           src={imagemFinal}
                           alt={produto.nome}
                           width={300}
                           height={300}
                           unoptimized={imagemFinal.startsWith("http://") || imagemFinal.startsWith("https://")}
-                          className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105 p-2"
+                          className="h-full w-full object-contain p-2.5 transition-transform duration-500 group-hover:scale-105"
                         />
                       </div>
 
                       <div className="flex flex-col flex-1 px-0.5">
-                        <div className="flex gap-1 mb-2">
-                          {produto.tags?.slice(0, 1).map(tag => (
-                            <span key={tag} className="text-[9px] font-bold text-gray-400 bg-gray-50/50 px-1.5 py-0.5 rounded-md">
+                        <div className="mb-2 flex min-h-5 flex-wrap gap-1.5">
+                          {produto.tags?.slice(0, 2).map(tag => (
+                            <span key={tag} className="rounded-full border border-purple-100 bg-purple-50 px-2 py-0.5 text-[10px] font-bold text-purple-700">
                               {tag}
                             </span>
                           ))}
                         </div>
 
-                        <h3 className="text-sm font-bold text-gray-800 line-clamp-2 leading-tight mb-3 h-10">
+                        <h3 className="mb-3 min-h-11 text-[15px] font-black leading-tight text-gray-800 line-clamp-2 transition-colors group-hover:text-purple-700">
                           {produto.nome}
                         </h3>
 
                         <div className="flex flex-col mt-auto">
-                          <span className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">Investimento</span>
-                          <span className="text-lg font-black text-gray-900 group-hover:text-purple-600 transition-colors">
+                          <span className="mb-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">Investimento</span>
+                          <span className="text-[1.15rem] font-black text-gray-900 transition-colors group-hover:text-purple-600">
                             R$ {formatCurrency(produto.preco)}
                           </span>
                         </div>
@@ -223,25 +225,14 @@ function CatalogContent() {
                     </Link>
 
                     {/* Action Buttons (Add to Cart / Buy Now) */}
-                    {/* BOTÕES – MOBILE LIMPO */}
-                    <div className="mt-3 pt-3 border-t border-purple-100 flex gap-2">
-                      {/* CARRINHO – SOMENTE ÍCONE */}
+                    {/* BOTÃƒâ€¢ES Ã¢â‚¬â€œ MOBILE LIMPO */}
+                    <div className="mt-3 flex gap-2 border-t border-purple-100/80 pt-3">
+                      {/* CARRINHO Ã¢â‚¬â€œ SOMENTE ÃƒÂCONE */}
                       <button
                         type="button"
                         onClick={() => handleAddToCart(produto)}
                         aria-label={`Adicionar ${produto.nome} ao carrinho`}
-                        className="
-      w-10 h-10
-      cursor-pointer
-      bg-purple-100 text-purple-800
-      rounded-xl
-      flex items-center justify-center
-      transition-all
-      active:scale-95
-      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2
-      hover:bg-purple-200
-      md:w-11 md:h-11
-    "
+                        className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-purple-200/70 bg-purple-100 text-purple-800 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-purple-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 md:h-11 md:w-11"
                       >
                         <ShoppingCart size={19}/>
                       </button>
@@ -251,20 +242,7 @@ function CatalogContent() {
                         type="button"
                         onClick={() => handleBuyNow(produto)}
                         aria-label={`Comprar agora: ${produto.nome}`}
-                        className="
-      flex-1 h-10
-      cursor-pointer
-      bg-gradient-to-r from-pink-500 to-purple-500
-      text-white
-      rounded-xl
-      text-[11px] font-extrabold
-      flex items-center justify-center gap-1
-      shadow-md
-      transition-all
-      active:scale-95
-      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2
-      md:text-xs md:h-11
-    "
+                        className="flex h-10 flex-1 cursor-pointer items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-[11px] font-extrabold text-white shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 md:h-11 md:text-xs"
                       >
                         <Download size={19} />
                         Comprar
@@ -275,14 +253,14 @@ function CatalogContent() {
               })}
             </div>
 
-            {/* PAGINAÇÃO */}
+            {/* PAGINAÃƒâ€¡ÃƒÆ’O */}
             {totalPaginas > 1 && (
               <div className="mt-12 flex justify-center items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setPaginaAtual(p => Math.max(p - 1, 1))}
                   disabled={paginaAtual === 1}
-                  aria-label="Ir para a página anterior"
+                  aria-label="Ir para a pÃƒÂ¡gina anterior"
                   className="p-2 rounded-xl bg-white border border-gray-100 text-purple-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-purple-50 transition-all"
                 >
                   <ChevronLeft size={20} />
@@ -293,7 +271,7 @@ function CatalogContent() {
                     key={num}
                     type="button"
                     onClick={() => setPaginaAtual(num)}
-                    aria-label={`Ir para a página ${num}`}
+                    aria-label={`Ir para a pÃƒÂ¡gina ${num}`}
                     aria-current={paginaAtual === num ? "page" : undefined}
                     className={`w-10 h-10 rounded-xl cursor-pointer  font-bold text-sm transition-all ${paginaAtual === num
                         ? "bg-purple-600 text-white shadow-md scale-110"
@@ -308,7 +286,7 @@ function CatalogContent() {
                   type="button"
                   onClick={() => setPaginaAtual(p => Math.min(p + 1, totalPaginas))}
                   disabled={paginaAtual === totalPaginas}
-                  aria-label="Ir para a próxima página"
+                  aria-label="Ir para a prÃƒÂ³xima pÃƒÂ¡gina"
                   className="p-2 rounded-xl bg-white border border-gray-100 text-purple-600 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-purple-50 transition-all"
                 >
                   <ChevronRight size={20} />
@@ -321,7 +299,7 @@ function CatalogContent() {
             <div className="w-20 h-20 bg-white/80 rounded-full flex items-center justify-center mb-4 shadow-sm">
               <SearchX size={32} className="text-gray-200" />
             </div>
-            <p className="font-bold text-xl text-gray-500">Nenhum material mágico encontrado.</p>
+            <p className="font-bold text-xl text-gray-500">Nenhum material mÃƒÂ¡gico encontrado.</p>
             <button
               type="button"
               onClick={() => { setCategoria('todos'); setTagAtiva('Tudo'); setPaginaAtual(1); }}
@@ -344,7 +322,7 @@ export default function Catalog() {
     <Suspense fallback={
       <div className="py-16 text-center">
         <div className="w-8 h-8 border-3 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-3"></div>
-        <p className="font-bold text-gray-400 text-sm">Preparando o catálogo...</p>
+        <p className="font-bold text-gray-400 text-sm">Preparando o catÃƒÂ¡logo...</p>
       </div>
     }>
       <CatalogContent />
