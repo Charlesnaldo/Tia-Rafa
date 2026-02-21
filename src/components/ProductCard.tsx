@@ -103,7 +103,7 @@ export default function ProductCard({
         <div>
           <span className="text-xs text-gray-600 font-semibold block mb-1">INVESTIMENTO</span>
           <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-black text-gray-900">R$ {formatCurrency(preco)}</span>
+            <span className="text-2xl font-black text-gray-900">{formatCurrency(preco)}</span>
             {tipo === "digital" && (
               <span className="text-xs text-green-700 font-bold bg-green-50 px-2 py-0.5 rounded">DOWNLOAD IMEDIATO</span>
             )}

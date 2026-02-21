@@ -287,7 +287,7 @@ function CatalogContent() {
                         <div className="flex flex-col mt-auto">
                           <span className="mb-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">Investimento</span>
                           <span className="text-[1.15rem] font-black text-gray-900 transition-colors group-hover:text-purple-600">
-                            R$ {formatCurrency(produto.preco)}
+                            {formatCurrency(produto.preco)}
                           </span>
                         </div>
                       </div>
