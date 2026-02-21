@@ -99,7 +99,7 @@ function CatalogContent() {
               <span className="text-gray-900 bg-white/80 px-4 py-1 rounded-2xl">Ã°Å¸â€Â Resultados para: {busca}</span>
             ) : (
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400">
-                Nosso CatÃƒÂ¡logo MÃƒÂ¡gico
+                Nosso Catálogo Mágico
               </span>
             )}
           </h2>
