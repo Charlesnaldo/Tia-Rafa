@@ -22,6 +22,7 @@ function CatalogContent() {
 
   const [categoria, setCategoria] = useState<'todos' | 'digital' | 'fisico'>('todos');
   const [tagAtiva, setTagAtiva] = useState<string>('Tudo');
+  const [imagemAtivaPorProduto, setImagemAtivaPorProduto] = useState<Record<string, string>>({});
 
   // LÃƒÂ³gica de PaginaÃƒÂ§ÃƒÂ£o
   const [paginaAtual, setPaginaAtual] = useState(1);
@@ -76,6 +77,27 @@ function CatalogContent() {
     router.push('/carrinho'); // Redirect to cart page
   };
 
+  const getImagensDoProduto = (produto: Produto) => {
+    const imagens = [...(produto.imagens || [])].filter(Boolean);
+    if (produto.imagem && !imagens.includes(produto.imagem)) {
+      imagens.unshift(produto.imagem);
+    }
+    return imagens.length > 0 ? imagens : ["/embreve.jpg"];
+  };
+
+  const handleSelecionarImagem = (produtoId: string, imagem: string) => {
+    setImagemAtivaPorProduto((prev) => ({ ...prev, [produtoId]: imagem }));
+  };
+
+  const handleNavegarMiniatura = (produto: Produto, direcao: "anterior" | "proxima") => {
+    const imagensDoProduto = getImagensDoProduto(produto);
+    const imagemAtual = imagemAtivaPorProduto[produto.id] || imagensDoProduto[0];
+    const indiceAtual = Math.max(imagensDoProduto.indexOf(imagemAtual), 0);
+    const proximoIndice = direcao === "proxima"
+      ? (indiceAtual + 1) % imagensDoProduto.length
+      : (indiceAtual - 1 + imagensDoProduto.length) % imagensDoProduto.length;
+    handleSelecionarImagem(produto.id, imagensDoProduto[proximoIndice]);
+  };
 
   return (
     <section
@@ -170,9 +192,8 @@ function CatalogContent() {
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
               {produtosExibidos.map((produto) => {
-                const imagemFinal = (produto.imagens && produto.imagens.length > 0)
-                  ? produto.imagens[0]
-                  : (produto.imagem || "/embreve.jpg");
+                const imagensDoProduto = getImagensDoProduto(produto);
+                const imagemFinal = imagemAtivaPorProduto[produto.id] || imagensDoProduto[0];
 
                 return (
                   <div
@@ -189,19 +210,67 @@ function CatalogContent() {
                       {produto.tipo === 'digital' ? 'PDF' : 'Físico'}
                     </span>
 
+                    <div className={`relative mb-2 aspect-square overflow-hidden rounded-2xl border border-white/60 shadow-inner ${produto.cor}`}>
+                      <Image
+                        src={imagemFinal}
+                        alt={produto.nome}
+                        width={300}
+                        height={300}
+                        unoptimized={imagemFinal.startsWith("http://") || imagemFinal.startsWith("https://")}
+                        className="h-full w-full object-contain p-2.5 transition-transform duration-500 group-hover:scale-105"
+                      />
+                    </div>
+
+                    {imagensDoProduto.length > 1 && (
+                      <div className="mb-3">
+                        <div className="mb-1.5 flex items-center justify-between md:hidden">
+                          <button
+                            type="button"
+                            onClick={() => handleNavegarMiniatura(produto, "anterior")}
+                            aria-label={`Miniatura anterior de ${produto.nome}`}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-purple-200 bg-white text-purple-700 transition-colors hover:bg-purple-50"
+                          >
+                            <ChevronLeft size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleNavegarMiniatura(produto, "proxima")}
+                            aria-label={`Próxima miniatura de ${produto.nome}`}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-purple-200 bg-white text-purple-700 transition-colors hover:bg-purple-50"
+                          >
+                            <ChevronRight size={14} />
+                          </button>
+                        </div>
+
+                        <div className="flex gap-1.5 overflow-x-auto pb-1">
+                          {imagensDoProduto.slice(0, 5).map((img, index) => (
+                            <button
+                              key={`${produto.id}-thumb-${index}`}
+                              type="button"
+                              onClick={() => handleSelecionarImagem(produto.id, img)}
+                              aria-label={`Ver foto ${index + 1} de ${produto.nome}`}
+                              className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
+                                imagemFinal === img
+                                  ? "border-purple-500 shadow-sm"
+                                  : "border-transparent opacity-80 hover:opacity-100"
+                              }`}
+                            >
+                              <Image
+                                src={img}
+                                alt={`${produto.nome} miniatura ${index + 1}`}
+                                fill
+                                sizes="48px"
+                                unoptimized={img.startsWith("http://") || img.startsWith("https://")}
+                                className="object-cover"
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Link to Product Details */}
                     <Link href={`/produto/${produto.id}`} className="flex flex-col flex-grow">
-                      <div className={`relative mb-3 aspect-square overflow-hidden rounded-2xl border border-white/60 shadow-inner ${produto.cor}`}>
-                        <Image
-                          src={imagemFinal}
-                          alt={produto.nome}
-                          width={300}
-                          height={300}
-                          unoptimized={imagemFinal.startsWith("http://") || imagemFinal.startsWith("https://")}
-                          className="h-full w-full object-contain p-2.5 transition-transform duration-500 group-hover:scale-105"
-                        />
-                      </div>
-
                       <div className="flex flex-col flex-1 px-0.5">
                         <div className="mb-2 flex min-h-5 flex-wrap gap-1.5">
                           {produto.tags?.slice(0, 2).map(tag => (
