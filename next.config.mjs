@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    inlineCss: true,
+    optimizeCss: true,
+  },
   images: {
     remotePatterns: [
       {

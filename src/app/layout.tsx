@@ -15,7 +15,7 @@ const fredoka = Fredoka({
   weight: ["300", "400", "500", "600", "700"],
   variable: "--font-fredoka",
   display: "swap",
-  preload: false,
+  preload: true,
   fallback: ["system-ui", "Arial", "sans-serif"],
 });
 
@@ -31,6 +31,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-br" className="scroll-smooth" data-scroll-behavior="smooth">
+      <head>
+        <link rel="preconnect" href="https://acqmtxttsirgxhvrgdjn.supabase.co" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://acqmtxttsirgxhvrgdjn.supabase.co" />
+      </head>
       <body className={`${fredoka.className} antialiased flex flex-col min-h-screen bg-white`}>
         <Suspense fallback={null}>
           <GoogleAnalytics />
