@@ -110,7 +110,7 @@ function CatalogContent() {
             {[
               { id: 'todos', label: 'Todos', icon: <ShoppingCart size={14} /> },
               { id: 'digital', label: 'Digital', icon: <FileText size={14} /> },
-              { id: 'fisico', label: 'FÃƒÂ­sico', icon: <Zap size={14} /> },
+              { id: 'fisico', label: 'Fantá­stico', icon: <Zap size={14} /> },
             ].map((filtro) => (
               <button
                 key={filtro.id}
