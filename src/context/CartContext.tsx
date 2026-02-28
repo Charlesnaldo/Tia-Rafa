@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback, useRef } from 'react';
 
 export type CartItem = {
   id: string;
@@ -34,11 +34,27 @@ const loadInitialCart = (): CartItem[] => {
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>(loadInitialCart);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback((message: string) => {
+    setToastMessage(message);
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => {
+      setToastMessage(null);
+    }, 2200);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     localStorage.setItem('cart', JSON.stringify(cartItems));
   }, [cartItems]);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
 
   const addToCart = useCallback((product: Omit<CartItem, 'quantity'>, quantity: number = 1) => {
     setCartItems((prevItems) => {
@@ -52,7 +68,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         return [...prevItems, { ...product, quantity }];
       }
     });
-  }, []);
+    const qtyLabel = quantity > 1 ? ` (${quantity}x)` : '';
+    showToast(`${product.nome}${qtyLabel} adicionado ao carrinho`);
+  }, [showToast]);
 
   const removeFromCart = useCallback((id: string) => {
     setCartItems((prevItems) => prevItems.filter((item) => item.id !== id));
@@ -83,7 +101,16 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     itemCount,
   };
 
-  return <CartContext.Provider value={contextValue}>{children}</CartContext.Provider>;
+  return (
+    <CartContext.Provider value={contextValue}>
+      {children}
+      {toastMessage && (
+        <div className="pointer-events-none fixed bottom-6 left-1/2 z-[100] -translate-x-1/2 rounded-full bg-gray-900 px-5 py-3 text-xs font-black uppercase tracking-[0.12em] text-white shadow-2xl">
+          {toastMessage}
+        </div>
+      )}
+    </CartContext.Provider>
+  );
 };
 
 // Custom hook to use the cart context

@@ -8,6 +8,7 @@ import {
   Lock,
   Zap,
   ShoppingBag,
+  ArrowLeft,
   ArrowRight,
   CreditCard,
   QrCode
@@ -165,6 +166,10 @@ export default function CheckoutClient() {
   if (itemCount === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 text-center">
+        <Link href="/" className="mb-8 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white/90 px-5 py-2 text-xs font-black uppercase tracking-[0.2em] text-blue-500 shadow-sm transition hover:bg-blue-50">
+          <ArrowLeft size={14} />
+          Voltar ao inicio
+        </Link>
         <div className="w-48 h-48 bg-blue-50 rounded-full flex items-center justify-center mb-6 animate-bounce duration-3000">
           <ShoppingBag size={80} className="text-blue-300" />
         </div>
@@ -188,6 +193,10 @@ export default function CheckoutClient() {
       <div className="pointer-events-none absolute -left-24 top-24 h-56 w-56 rounded-full bg-pink-200/40 blur-3xl" />
       <div className="pointer-events-none absolute -right-24 bottom-20 h-64 w-64 rounded-full bg-blue-200/40 blur-3xl" />
       <div className="max-w-6xl mx-auto">
+        <Link href="/" className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white/90 px-5 py-2 text-xs font-black uppercase tracking-[0.2em] text-blue-500 shadow-sm transition hover:bg-blue-50">
+          <ArrowLeft size={14} />
+          Voltar ao inicio
+        </Link>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           <div className="lg:col-span-12 xl:col-span-5 space-y-6 order-2 lg:order-1">
             <div className="bg-white/90 p-6 sm:p-8 rounded-[2.5rem] shadow-[0_20px_60px_rgba(2,8,23,0.08)] border border-white relative overflow-hidden backdrop-blur">
