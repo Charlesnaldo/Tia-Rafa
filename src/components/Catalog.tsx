@@ -438,13 +438,13 @@ function CatalogContent() {
               return (
                 <>
                   <div className="relative mb-4 overflow-hidden rounded-2xl border border-purple-100 bg-gray-50">
-                    <div className="relative aspect-[16/9] w-full">
+                    <div className="relative aspect-[4/3] w-full">
                       <Image
                         src={imagemAtualModal}
                         alt={produtoSelecionado.nome}
                         fill
                         unoptimized={imagemAtualModal.startsWith("http://") || imagemAtualModal.startsWith("https://")}
-                        className="object-contain p-3"
+                        className="object-contain p-1"
                       />
                     </div>
 
