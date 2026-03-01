@@ -438,7 +438,7 @@ function CatalogContent() {
               return (
                 <>
                   <div className="relative mb-4 overflow-hidden rounded-2xl border border-purple-100 bg-gray-50">
-                    <div className="relative aspect-[16/10] w-full">
+                    <div className="relative aspect-[16/9] w-full">
                       <Image
                         src={imagemAtualModal}
                         alt={produtoSelecionado.nome}
@@ -447,6 +447,14 @@ function CatalogContent() {
                         className="object-contain p-3"
                       />
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setProdutoSelecionado(null)}
+                      className="absolute right-3 top-3 rounded-xl bg-white/95 px-4 py-2 text-sm font-black text-gray-900 transition-colors hover:bg-white"
+                    >
+                      Voltar
+                    </button>
 
                     {imagensModal.length > 1 && (
                       <>
@@ -504,7 +512,7 @@ function CatalogContent() {
               {produtoSelecionado.tipo === "digital" ? "Arquivo Digital" : "Produto Fisico"}
             </p>
             <h3 className="mt-1 text-2xl font-black leading-tight text-gray-900">{produtoSelecionado.nome}</h3>
-            <p className="mt-3 text-sm text-gray-600">
+            <p className="mt-3 text-xs text-gray-600">
               {produtoSelecionado.descricao || "Material pronto para facilitar o aprendizado com praticidade."}
             </p>
             <div className="mt-3 text-xl font-black text-gray-900">{formatCurrency(produtoSelecionado.preco)}</div>
@@ -525,13 +533,6 @@ function CatalogContent() {
               >
                 <Download size={18} />
                 Comprar
-              </button>
-              <button
-                type="button"
-                onClick={() => setProdutoSelecionado(null)}
-                className="ml-auto rounded-xl bg-purple-600 px-4 py-3 text-sm font-black text-white transition-colors hover:bg-purple-700"
-              >
-                Voltar
               </button>
             </div>
           </div>
