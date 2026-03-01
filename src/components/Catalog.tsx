@@ -17,7 +17,6 @@ function CatalogContent() {
   const { productsArray: produtosArray, loaded } = useProductsCatalog();
 
   // CONFIGURAÃƒâ€¡ÃƒÆ’O DO FUNDO
-  const bgImage = "/background.webp";
 
   const [categoria, setCategoria] = useState<'todos' | 'digital' | 'fisico'>('todos');
   const [tagAtiva, setTagAtiva] = useState<string>('Tudo');
@@ -136,10 +135,6 @@ function CatalogContent() {
       aria-labelledby="catalogo-heading"
     >
       {/* BACKGROUND DIRETO NO CÃƒâ€œDIGO */}
-      <div
-        className="absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url('${bgImage}')` }}
-      />
       {/* OVERLAY PARA LEITURA (opcional, remova a classe bg-white/60 se quiser a imagem pura) */}
       <div className="absolute inset-0 -z-10 bg-white/92 backdrop-blur-[2px]" />
 
@@ -244,7 +239,7 @@ function CatalogContent() {
                       type="button"
                       onClick={() => abrirModalProduto(produto, imagemFinal)}
                       aria-label={`Abrir detalhes de ${produto.nome}`}
-                      className={`relative mb-2 aspect-square w-full overflow-hidden rounded-2xl border border-white/60 shadow-inner ${produto.cor} cursor-pointer`}
+                      className="relative mb-2 aspect-square w-full cursor-pointer overflow-hidden rounded-2xl border border-white/60 bg-white shadow-inner"
                     >
                       <Image
                         src={imagemFinal}
@@ -429,7 +424,7 @@ function CatalogContent() {
           onClick={() => setProdutoSelecionado(null)}
         >
           <div
-            className="w-full max-w-4xl overflow-hidden rounded-3xl bg-white p-5 shadow-2xl"
+            className="w-full max-w-5xl overflow-hidden rounded-3xl bg-white p-4 md:p-5 shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
             {(() => {
@@ -437,14 +432,14 @@ function CatalogContent() {
               const imagemAtualModal = imagensModal[indiceFotoModal] || imagensModal[0];
               return (
                 <>
-                  <div className="relative mb-4 overflow-hidden rounded-2xl border border-purple-100 bg-gray-50">
-                    <div className="relative aspect-[4/3] w-full">
+                  <div className="relative mb-3 overflow-hidden rounded-2xl border border-purple-100 bg-gradient-to-b from-white to-gray-100">
+                    <div className="relative h-[52vh] w-full md:h-[66vh]">
                       <Image
                         src={imagemAtualModal}
                         alt={produtoSelecionado.nome}
                         fill
                         unoptimized={imagemAtualModal.startsWith("http://") || imagemAtualModal.startsWith("https://")}
-                        className="object-contain p-1"
+                        className="object-contain p-0.5 md:p-1"
                       />
                     </div>
 
@@ -550,7 +545,7 @@ export default function Catalog() {
     <Suspense fallback={
       <div className="py-16 text-center">
         <div className="w-8 h-8 border-3 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-3"></div>
-        <p className="font-bold text-gray-400 text-sm">Preparando o catÃƒÂ¡logo...</p>
+        <p className="font-bold text-gray-400 text-sm">Preparando o catalogo...</p>
       </div>
     }>
       <CatalogContent />
