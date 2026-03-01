@@ -23,11 +23,7 @@ function CatalogContent() {
   const [tagAtiva, setTagAtiva] = useState<string>('Tudo');
   const [imagemAtivaPorProduto, setImagemAtivaPorProduto] = useState<Record<string, string>>({});
   const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
-  const [imagemExpandida, setImagemExpandida] = useState<{
-    nome: string;
-    imagens: string[];
-    indice: number;
-  } | null>(null);
+  const [indiceFotoModal, setIndiceFotoModal] = useState(0);
 
   // LÃƒÂ³gica de PaginaÃƒÂ§ÃƒÂ£o
   const [paginaAtual, setPaginaAtual] = useState(1);
@@ -104,21 +100,28 @@ function CatalogContent() {
     handleSelecionarImagem(produto.id, imagensDoProduto[proximoIndice]);
   };
 
-  const handleNavegarImagemExpandida = (direcao: "anterior" | "proxima") => {
-    setImagemExpandida((prev) => {
-      if (!prev || prev.imagens.length <= 1) return prev;
-      const proximoIndice = direcao === "proxima"
-        ? (prev.indice + 1) % prev.imagens.length
-        : (prev.indice - 1 + prev.imagens.length) % prev.imagens.length;
-      return { ...prev, indice: proximoIndice };
-    });
+  const abrirModalProduto = (produto: Produto, imagemInicial?: string) => {
+    const imagens = getImagensDoProduto(produto);
+    const indiceInicial = imagemInicial ? Math.max(imagens.indexOf(imagemInicial), 0) : 0;
+    setProdutoSelecionado(produto);
+    setIndiceFotoModal(indiceInicial);
+  };
+
+  const handleNavegarFotoModal = (direcao: "anterior" | "proxima") => {
+    if (!produtoSelecionado) return;
+    const imagens = getImagensDoProduto(produtoSelecionado);
+    if (imagens.length <= 1) return;
+    setIndiceFotoModal((indiceAtual) => (
+      direcao === "proxima"
+        ? (indiceAtual + 1) % imagens.length
+        : (indiceAtual - 1 + imagens.length) % imagens.length
+    ));
   };
 
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setProdutoSelecionado(null);
-        setImagemExpandida(null);
       }
     };
 
@@ -239,15 +242,8 @@ function CatalogContent() {
 
                     <button
                       type="button"
-                      onClick={() => {
-                        const indiceAtual = Math.max(imagensDoProduto.indexOf(imagemFinal), 0);
-                        setImagemExpandida({
-                          nome: produto.nome,
-                          imagens: imagensDoProduto,
-                          indice: indiceAtual,
-                        });
-                      }}
-                      aria-label={`Ampliar foto de ${produto.nome}`}
+                      onClick={() => abrirModalProduto(produto, imagemFinal)}
+                      aria-label={`Abrir detalhes de ${produto.nome}`}
                       className={`relative mb-2 aspect-square w-full overflow-hidden rounded-2xl border border-white/60 shadow-inner ${produto.cor} cursor-pointer`}
                     >
                       <Image
@@ -311,7 +307,7 @@ function CatalogContent() {
                     {/* Open quick modal with product details */}
                     <button
                       type="button"
-                      onClick={() => setProdutoSelecionado(produto)}
+                      onClick={() => abrirModalProduto(produto, imagemFinal)}
                       className="flex flex-col flex-grow text-left cursor-pointer"
                       aria-label={`Abrir detalhes de ${produto.nome}`}
                     >
@@ -426,29 +422,83 @@ function CatalogContent() {
 
       {produtoSelecionado && (
         <div
-          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 px-4 py-6"
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/45 backdrop-blur-md px-4 py-10"
           role="dialog"
           aria-modal="true"
           aria-label={`Detalhes de ${produtoSelecionado.nome}`}
           onClick={() => setProdutoSelecionado(null)}
         >
           <div
-            className="w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl"
+            className="w-full max-w-4xl overflow-hidden rounded-3xl bg-white p-5 shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="mb-4 overflow-hidden rounded-2xl border border-purple-100 bg-white">
-              <Image
-                src={(produtoSelecionado.imagens && produtoSelecionado.imagens[0]) || produtoSelecionado.imagem || "/embreve.jpg"}
-                alt={produtoSelecionado.nome}
-                width={520}
-                height={520}
-                unoptimized={
-                  ((produtoSelecionado.imagens && produtoSelecionado.imagens[0]) || produtoSelecionado.imagem || "").startsWith("http://") ||
-                  ((produtoSelecionado.imagens && produtoSelecionado.imagens[0]) || produtoSelecionado.imagem || "").startsWith("https://")
-                }
-                className="h-auto w-full object-contain"
-              />
-            </div>
+            {(() => {
+              const imagensModal = getImagensDoProduto(produtoSelecionado);
+              const imagemAtualModal = imagensModal[indiceFotoModal] || imagensModal[0];
+              return (
+                <>
+                  <div className="relative mb-4 overflow-hidden rounded-2xl border border-purple-100 bg-gray-50">
+                    <div className="relative aspect-[16/10] w-full">
+                      <Image
+                        src={imagemAtualModal}
+                        alt={produtoSelecionado.nome}
+                        fill
+                        unoptimized={imagemAtualModal.startsWith("http://") || imagemAtualModal.startsWith("https://")}
+                        className="object-contain p-3"
+                      />
+                    </div>
+
+                    {imagensModal.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleNavegarFotoModal("anterior")}
+                          aria-label="Foto anterior"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 rounded-xl bg-white/90 p-2 text-gray-900 transition-colors hover:bg-white"
+                        >
+                          <ChevronLeft size={20} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleNavegarFotoModal("proxima")}
+                          aria-label="Proxima foto"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl bg-white/90 p-2 text-gray-900 transition-colors hover:bg-white"
+                        >
+                          <ChevronRight size={20} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {imagensModal.length > 1 && (
+                    <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+                      {imagensModal.map((img, index) => (
+                        <button
+                          key={`${produtoSelecionado.id}-modal-thumb-${index}`}
+                          type="button"
+                          onClick={() => setIndiceFotoModal(index)}
+                          aria-label={`Ver foto ${index + 1} de ${produtoSelecionado.nome}`}
+                          className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
+                            indiceFotoModal === index
+                              ? "border-purple-500 shadow-sm"
+                              : "border-transparent opacity-80 hover:opacity-100"
+                          }`}
+                        >
+                          <Image
+                            src={img}
+                            alt={`${produtoSelecionado.nome} miniatura ${index + 1}`}
+                            fill
+                            sizes="56px"
+                            unoptimized={img.startsWith("http://") || img.startsWith("https://")}
+                            className="object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
             <p className="text-[11px] font-black uppercase tracking-[0.14em] text-purple-500">
               {produtoSelecionado.tipo === "digital" ? "Arquivo Digital" : "Produto Fisico"}
@@ -457,13 +507,29 @@ function CatalogContent() {
             <p className="mt-3 text-sm text-gray-600">
               {produtoSelecionado.descricao || "Material pronto para facilitar o aprendizado com praticidade."}
             </p>
+            <div className="mt-3 text-xl font-black text-gray-900">{formatCurrency(produtoSelecionado.preco)}</div>
 
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <span className="text-xl font-black text-gray-900">{formatCurrency(produtoSelecionado.preco)}</span>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleAddToCart(produtoSelecionado)}
+                className="flex h-11 items-center justify-center gap-2 rounded-xl border border-purple-200/70 bg-purple-100 px-4 text-sm font-black text-purple-800 transition-all hover:bg-purple-200"
+              >
+                <ShoppingCart size={18} />
+                Adicionar ao carrinho
+              </button>
+              <button
+                type="button"
+                onClick={() => handleBuyNow(produtoSelecionado)}
+                className="flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 px-4 text-sm font-extrabold text-white transition-all hover:shadow-lg"
+              >
+                <Download size={18} />
+                Comprar
+              </button>
               <button
                 type="button"
                 onClick={() => setProdutoSelecionado(null)}
-                className="rounded-xl bg-purple-600 px-4 py-2 text-sm font-black text-white transition-colors hover:bg-purple-700"
+                className="ml-auto rounded-xl bg-purple-600 px-4 py-2 text-sm font-black text-white transition-colors hover:bg-purple-700"
               >
                 Voltar
               </button>
@@ -472,60 +538,6 @@ function CatalogContent() {
         </div>
       )}
 
-      {imagemExpandida && (
-        <div
-          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/45 backdrop-blur-md px-4 py-10"
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Foto ampliada de ${imagemExpandida.nome}`}
-          onClick={() => setImagemExpandida(null)}
-        >
-          <div
-            className="relative flex h-[min(80vh,820px)] w-[min(94vw,1200px)] items-center justify-center overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-3 shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <Image
-              src={imagemExpandida.imagens[imagemExpandida.indice]}
-              alt={imagemExpandida.nome}
-              fill
-              unoptimized={
-                imagemExpandida.imagens[imagemExpandida.indice].startsWith("http://") ||
-                imagemExpandida.imagens[imagemExpandida.indice].startsWith("https://")
-              }
-              className="object-contain"
-            />
-
-            {imagemExpandida.imagens.length > 1 && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => handleNavegarImagemExpandida("anterior")}
-                  aria-label="Foto anterior"
-                  className="absolute left-4 top-1/2 -translate-y-1/2 rounded-xl bg-white/90 p-2 text-gray-900 transition-colors hover:bg-white"
-                >
-                  <ChevronLeft size={22} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleNavegarImagemExpandida("proxima")}
-                  aria-label="Próxima foto"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 rounded-xl bg-white/90 p-2 text-gray-900 transition-colors hover:bg-white"
-                >
-                  <ChevronRight size={22} />
-                </button>
-              </>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setImagemExpandida(null)}
-              className="absolute right-4 top-4 rounded-xl bg-white/90 px-4 py-2 text-sm font-black text-gray-900 transition-colors hover:bg-white"
-            >
-              Voltar
-            </button>
-          </div>
-        </div>
-      )}
 
 
     </section>
