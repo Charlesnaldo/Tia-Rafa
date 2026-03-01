@@ -4,7 +4,7 @@ import { useCart } from "@/context/CartContext";
 import Image from "next/image";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
-import { Trash2, PlusCircle, MinusCircle, XCircle, ShoppingBag, ArrowRight } from "lucide-react";
+import { Trash2, PlusCircle, MinusCircle, XCircle, ShoppingBag, ArrowRight, ArrowLeft } from "lucide-react";
 
 export default function CartPage() {
   const { cartItems, removeFromCart, updateQuantity, clearCart, cartTotal, itemCount } = useCart();
@@ -14,6 +14,13 @@ export default function CartPage() {
     return (
       <div className="relative min-h-[calc(100vh-180px)] overflow-hidden bg-[radial-gradient(circle_at_top,#f3e8ff_0%,#fff_45%,#eef2ff_100%)] px-4 py-14">
         <div className="mx-auto flex w-full max-w-2xl flex-col items-center rounded-[2.5rem] border border-white/70 bg-white/80 p-10 text-center shadow-[0_20px_80px_rgba(76,29,149,0.12)] backdrop-blur">
+          <Link
+            href="/"
+            className="mb-8 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white/90 px-5 py-2 text-xs font-black uppercase tracking-[0.2em] text-blue-500 shadow-sm transition hover:bg-blue-50"
+          >
+            <ArrowLeft size={14} />
+            Voltar ao inicio
+          </Link>
           <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-purple-100 text-purple-500">
             <XCircle size={52} />
           </div>
@@ -36,6 +43,13 @@ export default function CartPage() {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#e0f2fe_0%,#f8fafc_45%,#eef2ff_100%)] font-fredoka py-8 px-4 lg:py-14">
       <div className="mx-auto max-w-6xl">
+        <Link
+          href="/"
+          className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white/90 px-5 py-2 text-xs font-black uppercase tracking-[0.2em] text-blue-500 shadow-sm transition hover:bg-blue-50"
+        >
+          <ArrowLeft size={14} />
+          Voltar ao inicio
+        </Link>
         <div className="mb-8 rounded-[2.2rem] border border-white/70 bg-white/80 px-6 py-6 shadow-[0_20px_70px_rgba(30,41,59,0.08)] backdrop-blur md:px-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>

@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, Suspense, useMemo } from "react";
+import { useState, Suspense, useMemo, useEffect } from "react";
 import { ShoppingCart, FileText, SearchX, Zap, ChevronLeft, ChevronRight, Download } from "lucide-react";
-import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation"; // Import useRouter
 import { type Produto } from "@/constants/produtos"; // Import Produto type
@@ -23,6 +22,7 @@ function CatalogContent() {
   const [categoria, setCategoria] = useState<'todos' | 'digital' | 'fisico'>('todos');
   const [tagAtiva, setTagAtiva] = useState<string>('Tudo');
   const [imagemAtivaPorProduto, setImagemAtivaPorProduto] = useState<Record<string, string>>({});
+  const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
 
   // LÃƒÂ³gica de PaginaÃƒÂ§ÃƒÂ£o
   const [paginaAtual, setPaginaAtual] = useState(1);
@@ -98,6 +98,17 @@ function CatalogContent() {
       : (indiceAtual - 1 + imagensDoProduto.length) % imagensDoProduto.length;
     handleSelecionarImagem(produto.id, imagensDoProduto[proximoIndice]);
   };
+
+  useEffect(() => {
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setProdutoSelecionado(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, []);
 
   return (
     <section
@@ -269,8 +280,13 @@ function CatalogContent() {
                       </div>
                     )}
 
-                    {/* Link to Product Details */}
-                    <Link href={`/produto/${produto.id}`} className="flex flex-col flex-grow">
+                    {/* Open quick modal with product details */}
+                    <button
+                      type="button"
+                      onClick={() => setProdutoSelecionado(produto)}
+                      className="flex flex-col flex-grow text-left cursor-pointer"
+                      aria-label={`Abrir detalhes de ${produto.nome}`}
+                    >
                       <div className="flex flex-col flex-1 px-0.5">
                         <div className="mb-2 flex min-h-5 flex-wrap gap-1.5">
                           {produto.tags?.slice(0, 2).map(tag => (
@@ -291,7 +307,7 @@ function CatalogContent() {
                           </span>
                         </div>
                       </div>
-                    </Link>
+                    </button>
 
                     {/* Action Buttons (Add to Cart / Buy Now) */}
                     {/* BOTÃƒâ€¢ES Ã¢â‚¬â€œ MOBILE LIMPO */}
@@ -380,6 +396,53 @@ function CatalogContent() {
         )}
       </div>
 
+      {produtoSelecionado && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 px-4 py-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Detalhes de ${produtoSelecionado.nome}`}
+          onClick={() => setProdutoSelecionado(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 overflow-hidden rounded-2xl border border-purple-100 bg-white">
+              <Image
+                src={(produtoSelecionado.imagens && produtoSelecionado.imagens[0]) || produtoSelecionado.imagem || "/embreve.jpg"}
+                alt={produtoSelecionado.nome}
+                width={520}
+                height={520}
+                unoptimized={
+                  ((produtoSelecionado.imagens && produtoSelecionado.imagens[0]) || produtoSelecionado.imagem || "").startsWith("http://") ||
+                  ((produtoSelecionado.imagens && produtoSelecionado.imagens[0]) || produtoSelecionado.imagem || "").startsWith("https://")
+                }
+                className="h-auto w-full object-contain"
+              />
+            </div>
+
+            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-purple-500">
+              {produtoSelecionado.tipo === "digital" ? "Arquivo Digital" : "Produto Fisico"}
+            </p>
+            <h3 className="mt-1 text-2xl font-black leading-tight text-gray-900">{produtoSelecionado.nome}</h3>
+            <p className="mt-3 text-sm text-gray-600">
+              {produtoSelecionado.descricao || "Material pronto para facilitar o aprendizado com praticidade."}
+            </p>
+
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <span className="text-xl font-black text-gray-900">{formatCurrency(produtoSelecionado.preco)}</span>
+              <button
+                type="button"
+                onClick={() => setProdutoSelecionado(null)}
+                className="rounded-xl bg-purple-600 px-4 py-2 text-sm font-black text-white transition-colors hover:bg-purple-700"
+              >
+                Voltar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
 
     </section>
