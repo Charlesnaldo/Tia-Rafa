@@ -23,6 +23,7 @@ function CatalogContent() {
   const [tagAtiva, setTagAtiva] = useState<string>('Tudo');
   const [imagemAtivaPorProduto, setImagemAtivaPorProduto] = useState<Record<string, string>>({});
   const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
+  const [imagemExpandida, setImagemExpandida] = useState<{ src: string; nome: string } | null>(null);
 
   // LÃƒÂ³gica de PaginaÃƒÂ§ÃƒÂ£o
   const [paginaAtual, setPaginaAtual] = useState(1);
@@ -103,6 +104,7 @@ function CatalogContent() {
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setProdutoSelecionado(null);
+        setImagemExpandida(null);
       }
     };
 
@@ -221,7 +223,12 @@ function CatalogContent() {
                       {produto.tipo === 'digital' ? 'PDF' : 'Físico'}
                     </span>
 
-                    <div className={`relative mb-2 aspect-square overflow-hidden rounded-2xl border border-white/60 shadow-inner ${produto.cor}`}>
+                    <button
+                      type="button"
+                      onClick={() => setImagemExpandida({ src: imagemFinal, nome: produto.nome })}
+                      aria-label={`Ampliar foto de ${produto.nome}`}
+                      className={`relative mb-2 aspect-square w-full overflow-hidden rounded-2xl border border-white/60 shadow-inner ${produto.cor} cursor-pointer`}
+                    >
                       <Image
                         src={imagemFinal}
                         alt={produto.nome}
@@ -230,7 +237,7 @@ function CatalogContent() {
                         unoptimized={imagemFinal.startsWith("http://") || imagemFinal.startsWith("https://")}
                         className="h-full w-full object-contain p-2.5 transition-transform duration-500 group-hover:scale-105"
                       />
-                    </div>
+                    </button>
 
                     {imagensDoProduto.length > 1 && (
                       <div className="mb-3">
@@ -440,6 +447,36 @@ function CatalogContent() {
                 Voltar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {imagemExpandida && (
+        <div
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/45 backdrop-blur-md px-4 py-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Foto ampliada de ${imagemExpandida.nome}`}
+          onClick={() => setImagemExpandida(null)}
+        >
+          <div
+            className="relative flex h-[min(86vh,860px)] w-[min(94vw,1200px)] items-center justify-center overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-3 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <Image
+              src={imagemExpandida.src}
+              alt={imagemExpandida.nome}
+              fill
+              unoptimized={imagemExpandida.src.startsWith("http://") || imagemExpandida.src.startsWith("https://")}
+              className="object-contain"
+            />
+            <button
+              type="button"
+              onClick={() => setImagemExpandida(null)}
+              className="absolute right-4 top-4 rounded-xl bg-white/90 px-4 py-2 text-sm font-black text-gray-900 transition-colors hover:bg-white"
+            >
+              Voltar
+            </button>
           </div>
         </div>
       )}
