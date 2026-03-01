@@ -23,7 +23,11 @@ function CatalogContent() {
   const [tagAtiva, setTagAtiva] = useState<string>('Tudo');
   const [imagemAtivaPorProduto, setImagemAtivaPorProduto] = useState<Record<string, string>>({});
   const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
-  const [imagemExpandida, setImagemExpandida] = useState<{ src: string; nome: string } | null>(null);
+  const [imagemExpandida, setImagemExpandida] = useState<{
+    nome: string;
+    imagens: string[];
+    indice: number;
+  } | null>(null);
 
   // LÃƒÂ³gica de PaginaÃƒÂ§ÃƒÂ£o
   const [paginaAtual, setPaginaAtual] = useState(1);
@@ -98,6 +102,16 @@ function CatalogContent() {
       ? (indiceAtual + 1) % imagensDoProduto.length
       : (indiceAtual - 1 + imagensDoProduto.length) % imagensDoProduto.length;
     handleSelecionarImagem(produto.id, imagensDoProduto[proximoIndice]);
+  };
+
+  const handleNavegarImagemExpandida = (direcao: "anterior" | "proxima") => {
+    setImagemExpandida((prev) => {
+      if (!prev || prev.imagens.length <= 1) return prev;
+      const proximoIndice = direcao === "proxima"
+        ? (prev.indice + 1) % prev.imagens.length
+        : (prev.indice - 1 + prev.imagens.length) % prev.imagens.length;
+      return { ...prev, indice: proximoIndice };
+    });
   };
 
   useEffect(() => {
@@ -225,7 +239,14 @@ function CatalogContent() {
 
                     <button
                       type="button"
-                      onClick={() => setImagemExpandida({ src: imagemFinal, nome: produto.nome })}
+                      onClick={() => {
+                        const indiceAtual = Math.max(imagensDoProduto.indexOf(imagemFinal), 0);
+                        setImagemExpandida({
+                          nome: produto.nome,
+                          imagens: imagensDoProduto,
+                          indice: indiceAtual,
+                        });
+                      }}
                       aria-label={`Ampliar foto de ${produto.nome}`}
                       className={`relative mb-2 aspect-square w-full overflow-hidden rounded-2xl border border-white/60 shadow-inner ${produto.cor} cursor-pointer`}
                     >
@@ -453,23 +474,48 @@ function CatalogContent() {
 
       {imagemExpandida && (
         <div
-          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/45 backdrop-blur-md px-4 py-6"
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/45 backdrop-blur-md px-4 py-10"
           role="dialog"
           aria-modal="true"
           aria-label={`Foto ampliada de ${imagemExpandida.nome}`}
           onClick={() => setImagemExpandida(null)}
         >
           <div
-            className="relative flex h-[min(86vh,860px)] w-[min(94vw,1200px)] items-center justify-center overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-3 shadow-2xl"
+            className="relative flex h-[min(80vh,820px)] w-[min(94vw,1200px)] items-center justify-center overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-3 shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
             <Image
-              src={imagemExpandida.src}
+              src={imagemExpandida.imagens[imagemExpandida.indice]}
               alt={imagemExpandida.nome}
               fill
-              unoptimized={imagemExpandida.src.startsWith("http://") || imagemExpandida.src.startsWith("https://")}
+              unoptimized={
+                imagemExpandida.imagens[imagemExpandida.indice].startsWith("http://") ||
+                imagemExpandida.imagens[imagemExpandida.indice].startsWith("https://")
+              }
               className="object-contain"
             />
+
+            {imagemExpandida.imagens.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleNavegarImagemExpandida("anterior")}
+                  aria-label="Foto anterior"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 rounded-xl bg-white/90 p-2 text-gray-900 transition-colors hover:bg-white"
+                >
+                  <ChevronLeft size={22} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleNavegarImagemExpandida("proxima")}
+                  aria-label="Próxima foto"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 rounded-xl bg-white/90 p-2 text-gray-900 transition-colors hover:bg-white"
+                >
+                  <ChevronRight size={22} />
+                </button>
+              </>
+            )}
+
             <button
               type="button"
               onClick={() => setImagemExpandida(null)}
