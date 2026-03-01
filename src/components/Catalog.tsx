@@ -511,7 +511,7 @@ function CatalogContent() {
             <p className="text-[11px] font-black uppercase tracking-[0.14em] text-purple-500">
               {produtoSelecionado.tipo === "digital" ? "Arquivo Digital" : "Produto Fisico"}
             </p>
-            <h3 className="mt-1 text-2xl font-black leading-tight text-gray-900">{produtoSelecionado.nome}</h3>
+            <h3 className="mt-1 text-xl font-black leading-tight text-gray-900">{produtoSelecionado.nome}</h3>
             <p className="mt-3 text-xs text-gray-600">
               {produtoSelecionado.descricao || "Material pronto para facilitar o aprendizado com praticidade."}
             </p>
