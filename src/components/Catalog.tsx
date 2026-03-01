@@ -408,7 +408,7 @@ function CatalogContent() {
             <div className="w-20 h-20 bg-white/80 rounded-full flex items-center justify-center mb-4 shadow-sm">
               <SearchX size={32} className="text-gray-200" />
             </div>
-            <p className="font-bold text-xl text-gray-500">Nenhum material mÃƒÂ¡gico encontrado.</p>
+            <p className="font-bold text-xl text-gray-500">Nenhum material magico encontrado.</p>
             <button
               type="button"
               onClick={() => { setCategoria('todos'); setTagAtiva('Tudo'); setPaginaAtual(1); }}
@@ -516,7 +516,7 @@ function CatalogContent() {
                 className="flex h-11 items-center justify-center gap-2 rounded-xl border border-purple-200/70 bg-purple-100 px-4 text-sm font-black text-purple-800 transition-all hover:bg-purple-200"
               >
                 <ShoppingCart size={18} />
-                Adicionar ao carrinho
+                +
               </button>
               <button
                 type="button"
@@ -529,7 +529,7 @@ function CatalogContent() {
               <button
                 type="button"
                 onClick={() => setProdutoSelecionado(null)}
-                className="ml-auto rounded-xl bg-purple-600 px-4 py-2 text-sm font-black text-white transition-colors hover:bg-purple-700"
+                className="ml-auto rounded-xl bg-purple-600 px-4 py-3 text-sm font-black text-white transition-colors hover:bg-purple-700"
               >
                 Voltar
               </button>
