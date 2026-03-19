@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, Suspense, useMemo, useEffect } from "react";
-import { ShoppingCart, FileText, SearchX, Zap, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { ShoppingCart, FileText, SearchX, Zap, ChevronLeft, ChevronRight, Download, X, Sparkles, Package, ShieldCheck } from "lucide-react";
 import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation"; // Import useRouter
 import { type Produto } from "@/constants/produtos"; // Import Produto type
@@ -127,6 +127,17 @@ function CatalogContent() {
     window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
   }, []);
+
+  useEffect(() => {
+    if (!produtoSelecionado) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [produtoSelecionado]);
 
   return (
     <section
@@ -417,119 +428,200 @@ function CatalogContent() {
 
       {produtoSelecionado && (
         <div
-          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/45 backdrop-blur-md px-4 py-10"
+          className="fixed inset-0 z-[130] overflow-y-auto bg-slate-950/55 px-4 py-6 backdrop-blur-md md:px-6 md:py-10"
           role="dialog"
           aria-modal="true"
           aria-label={`Detalhes de ${produtoSelecionado.nome}`}
           onClick={() => setProdutoSelecionado(null)}
         >
           <div
-            className="w-full max-w-5xl overflow-hidden rounded-3xl bg-white p-4 md:p-5 shadow-2xl"
+            className="mx-auto w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-[0_35px_120px_rgba(15,23,42,0.28)]"
             onClick={(event) => event.stopPropagation()}
           >
             {(() => {
               const imagensModal = getImagensDoProduto(produtoSelecionado);
               const imagemAtualModal = imagensModal[indiceFotoModal] || imagensModal[0];
+              const destaques = produtoSelecionado.tipo === "digital"
+                ? ["Acesso imediato", "Arquivo pronto para imprimir", "Compra 100% segura"]
+                : ["Produção caprichada", "Envio com cuidado", "Compra 100% segura"];
+
               return (
-                <>
-                  <div className="relative mb-3 overflow-hidden rounded-2xl border border-purple-100 bg-gradient-to-b from-white to-gray-100">
-                    <div className="relative h-[52vh] w-full md:h-[66vh]">
-                      <Image
-                        src={imagemAtualModal}
-                        alt={produtoSelecionado.nome}
-                        fill
-                        unoptimized={imagemAtualModal.startsWith("http://") || imagemAtualModal.startsWith("https://")}
-                        className="object-contain p-0.5 md:p-1"
-                      />
+                <div className="grid lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
+                  <div className="relative overflow-hidden bg-[radial-gradient(circle_at_top,#f5d0fe_0%,#ffffff_38%,#eef2ff_100%)] p-4 md:p-6">
+                    <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-white/70 to-transparent" />
+                    <div className="relative overflow-hidden rounded-[1.75rem] border border-white/80 bg-white/70 shadow-inner">
+                      <div className="absolute left-4 top-4 z-10 flex flex-wrap gap-2">
+                        <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] ${produtoSelecionado.tipo === "digital" ? "bg-blue-600 text-white" : "bg-orange-500 text-white"}`}>
+                          {produtoSelecionado.tipo === "digital" ? "Digital" : "Físico"}
+                        </span>
+                        {produtoSelecionado.tags?.slice(0, 2).map((tag) => (
+                          <span
+                            key={`${produtoSelecionado.id}-tag-${tag}`}
+                            className="rounded-full border border-white/80 bg-white/80 px-3 py-1 text-[11px] font-bold text-slate-700"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="relative h-[38vh] min-h-[300px] w-full md:h-[52vh]">
+                        <Image
+                          src={imagemAtualModal}
+                          alt={produtoSelecionado.nome}
+                          fill
+                          unoptimized={imagemAtualModal.startsWith("http://") || imagemAtualModal.startsWith("https://")}
+                          className="object-contain p-4 md:p-6"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setProdutoSelecionado(null)}
+                        aria-label="Fechar modal"
+                        className="absolute right-4 top-4 z-10 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/80 bg-white/90 text-slate-700 shadow-sm transition-colors hover:bg-white"
+                      >
+                        <X size={18} />
+                      </button>
+
+                      {imagensModal.length > 1 && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleNavegarFotoModal("anterior")}
+                            aria-label="Foto anterior"
+                            className="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-2xl border border-white/80 bg-white/90 p-3 text-slate-700 shadow-sm transition-colors hover:bg-white"
+                          >
+                            <ChevronLeft size={20} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleNavegarFotoModal("proxima")}
+                            aria-label="Proxima foto"
+                            className="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-2xl border border-white/80 bg-white/90 p-3 text-slate-700 shadow-sm transition-colors hover:bg-white"
+                          >
+                            <ChevronRight size={20} />
+                          </button>
+                        </>
+                      )}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setProdutoSelecionado(null)}
-                      className="absolute right-3 top-3 rounded-xl bg-sky-200 px-4 py-2 text-sm font-black text-sky-900 transition-colors hover:bg-sky-300"
-                    >
-                      Voltar
-                    </button>
-
                     {imagensModal.length > 1 && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => handleNavegarFotoModal("anterior")}
-                          aria-label="Foto anterior"
-                          className="absolute left-3 top-1/2 -translate-y-1/2 rounded-xl bg-white/90 p-2 text-gray-900 transition-colors hover:bg-white"
-                        >
-                          <ChevronLeft size={20} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleNavegarFotoModal("proxima")}
-                          aria-label="Proxima foto"
-                          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl bg-white/90 p-2 text-gray-900 transition-colors hover:bg-white"
-                        >
-                          <ChevronRight size={20} />
-                        </button>
-                      </>
+                      <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+                        {imagensModal.map((img, index) => (
+                          <button
+                            key={`${produtoSelecionado.id}-modal-thumb-${index}`}
+                            type="button"
+                            onClick={() => setIndiceFotoModal(index)}
+                            aria-label={`Ver foto ${index + 1} de ${produtoSelecionado.nome}`}
+                            className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border-2 bg-white transition-all ${
+                              indiceFotoModal === index
+                                ? "border-fuchsia-500 shadow-[0_10px_25px_rgba(217,70,239,0.22)]"
+                                : "border-transparent opacity-80 hover:opacity-100"
+                            }`}
+                          >
+                            <Image
+                              src={img}
+                              alt={`${produtoSelecionado.nome} miniatura ${index + 1}`}
+                              fill
+                              sizes="64px"
+                              unoptimized={img.startsWith("http://") || img.startsWith("https://")}
+                              className="object-cover"
+                            />
+                          </button>
+                        ))}
+                      </div>
                     )}
                   </div>
 
-                  {imagensModal.length > 1 && (
-                    <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
-                      {imagensModal.map((img, index) => (
-                        <button
-                          key={`${produtoSelecionado.id}-modal-thumb-${index}`}
-                          type="button"
-                          onClick={() => setIndiceFotoModal(index)}
-                          aria-label={`Ver foto ${index + 1} de ${produtoSelecionado.nome}`}
-                          className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
-                            indiceFotoModal === index
-                              ? "border-purple-500 shadow-sm"
-                              : "border-transparent opacity-80 hover:opacity-100"
-                          }`}
+                  <div className="flex flex-col p-5 md:p-7">
+                    <div className="mb-5 flex items-start justify-between gap-4">
+                      <div>
+                        <p className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.16em] text-fuchsia-600">
+                          <Sparkles size={14} />
+                          Detalhes do material
+                        </p>
+                        <h3 className="mt-3 text-2xl font-black leading-tight text-slate-900 md:text-[2rem]">
+                          {produtoSelecionado.nome}
+                        </h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/produto/${produtoSelecionado.id}`)}
+                        className="hidden rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-black text-slate-700 transition-colors hover:bg-slate-100 md:inline-flex"
+                      >
+                        Ver página
+                      </button>
+                    </div>
+
+                    <p className="text-sm leading-6 text-slate-600 md:text-[15px]">
+                      {produtoSelecionado.descricao || "Material pronto para facilitar o aprendizado com praticidade."}
+                    </p>
+
+                    <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                      {destaques.map((item) => (
+                        <div
+                          key={item}
+                          className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700"
                         >
-                          <Image
-                            src={img}
-                            alt={`${produtoSelecionado.nome} miniatura ${index + 1}`}
-                            fill
-                            sizes="56px"
-                            unoptimized={img.startsWith("http://") || img.startsWith("https://")}
-                            className="object-cover"
-                          />
-                        </button>
+                          {item}
+                        </div>
                       ))}
                     </div>
-                  )}
-                </>
+
+                    <div className="mt-6 rounded-[1.75rem] border border-slate-200 bg-[linear-gradient(135deg,#fff7ed_0%,#ffffff_45%,#f5f3ff_100%)] p-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <span className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Investimento</span>
+                          <div className="mt-2 text-3xl font-black text-slate-900">
+                            {formatCurrency(produtoSelecionado.preco)}
+                          </div>
+                        </div>
+                        <div className="rounded-2xl bg-white/80 px-3 py-2 text-right shadow-sm">
+                          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Entrega</div>
+                          <div className="mt-1 flex items-center gap-2 text-sm font-bold text-slate-700">
+                            {produtoSelecionado.tipo === "digital" ? <Download size={16} /> : <Package size={16} />}
+                            {produtoSelecionado.tipo === "digital" ? "Imediata" : "Preparação rápida"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 grid gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleBuyNow(produtoSelecionado)}
+                          className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-500 via-fuchsia-500 to-violet-600 px-5 text-sm font-extrabold text-white shadow-lg shadow-fuchsia-200/70 transition-all hover:-translate-y-0.5 hover:shadow-xl"
+                        >
+                          {produtoSelecionado.tipo === "digital" ? <Download size={18} /> : <Package size={18} />}
+                          Comprar agora
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAddToCart(produtoSelecionado)}
+                          className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-fuchsia-200 bg-fuchsia-50 px-5 text-sm font-black text-fuchsia-800 transition-colors hover:bg-fuchsia-100"
+                        >
+                          <ShoppingCart size={18} />
+                          Adicionar ao carrinho
+                        </button>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-bold text-slate-500">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1.5">
+                          <ShieldCheck size={14} className="text-emerald-600" />
+                          Pagamento seguro
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => router.push(`/produto/${produtoSelecionado.id}`)}
+                          className="inline-flex items-center rounded-full px-1 py-1 text-fuchsia-700 transition-colors hover:text-fuchsia-900 md:hidden"
+                        >
+                          Ver página completa
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               );
             })()}
-
-            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-purple-500">
-              {produtoSelecionado.tipo === "digital" ? "Arquivo Digital" : "Produto Fisico"}
-            </p>
-            <h3 className="mt-1 text-xl font-black leading-tight text-gray-900">{produtoSelecionado.nome}</h3>
-            <p className="mt-3 text-xs text-gray-600">
-              {produtoSelecionado.descricao || "Material pronto para facilitar o aprendizado com praticidade."}
-            </p>
-            <div className="mt-3 text-xl font-black text-gray-900">{formatCurrency(produtoSelecionado.preco)}</div>
-
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleAddToCart(produtoSelecionado)}
-                className="flex h-11 items-center justify-center gap-2 rounded-xl border border-purple-200/70 bg-purple-100 px-4 text-sm font-black text-purple-800 transition-all hover:bg-purple-200"
-              >
-                <ShoppingCart size={18} />
-                +
-              </button>
-              <button
-                type="button"
-                onClick={() => handleBuyNow(produtoSelecionado)}
-                className="flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 px-4 text-sm font-extrabold text-white transition-all hover:shadow-lg"
-              >
-                <Download size={18} />
-                Comprar
-              </button>
-            </div>
           </div>
         </div>
       )}
