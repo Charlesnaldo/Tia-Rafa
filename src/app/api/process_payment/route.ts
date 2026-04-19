@@ -140,12 +140,16 @@ export async function POST(request: Request) {
       cart_items: JSON.stringify(cartItems),
     };
     const baseUrl = process.env.NEXT_PUBLIC_URL?.trim();
+    const webhookSecret = process.env.MP_WEBHOOK_SECRET?.trim();
     let notificationUrl: string | undefined;
     if (baseUrl) {
       try {
         const parsed = new URL(baseUrl);
         if ((parsed.protocol === "https:" || parsed.protocol === "http:") && isPublicHost(parsed.hostname)) {
           notificationUrl = `${parsed.origin}/api/webhook/mercadopago`;
+          if (webhookSecret) {
+            notificationUrl += `?secret=${encodeURIComponent(webhookSecret)}`;
+          }
         }
       } catch {
         notificationUrl = undefined;

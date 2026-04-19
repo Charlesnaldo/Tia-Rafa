@@ -30,15 +30,54 @@ type PurchasedProduct = {
   materialPath?: string | null;
 };
 
+function parseMetadataList(value: unknown): string[] {
+  if (typeof value !== "string" || !value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseCartItems(value: unknown): { id: string; quantity: number }[] {
+  if (typeof value !== "string" || !value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item): item is { id: string; quantity: number } =>
+        Boolean(item) &&
+        typeof item === "object" &&
+        typeof (item as { id?: unknown }).id === "string" &&
+        Number.isInteger((item as { quantity?: unknown }).quantity) &&
+        (item as { quantity?: number }).quantity > 0
+    );
+  } catch {
+    return [];
+  }
+}
+
+function parseAddress(value: unknown): { rua?: string; numero?: string } | null {
+  if (typeof value !== "string" || !value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    if (!parsed || typeof parsed !== "object") return null;
+    return {
+      rua: typeof (parsed as { rua?: unknown }).rua === "string" ? String((parsed as { rua?: string }).rua) : undefined,
+      numero: typeof (parsed as { numero?: unknown }).numero === "string" ? String((parsed as { numero?: string }).numero) : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function getDownloadLink(
   request: Request,
   produto: { materialPath?: string | null }
 ) {
   const origin = new URL(request.url).origin;
   if (!produto.materialPath) return "";
-  if (produto.materialPath.startsWith("http://") || produto.materialPath.startsWith("https://")) {
-    return produto.materialPath;
-  }
   if (produto.materialPath.startsWith("/")) {
     return `${origin}${produto.materialPath}`;
   }
@@ -113,24 +152,6 @@ async function getDigitalAttachment(produto: { id: string; materialPath?: string
     }
   }
 
-  if (produto.materialPath.startsWith("http://") || produto.materialPath.startsWith("https://")) {
-    try {
-      const response = await fetch(produto.materialPath);
-      if (!response.ok) return null;
-      const arrayBuffer = await response.arrayBuffer();
-      const fileBytes = Buffer.from(arrayBuffer);
-      const pathname = new URL(produto.materialPath).pathname;
-      const fileName = pathname.split("/").pop() || `${produto.id}.pdf`;
-      return {
-        filename: decodeURIComponent(fileName),
-        content: fileBytes,
-        contentType: "application/pdf",
-      };
-    } catch {
-      return null;
-    }
-  }
-
   try {
     const supabase = getSupabaseAdminClient();
     const signed = await supabase.storage
@@ -158,6 +179,11 @@ async function getDigitalAttachment(produto: { id: string; materialPath?: string
 export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    const webhookSecret = process.env.MP_WEBHOOK_SECRET?.trim();
+    if (webhookSecret && searchParams.get("secret") !== webhookSecret) {
+      return NextResponse.json({ error: "Webhook nao autorizado." }, { status: 401 });
+    }
+
     const id = searchParams.get("data.id") || searchParams.get("id");
     const type = searchParams.get("type");
 
@@ -176,9 +202,9 @@ export async function POST(request: Request) {
         const telefoneCliente = paymentData.metadata.telefone_comprador;
         const idsProdutosRaw = paymentData.metadata.id_produtos;
         const cartItemsRaw = paymentData.metadata.cart_items;
-        const idsProdutos: string[] = JSON.parse(idsProdutosRaw || "[]");
-        const cartItems: { id: string; quantity: number }[] = JSON.parse(cartItemsRaw || "[]");
-        const enderecoEntrega = paymentData.metadata.endereco_entrega;
+        const idsProdutos = parseMetadataList(idsProdutosRaw);
+        const cartItems = parseCartItems(cartItemsRaw);
+        const enderecoEntrega = parseAddress(paymentData.metadata.endereco_entrega);
 
         console.log(`✅ Pagamento aprovado! Itens: ${idsProdutos.join(", ")} para: ${emailCliente}`);
 
@@ -246,8 +272,8 @@ export async function POST(request: Request) {
                     <p>Em breve você receberá o código de rastreio por este e-mail.</p>
                     ${enderecoEntrega ? `
                     <div style="background: #fff7ed; padding: 20px; border-radius: 12px; border: 1px solid #fed7aa;">
-                      <h4 style="margin-top: 0;">Dados de Entrega:</h4>
-                      <pre style="font-family: inherit; font-size: 14px; margin-bottom: 0;">${JSON.parse(enderecoEntrega || '{}').rua}, ${JSON.parse(enderecoEntrega || '{}').numero}</pre>
+                    <h4 style="margin-top: 0;">Dados de Entrega:</h4>
+                      <pre style="font-family: inherit; font-size: 14px; margin-bottom: 0;">${enderecoEntrega?.rua || ""}, ${enderecoEntrega?.numero || ""}</pre>
                     </div>` : ''}
                     <br/>
                     <p style="font-size: 12px; color: #999;">Dúvidas? Entre em contato conosco pelo WhatsApp.</p>
