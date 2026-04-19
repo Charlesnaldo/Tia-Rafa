@@ -3,15 +3,5 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div
-      className="font-sans"
-      style={{
-        fontFamily:
-          'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      }}
-    >
-      {children}
-    </div>
-  );
+  return <div className="admin-shell font-sans">{children}</div>;
 }
