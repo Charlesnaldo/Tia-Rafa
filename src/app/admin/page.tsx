@@ -146,6 +146,7 @@ export default function AdminPage() {
     }
 
     await supabase.auth.signOut();
+    await fetch("/api/admin/session", { method: "DELETE" }).catch(() => null);
     router.push("/admin/login");
   };
 

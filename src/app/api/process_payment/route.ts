@@ -34,6 +34,9 @@ type MercadoPagoCreatePreferenceResponse = {
 };
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_CART_ITEMS = 20;
+const MAX_ID_LENGTH = 128;
+const MAX_NAME_LENGTH = 120;
 const isPublicHost = (hostname: string) =>
   hostname !== "localhost"
   && hostname !== "127.0.0.1"
@@ -99,6 +102,15 @@ export async function POST(request: Request) {
     }
     if (!Array.isArray(cartItems) || cartItems.length === 0) {
       return NextResponse.json({ error: "Carrinho vazio ou invalido." }, { status: 400 });
+    }
+    if (cartItems.length > MAX_CART_ITEMS) {
+      return NextResponse.json({ error: "Carrinho excede o limite permitido." }, { status: 400 });
+    }
+    if (nomeCliente.length > MAX_NAME_LENGTH) {
+      return NextResponse.json({ error: "Nome do cliente excede o limite permitido." }, { status: 400 });
+    }
+    if (cartItems.some((item) => typeof item?.id !== "string" || item.id.length === 0 || item.id.length > MAX_ID_LENGTH)) {
+      return NextResponse.json({ error: "Carrinho contem IDs invalidos." }, { status: 400 });
     }
 
     const idsCarrinho = cartItems.map((item) => item.id);
@@ -183,7 +195,7 @@ export async function POST(request: Request) {
         },
       };
 
-      const preferenceResponse = await fetch("https://api.mercadopago.com/checkout/preferences", {
+    const preferenceResponse = await fetch("https://api.mercadopago.com/checkout/preferences", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -195,10 +207,7 @@ export async function POST(request: Request) {
 
       const preferenceData = await preferenceResponse.json();
       if (!preferenceResponse.ok) {
-        return NextResponse.json(
-          { error: "Erro ao iniciar checkout de cartao.", details: preferenceData },
-          { status: preferenceResponse.status }
-        );
+        return NextResponse.json({ error: "Erro ao iniciar checkout de cartao." }, { status: preferenceResponse.status });
       }
 
       const typedPreferenceData = preferenceData as MercadoPagoCreatePreferenceResponse;
@@ -236,10 +245,7 @@ export async function POST(request: Request) {
 
     const paymentData = await mpResponse.json();
     if (!mpResponse.ok) {
-      return NextResponse.json(
-        { error: "Erro ao gerar o Pix.", details: paymentData },
-        { status: mpResponse.status }
-      );
+      return NextResponse.json({ error: "Erro ao gerar o Pix." }, { status: mpResponse.status });
     }
 
     const typedPaymentData = paymentData as MercadoPagoCreatePaymentResponse;
@@ -253,10 +259,7 @@ export async function POST(request: Request) {
       point_of_interaction: typedPaymentData.point_of_interaction,
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    return NextResponse.json(
-      { error: "Erro interno no servidor ao processar pagamento.", details: message },
-      { status: 500 }
-    );
+    console.error("Erro interno no servidor ao processar pagamento:", error);
+    return NextResponse.json({ error: "Erro interno no servidor ao processar pagamento." }, { status: 500 });
   }
 }

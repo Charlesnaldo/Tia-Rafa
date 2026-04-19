@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       payment_method_id: paymentData.payment_method_id || null,
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: "Falha ao consultar pagamento.", details: message }, { status: 500 });
+    console.error("Falha ao consultar pagamento:", error);
+    return NextResponse.json({ error: "Falha ao consultar pagamento." }, { status: 500 });
   }
 }

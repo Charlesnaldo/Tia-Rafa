@@ -394,6 +394,20 @@ export default function AdminMateriaisPage() {
     }
   };
 
+  const handleLogout = async () => {
+    let supabase;
+    try {
+      supabase = getSupabaseBrowserClient();
+    } catch {
+      router.push("/admin/login");
+      return;
+    }
+
+    await supabase.auth.signOut();
+    await fetch("/api/admin/session", { method: "DELETE" }).catch(() => null);
+    router.push("/admin/login");
+  };
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_45%,#f5f3ff_100%)] px-4 py-10">
       <div className="mx-auto max-w-6xl space-y-6">
@@ -412,6 +426,14 @@ export default function AdminMateriaisPage() {
               <ArrowLeft size={14} />
               Voltar para painel
             </Link>
+
+            <button
+              type="button"
+              onClick={() => void handleLogout()}
+              className="mb-6 ml-4 inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-red-500 transition hover:text-red-700"
+            >
+              Sair
+            </button>
 
             <h1 className="text-3xl font-black text-gray-900">Gerenciar produtos</h1>
             <p className="mt-2 text-sm text-gray-500">Cadastro completo, uploads e edicao de nome, descricao, preco e arquivos.</p>

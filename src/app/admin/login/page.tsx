@@ -35,10 +35,35 @@ export default function AdminLoginPage() {
       password,
     });
 
+    if (signInError) {
+      setLoading(false);
+      setError(signInError.message);
+      return;
+    }
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      setLoading(false);
+      setError("Nao foi possivel criar a sessao do admin.");
+      return;
+    }
+
+    const response = await fetch("/api/admin/session", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ accessToken: session.access_token }),
+    });
+
     setLoading(false);
 
-    if (signInError) {
-      setError(signInError.message);
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      setError(payload?.error || "Nao foi possivel autenticar o admin.");
       return;
     }
 
