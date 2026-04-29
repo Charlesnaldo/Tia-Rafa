@@ -171,7 +171,7 @@ export default function ProdutoDetalhes({
           <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-xl shadow-gray-200/50">
             <div className="flex items-baseline gap-2 mb-6">
               <span className="text-gray-400 text-lg font-medium">Investimento:</span>
-              <span className="text-4xl font-black text-gray-800">R$ {formatCurrency(produto.preco * quantity)}</span> {/* Update price based on quantity */}
+              <span className="text-4xl font-black text-gray-800">{formatCurrency(produto.preco * quantity)}</span> {/* Update price based on quantity */}
             </div>
 
             {/* Quantity Selector */}
