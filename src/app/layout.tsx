@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import HeaderMobile from "@/components/HeaderMobile";
 import HeaderMobileTop from "@/components/HeaderMobileTop";
 import Footer from "@/components/Footer";
+import WhatsAppFloatingButton from "@/components/WhatsAppFloatingButton";
 import { CartProvider } from "@/context/CartContext";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 
@@ -60,6 +61,7 @@ export default function RootLayout({
           </div>
 
           <Footer />
+          <WhatsAppFloatingButton />
         </CartProvider>
       </body>
     </html>
