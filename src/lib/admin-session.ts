@@ -24,8 +24,9 @@ async function getKey() {
   );
 }
 
-function base64UrlEncode(bytes: ArrayBuffer) {
-  const binary = String.fromCharCode(...new Uint8Array(bytes));
+function base64UrlEncode(bytes: ArrayBuffer | ArrayBufferView) {
+  const view = bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const binary = String.fromCharCode(...view);
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 

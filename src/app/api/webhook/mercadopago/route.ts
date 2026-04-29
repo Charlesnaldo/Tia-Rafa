@@ -45,14 +45,14 @@ function parseCartItems(value: unknown): { id: string; quantity: number }[] {
   try {
     const parsed = JSON.parse(value);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (item): item is { id: string; quantity: number } =>
-        Boolean(item) &&
-        typeof item === "object" &&
-        typeof (item as { id?: unknown }).id === "string" &&
-        Number.isInteger((item as { quantity?: unknown }).quantity) &&
-        (item as { quantity?: number }).quantity > 0
-    );
+    return parsed.filter((item): item is { id: string; quantity: number } => {
+      if (!item || typeof item !== "object") return false;
+
+      const id = (item as { id?: unknown }).id;
+      const quantity = (item as { quantity?: unknown }).quantity;
+
+      return typeof id === "string" && typeof quantity === "number" && Number.isInteger(quantity) && quantity > 0;
+    });
   } catch {
     return [];
   }
