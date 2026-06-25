@@ -17,6 +17,14 @@ type CustomerRow = {
   created_at: string;
 };
 
+type OrderItemRow = {
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  unit_price_cents: number;
+  line_total_cents: number;
+};
+
 type OrderRow = {
   id: string;
   mp_payment_id: string;
@@ -29,6 +37,7 @@ type OrderRow = {
     email: string;
     telefone: string | null;
   }[];
+  order_items: OrderItemRow[];
 };
 
 export default function AdminPage() {
@@ -69,7 +78,7 @@ export default function AdminPage() {
     const [ordersResult, customersResult, orderItemsResult] = await Promise.all([
       supabase
         .from("orders")
-        .select("id, mp_payment_id, status, payment_method, total_amount, created_at, customers(nome, email, telefone)")
+        .select("id, mp_payment_id, status, payment_method, total_amount, created_at, customers(nome, email, telefone), order_items(product_id, product_name, quantity, unit_price_cents, line_total_cents)")
         .order("created_at", { ascending: false })
         .limit(50),
       supabase
@@ -92,6 +101,12 @@ export default function AdminPage() {
           : rawCustomer
             ? [rawCustomer]
             : [];
+        const rawOrderItems = (order as { order_items?: unknown }).order_items;
+        const orderItems = Array.isArray(rawOrderItems)
+          ? rawOrderItems
+          : rawOrderItems
+            ? [rawOrderItems]
+            : [];
 
         return {
           id: String(order.id),
@@ -105,6 +120,19 @@ export default function AdminPage() {
             email: String((customer as { email?: unknown }).email || ""),
             telefone: (customer as { telefone?: string | null }).telefone ?? null,
           })),
+          order_items: orderItems.map((item) => {
+            const quantity = Number((item as { quantity?: unknown }).quantity || 0);
+            const unitPrice = Number((item as { unit_price_cents?: unknown }).unit_price_cents || 0);
+            const lineTotal = Number((item as { line_total_cents?: unknown }).line_total_cents || 0);
+
+            return {
+              product_id: String((item as { product_id?: unknown }).product_id || ""),
+              product_name: String((item as { product_name?: unknown }).product_name || "Produto"),
+              quantity,
+              unit_price_cents: unitPrice,
+              line_total_cents: lineTotal || unitPrice * quantity,
+            };
+          }),
         };
       });
 
@@ -287,6 +315,31 @@ export default function AdminPage() {
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
                     <span>MP: {order.mp_payment_id}</span>
                     <span className="font-black text-gray-800">{formatCurrency(Math.round(Number(order.total_amount) * 100))}</span>
+                  </div>
+                  <div className="mt-4 rounded-lg border border-gray-100 bg-white p-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Itens comprados</p>
+                    {order.order_items.length > 0 ? (
+                      <div className="mt-2 space-y-2">
+                        {order.order_items.map((item, index) => (
+                          <div
+                            key={`${order.id}-${item.product_id}-${index}`}
+                            className="flex items-start justify-between gap-3 rounded-lg bg-gray-50 px-3 py-2"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-black text-gray-900">{item.product_name}</p>
+                              <p className="mt-0.5 text-[11px] font-semibold text-gray-500">
+                                {item.quantity} unidade{item.quantity === 1 ? "" : "s"} x {formatCurrency(item.unit_price_cents)}
+                              </p>
+                            </div>
+                            <span className="shrink-0 text-xs font-black text-gray-800">
+                              {formatCurrency(item.line_total_cents)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-xs font-semibold text-gray-500">Itens nao registrados nesta venda.</p>
+                    )}
                   </div>
                 </div>
               ))}
