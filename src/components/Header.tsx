@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Heart, MessageCircle, Palette, Instagram, Youtube, ShoppingCart } from "lucide-react"; // Import ShoppingCart
+import { BookOpen, Heart, MessageCircle, Instagram, Youtube, ShoppingCart } from "lucide-react"; // Import ShoppingCart
 import { useCart } from "@/context/CartContext"; // Import useCart
 
 function HeaderContent() {
@@ -71,11 +71,6 @@ function HeaderContent() {
           <Link href="/sobre" className="flex flex-col items-center gap-1 text-purple-800 font-black hover:text-pink-400 transition-all group">
             <Heart size={40} className="group-hover:scale-110 transition-transform" />
             <span className="text-[10px] uppercase tracking-[0.15em] font-fredoka">Sobre</span>
-          </Link>
-
-          <Link href="/atividades" className="flex flex-col items-center gap-1 text-purple-800 font-black hover:text-blue-400 transition-all group">
-            <Palette size={40} className="group-hover:scale-110 group-hover:rotate-6 transition-transform" />
-            <span className="text-[10px] uppercase tracking-[0.15em] font-fredoka">Atividades</span>
           </Link>
 
           {/* Carrinho de Compras */}
