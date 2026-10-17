@@ -5,6 +5,7 @@ const { readFileSync } = require("node:fs");
 const path = require("node:path");
 const { createHmac } = require("node:crypto");
 const ts = require("typescript");
+const sharp = require("sharp");
 const { NextRequest } = require("next/server");
 
 // Load the actual TypeScript handlers with mocked external services, without a dev server.
@@ -15,7 +16,7 @@ function load(relative, mocks = {}) {
     const loadedModule = { exports: {} };
     cache.set(filename, loadedModule);
     const source = ts.transpileModule(readFileSync(filename, "utf8"), {
-      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true, jsx: ts.JsxEmit.ReactJSX },
     }).outputText;
     const localRequire = (id) => {
       if (Object.hasOwn(mocks, id)) return mocks[id];
@@ -178,23 +179,45 @@ test("chat limiter uses shared durable RPC quotas and fails closed on database e
 });
 
 test("image proxy rejects inactive products and unpublished paths before privileged download", async () => {
+  const sourceImage = await sharp({ create: { width: 1000, height: 600, channels: 3, background: "#8b5cf6" } }).png().toBuffer();
   let product = null;
   let downloads = 0;
   const chain = { select() { return this; }, eq() { return this; }, async maybeSingle() { return { data: product }; } };
   const { GET } = load("src/app/api/product-image/route.ts", {
-    "@/lib/supabase/admin": { getSupabaseAdminClient: () => ({ from: () => chain, storage: { from: () => ({ download: async () => { downloads++; return { data: new Blob(["test"], { type: "image/png" }) }; } }) } }) },
+    "@/lib/supabase/admin": { getSupabaseAdminClient: () => ({ from: () => chain, storage: { from: () => ({ download: async () => { downloads++; return { data: new Blob([sourceImage], { type: "image/png" }) }; } }) } }) },
     "@/lib/supabase/storage-images": { listProductImagePaths: async () => ["product/imagens/public.png"] },
   });
-  const request = (value) => new NextRequest(`https://example.com/api/product-image?path=${encodeURIComponent(value)}`);
+  const request = (value, width = 64) => new NextRequest(`https://example.com/api/product-image?path=${encodeURIComponent(value)}&w=${width}`);
   assert.equal((await GET(request("product/imagens/public.png"))).status, 404);
   product = { id: "product", imagem_url: "product/imagens/public.png" };
   assert.equal((await GET(request("product/imagens/private.png"))).status, 404);
   assert.equal((await GET(request("product/imagens/../file.png"))).status, 400);
+  assert.equal((await GET(request("product/imagens/public.png", 99999))).status, 400);
+  assert.equal((await GET(request("product/pdf/private.pdf"))).status, 400);
   assert.equal(downloads, 0);
   const response = await GET(request("product/imagens/public.png"));
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.equal(response.headers.get("cache-control"), "public, max-age=60, s-maxage=60, must-revalidate");
+  assert.equal(response.headers.get("content-type"), "image/webp");
+  const metadata = await sharp(Buffer.from(await response.arrayBuffer())).metadata();
+  assert.equal(metadata.width, 64);
+  assert.equal(metadata.format, "webp");
   assert.equal(downloads, 1);
+});
+
+test("responsive product images bypass Vercel's incompatible optimizer without disabling resizing", () => {
+  const { productImageLoader } = load("src/lib/product-image-loader.ts");
+  const src = "/api/product-image?path=product%2Fimagens%2Fphoto.png";
+  const thumbnail = new URL(productImageLoader({ src, width: 64 }), "https://example.com");
+  assert.equal(thumbnail.searchParams.get("path"), "product/imagens/photo.png");
+  assert.equal(thumbnail.searchParams.get("w"), "64");
+  assert.equal(new URL(productImageLoader({ src, width: 3840 }), "https://example.com").searchParams.get("w"), "1600");
+  const FallbackImage = load("src/components/FallbackImage.tsx").default;
+  const markup = require("react-dom/server").renderToStaticMarkup(require("react").createElement(FallbackImage, {
+    src, alt: "Produto", width: 64, height: 64,
+  }));
+  assert.match(markup, /srcSet="\/api\/product-image\?/);
+  assert.equal(markup.includes("/_next/image"), false);
 });
 
 test("public catalog excludes paid material paths", async () => {

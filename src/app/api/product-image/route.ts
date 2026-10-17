@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { listProductImagePaths } from "@/lib/supabase/storage-images";
+import sharp from "sharp";
+import { PRODUCT_IMAGE_WIDTHS } from "@/lib/product-image-loader";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 const IMAGE_CONTENT_TYPES: Record<string, string> = {
   avif: "image/avif",
@@ -31,8 +34,10 @@ function isAllowedProductImagePath(path: string) {
 
 export async function GET(request: NextRequest) {
   const imagePath = normalizeImagePath(request.nextUrl.searchParams.get("path"));
+  const requestedWidth = request.nextUrl.searchParams.get("w");
+  const width = requestedWidth === null ? 1600 : Number(requestedWidth);
 
-  if (!isAllowedProductImagePath(imagePath)) {
+  if (!isAllowedProductImagePath(imagePath) || !PRODUCT_IMAGE_WIDTHS.some((size) => size === width)) {
     return NextResponse.json({ error: "Imagem invalida." }, { status: 400 });
   }
 
@@ -53,12 +58,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Imagem nao encontrada." }, { status: 404 });
     }
 
-    const contentType = getImageContentType(imagePath) || "application/octet-stream";
+    if (data.size > 15 * 1024 * 1024) {
+      return NextResponse.json({ error: "Imagem excede o tamanho permitido." }, { status: 413 });
+    }
+    const input = Buffer.from(await data.arrayBuffer());
+    const optimized = await sharp(input, { limitInputPixels: 40_000_000 })
+      .rotate()
+      .resize({ width, withoutEnlargement: true })
+      .webp({ quality: 75 })
+      .toBuffer();
 
-    return new Response(data, {
+    return new Response(new Uint8Array(optimized), {
       headers: {
-        "Cache-Control": "no-store",
-        "Content-Type": contentType,
+        // Short, bounded caching: recheck active-product membership after at most a minute.
+        "Cache-Control": "public, max-age=60, s-maxage=60, must-revalidate",
+        "Content-Type": "image/webp",
+        "Content-Length": String(optimized.byteLength),
         "X-Content-Type-Options": "nosniff",
       },
     });

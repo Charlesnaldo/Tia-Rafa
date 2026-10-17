@@ -2,6 +2,7 @@
 
 import Image, { type ImageProps } from "next/image";
 import { useState } from "react";
+import { isProductImageProxy, productImageLoader } from "@/lib/product-image-loader";
 
 type FallbackImageProps = Omit<ImageProps, "src"> & {
   src?: string | null;
@@ -25,6 +26,7 @@ function FallbackImageSource({
   return (
     <Image
       {...props}
+      loader={isProductImageProxy(currentSrc) ? productImageLoader : props.loader}
       src={currentSrc}
       alt={alt}
       onError={(event) => {

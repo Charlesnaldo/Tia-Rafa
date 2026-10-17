@@ -257,6 +257,7 @@ function CatalogContent() {
                         alt={produto.nome}
                         width={300}
                         height={300}
+                        sizes="(max-width: 767px) 45vw, (max-width: 1023px) 30vw, (max-width: 1279px) 22vw, 18vw"
                         unoptimized={imagemFinal.startsWith("http://") || imagemFinal.startsWith("https://")}
                         className="h-full w-full object-contain p-2.5 transition-transform duration-500 group-hover:scale-105"
                       />
@@ -469,6 +470,7 @@ function CatalogContent() {
                           src={imagemAtualModal}
                           alt={produtoSelecionado.nome}
                           fill
+                          sizes="(max-width: 767px) 90vw, 50vw"
                           unoptimized={imagemAtualModal.startsWith("http://") || imagemAtualModal.startsWith("https://")}
                           className="object-contain p-4 md:p-6"
                         />
