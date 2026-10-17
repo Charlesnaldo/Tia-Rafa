@@ -11,7 +11,6 @@ type ProductOverride = {
   tipo: "digital" | "fisico";
   imagem_url: string | null;
   imagem_urls?: string[];
-  material_path: string | null;
 };
 
 type ProductsApiResponse = {
@@ -46,7 +45,6 @@ function buildCatalogWithOverrides(overrides: ProductOverride[]): Record<string,
         tipo: override.tipo === "fisico" ? "fisico" : "digital",
         imagem: primaryImage,
         imagens: overrideImages.length > 0 ? overrideImages : [primaryImage],
-        arquivoLocal: override.material_path || undefined,
         cor: "bg-blue-100",
         descricao: override.descricao || "Material cadastrado no painel administrativo.",
         tags: ["Novo"],
@@ -65,7 +63,6 @@ function buildCatalogWithOverrides(overrides: ProductOverride[]): Record<string,
       imagens: overrideImages.length > 0
         ? overrideImages
         : current.imagens,
-      arquivoLocal: override.material_path ?? current.arquivoLocal,
     };
   }
 

@@ -16,6 +16,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import FallbackImage from "@/components/FallbackImage";
 import { formatCurrency, formatPaymentStatus } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
 import { LastPaymentSessionData, PaymentPointOfInteraction } from "@/types/payment";
@@ -212,7 +213,7 @@ export default function CheckoutClient() {
                   return (
                     <motion.div key={item.id} className="flex items-center gap-4 p-3 rounded-2xl bg-gray-50/50">
                       <div className="w-16 h-16 bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
-                        <Image src={item.imagem || "/embreve.jpg"} width={64} height={64} alt={item.nome} className="w-full h-full object-cover" />
+                        <FallbackImage src={item.imagem || "/embreve.jpg"} width={64} height={64} alt={item.nome} className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-grow min-w-0">
                         <h4 className="font-bold text-gray-800 truncate text-sm">{item.nome}</h4>

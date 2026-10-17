@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
-import { resolveProductImageUrls, resolveStorageImageUrl } from "@/lib/supabase/storage-images";
+import { buildProductImageProxyUrl, resolveProductImageUrls, resolveStorageImageUrl } from "@/lib/supabase/storage-images";
 
 export const revalidate = 60;
 
@@ -12,7 +12,6 @@ type ProductView = {
   tipo: "digital" | "fisico";
   imagem_url: string | null;
   imagem_urls: string[];
-  material_path: string | null;
 };
 
 export async function GET() {
@@ -22,7 +21,7 @@ export async function GET() {
     const supabase = getSupabaseAdminClient();
     const { data, error } = await supabase
       .from("products")
-      .select("id, nome, descricao, preco_cents, tipo, imagem_url, material_path, is_active")
+      .select("id, nome, descricao, preco_cents, tipo, imagem_url, is_active")
       .eq("is_active", true);
 
     if (error || !data) {
@@ -33,7 +32,10 @@ export async function GET() {
     const products = await Promise.all(
       activeRows.map(async (row): Promise<ProductView> => {
         const resolvedImageUrls = await resolveProductImageUrls(supabase, row.id, row.imagem_url ?? null);
-        const resolvedImageUrl = resolvedImageUrls[0] || (await resolveStorageImageUrl(supabase, row.imagem_url ?? null));
+        const resolvedImageUrl =
+          resolvedImageUrls[0] ||
+          buildProductImageProxyUrl(row.imagem_url ?? null) ||
+          (await resolveStorageImageUrl(supabase, row.imagem_url ?? null));
 
         return {
           id: row.id,
@@ -43,7 +45,6 @@ export async function GET() {
           tipo: row.tipo === "fisico" ? "fisico" : "digital",
           imagem_url: resolvedImageUrl,
           imagem_urls: resolvedImageUrls,
-          material_path: row.material_path ?? null,
         };
       })
     );

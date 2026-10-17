@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { allowChatRequest } from "@/lib/chat-rate-limit";
+import { readLimitedJson, RequestBodyError } from "@/lib/limited-json";
 
 export const dynamic = "force-dynamic";
 
@@ -38,13 +40,22 @@ function extractAssistantText(data: unknown) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const parsed = await readLimitedJson(request, 8192);
+    const body = parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : {};
     const text = typeof body?.text === "string" ? body.text.trim() : "";
     const sessionId = typeof body?.sessionId === "string" ? body.sessionId.trim() : "";
     const page = typeof body?.page === "string" ? body.page.trim() : "";
 
     if (!text) {
       return NextResponse.json({ error: "Mensagem vazia." }, { status: 400 });
+    }
+    if (text.length > 2000 || sessionId.length > 128 || page.length > 512) {
+      return NextResponse.json({ error: "Mensagem excede o tamanho permitido." }, { status: 400 });
+    }
+    if (!await allowChatRequest(request)) {
+      return NextResponse.json({ error: "Limite de mensagens atingido. Tente novamente mais tarde." }, {
+        status: 429, headers: { "Retry-After": "60" },
+      });
     }
 
     const payload = {
@@ -62,6 +73,7 @@ export async function POST(request: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(15000),
     });
 
     const contentType = response.headers.get("content-type") || "";
@@ -75,7 +87,7 @@ export async function POST(request: Request) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: "Falha ao encaminhar mensagem.", details: data },
+        { error: "Falha ao encaminhar mensagem." },
         { status: 502 }
       );
     }
@@ -94,10 +106,12 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       messages,
-      raw: data,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Erro inesperado.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    if (error instanceof RequestBodyError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    console.error("Falha no atendimento do site.");
+    return NextResponse.json({ error: "Atendimento temporariamente indisponivel." }, { status: 503 });
   }
 }

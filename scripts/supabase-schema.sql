@@ -64,6 +64,7 @@ create table if not exists public.admin_users (
 create or replace function public.touch_updated_at()
 returns trigger
 language plpgsql
+set search_path = ''
 as $$
 begin
   new.updated_at = now();
@@ -90,6 +91,7 @@ create or replace function public.is_admin()
 returns boolean
 language sql
 stable
+set search_path = ''
 as $$
   select exists (
     select 1

@@ -110,14 +110,14 @@ export default function AdminMateriaisPage() {
     [products, selectedProductId]
   );
 
-  useEffect(() => {
-    if (!selectedProduct) return;
-    setEditNome(selectedProduct.nome);
-    setEditDescricao(selectedProduct.descricao || "");
-    setEditTipo(selectedProduct.tipo);
-    setEditIsActive(selectedProduct.isActive);
-    setEditPreco((selectedProduct.precoCents / 100).toFixed(2));
-  }, [selectedProduct]);
+  const populateEditor = useCallback((product: EditableProduct | null) => {
+    if (!product) return;
+    setEditNome(product.nome);
+    setEditDescricao(product.descricao || "");
+    setEditTipo(product.tipo);
+    setEditIsActive(product.isActive);
+    setEditPreco((product.precoCents / 100).toFixed(2));
+  }, []);
 
   const ensureSupabaseSession = useCallback(async () => {
     let supabase;
@@ -203,8 +203,9 @@ export default function AdminMateriaisPage() {
     setProducts(normalized);
     const selectedAfterLoad = normalized.find((product) => product.id === selectedProductId) || normalized[0] || null;
     setSelectedProductId(selectedAfterLoad?.id || "");
+    populateEditor(selectedAfterLoad);
     setLoading(false);
-  }, [ensureSupabaseSession, selectedProductId]);
+  }, [ensureSupabaseSession, selectedProductId, populateEditor]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -579,7 +580,11 @@ export default function AdminMateriaisPage() {
                     <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-gray-400">Produto</span>
                     <select
                       value={selectedProductId}
-                      onChange={(event) => setSelectedProductId(event.target.value)}
+                      onChange={(event) => {
+                        const id = event.target.value;
+                        setSelectedProductId(id);
+                        populateEditor(products.find((product) => product.id === id) || null);
+                      }}
                       className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 outline-none"
                     >
                       {products.map((produto) => (

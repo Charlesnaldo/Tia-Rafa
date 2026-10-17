@@ -5,6 +5,8 @@ import { readFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { persistApprovedSale } from "@/lib/supabase/sales";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import { verifyMercadoPagoWebhook } from "@/lib/mercadopago-webhook";
+import { sendPaymentEmailOnce } from "@/lib/payment-email";
 
 // Force dynamic rendering - não gerar estaticamente
 export const dynamic = 'force-dynamic';
@@ -99,11 +101,12 @@ async function getPurchasedProducts(idsProdutos: string[]) {
 
   try {
     const supabase = getSupabaseAdminClient();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("products")
       .select("id, nome, tipo, material_path, is_active")
       .in("id", idsProdutos)
       .eq("is_active", true);
+    if (error) throw error;
 
     for (const row of data || []) {
       if (!row?.id) continue;
@@ -115,7 +118,7 @@ async function getPurchasedProducts(idsProdutos: string[]) {
       });
     }
   } catch {
-    return map;
+    throw new Error("Falha ao consultar materiais comprados.");
   }
 
   return map;
@@ -180,11 +183,14 @@ export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const webhookSecret = process.env.MP_WEBHOOK_SECRET?.trim();
-    if (webhookSecret && searchParams.get("secret") !== webhookSecret) {
+    if (!webhookSecret) {
+      return NextResponse.json({ error: "Webhook indisponivel." }, { status: 503 });
+    }
+    const id = verifyMercadoPagoWebhook(request, webhookSecret);
+    if (!id) {
       return NextResponse.json({ error: "Webhook nao autorizado." }, { status: 401 });
     }
 
-    const id = searchParams.get("data.id") || searchParams.get("id");
     const type = searchParams.get("type");
 
     // Só processamos se for um evento de pagamento
@@ -202,11 +208,14 @@ export async function POST(request: Request) {
         const telefoneCliente = paymentData.metadata.telefone_comprador;
         const idsProdutosRaw = paymentData.metadata.id_produtos;
         const cartItemsRaw = paymentData.metadata.cart_items;
-        const idsProdutos = parseMetadataList(idsProdutosRaw);
+        const idsProdutos = [...new Set(parseMetadataList(idsProdutosRaw))];
         const cartItems = parseCartItems(cartItemsRaw);
         const enderecoEntrega = parseAddress(paymentData.metadata.endereco_entrega);
 
-        console.log(`✅ Pagamento aprovado! Itens: ${idsProdutos.join(", ")} para: ${emailCliente}`);
+        if (typeof emailCliente !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailCliente)) {
+          throw new Error("Pagamento sem destinatario valido.");
+        }
+        if (!getResend()) throw new Error("Provedor de e-mail indisponivel.");
 
         try {
           await persistApprovedSale({
@@ -223,6 +232,7 @@ export async function POST(request: Request) {
           });
         } catch (dbError) {
           console.error("Falha ao persistir venda no Supabase:", dbError);
+          throw new Error("Falha ao persistir venda.");
         }
 
         const purchasedProducts = await getPurchasedProducts(idsProdutos);
@@ -236,7 +246,8 @@ export async function POST(request: Request) {
             const downloadLink = await getDownloadLink(request, produto);
             const attachment = await getDigitalAttachment(produto);
             if (resend) {
-              await resend.emails.send({
+              if (!attachment && !downloadLink) throw new Error("Material indisponivel para entrega.");
+              await sendPaymentEmailOnce(resend, String(paymentData.id), produto.id, {
                 from: resendFrom,
                 to: emailCliente,
                 subject: `🎉 Seu material "${produto.nome}" chegou!`,
@@ -261,7 +272,7 @@ export async function POST(request: Request) {
             // ENVIAR E-MAIL DE CONFIRMAÇÃO PARA O CLIENTE (FÍSICO)
             const resend = getResend();
             if (resend) {
-              await resend.emails.send({
+              await sendPaymentEmailOnce(resend, String(paymentData.id), produto.id, {
                 from: resendFrom,
                 to: emailCliente,
                 subject: '📦 Seu pedido está sendo preparado!',

@@ -19,6 +19,12 @@ export function buildPublicStorageUrl(path: string | null) {
     .join("/")}`;
 }
 
+export function buildProductImageProxyUrl(path: string | null) {
+  if (!path) return null;
+  if (isDirectUrl(path)) return path;
+  return `/api/product-image?path=${encodeURIComponent(path)}`;
+}
+
 export async function resolveStorageImageUrl(
   supabase: StorageClient | null,
   path: string | null,
@@ -50,8 +56,9 @@ export async function listProductImagePaths(
     offset: 0,
     sortBy: { column: "name", order: "asc" },
   });
+  const listedSuccessfully = !listed.error && Array.isArray(listed.data);
 
-  if (!listed.error && Array.isArray(listed.data)) {
+  if (listedSuccessfully) {
     for (const item of listed.data) {
       if (!item?.name || item.id === null) continue;
       imagePaths.push(`${folder}/${item.name}`);
@@ -59,7 +66,10 @@ export async function listProductImagePaths(
   }
 
   if (primaryImagePath && !imagePaths.includes(primaryImagePath)) {
-    imagePaths.unshift(primaryImagePath);
+    const isProbablyStalePrimary = listedSuccessfully && primaryImagePath.startsWith(`${folder}/`);
+    if (isDirectUrl(primaryImagePath) || !isProbablyStalePrimary) {
+      imagePaths.unshift(primaryImagePath);
+    }
   }
 
   return imagePaths;
@@ -68,8 +78,7 @@ export async function listProductImagePaths(
 export async function resolveProductImageUrls(
   supabase: StorageClient,
   productId: string,
-  primaryImagePath: string | null,
-  expiresIn = DEFAULT_SIGNED_URL_TTL_SECONDS
+  primaryImagePath: string | null
 ) {
   const imagePaths = await listProductImagePaths(supabase, productId, primaryImagePath);
   if (imagePaths.length === 0) return [];
@@ -83,30 +92,9 @@ export async function resolveProductImageUrls(
   }
 
   if (storagePaths.length > 0) {
-    try {
-      const signedBatch = await supabase.storage.from(MATERIALS_BUCKET).createSignedUrls(storagePaths, expiresIn);
-      if (!signedBatch.error && Array.isArray(signedBatch.data)) {
-        for (let i = 0; i < storagePaths.length; i += 1) {
-          const path = storagePaths[i];
-          const signedUrl = signedBatch.data[i]?.signedUrl || null;
-          if (signedUrl) {
-            resolvedByPath.set(path, signedUrl);
-            continue;
-          }
-          const fallbackUrl = buildPublicStorageUrl(path);
-          if (fallbackUrl) resolvedByPath.set(path, fallbackUrl);
-        }
-      } else {
-        for (const path of storagePaths) {
-          const fallbackUrl = buildPublicStorageUrl(path);
-          if (fallbackUrl) resolvedByPath.set(path, fallbackUrl);
-        }
-      }
-    } catch {
-      for (const path of storagePaths) {
-        const fallbackUrl = buildPublicStorageUrl(path);
-        if (fallbackUrl) resolvedByPath.set(path, fallbackUrl);
-      }
+    for (const path of storagePaths) {
+      const proxyUrl = buildProductImageProxyUrl(path);
+      if (proxyUrl) resolvedByPath.set(path, proxyUrl);
     }
   }
 

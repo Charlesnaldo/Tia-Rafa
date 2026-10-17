@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useRef } from "react";
-import Image from "next/image";
+import FallbackImage from "@/components/FallbackImage";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 export default function Galeria({ imagens, nome, cor }: { imagens: string[], nome: string, cor: string }) {
   const [fotoAtiva, setFotoAtiva] = useState(0);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+  const imagemAtiva = imagens[fotoAtiva] || "/embreve.jpg";
+  const imagemExibida = failedImages[imagemAtiva] ? "/embreve.jpg" : imagemAtiva;
 
   // Estados para a lupa
   const [zoomPos, setZoomPos] = useState({ x: 0, y: 0, show: false });
@@ -35,12 +38,13 @@ export default function Galeria({ imagens, nome, cor }: { imagens: string[], nom
         className={`relative aspect-[4/5] ${cor} rounded-[32px] overflow-hidden shadow-inner flex items-center justify-center p-8 group cursor-zoom-in`}
       >
         <div className="relative w-full h-full bg-white shadow-2xl rounded-sm overflow-hidden border-t-[12px] border-purple-200">
-          <Image
-            src={imagens[fotoAtiva]}
+          <FallbackImage
+            src={imagemExibida}
             alt={nome}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 40vw"
             className={`object-cover transition-opacity duration-500 ${zoomPos.show ? 'opacity-0' : 'opacity-100'}`}
+            onError={() => setFailedImages((prev) => ({ ...prev, [imagemAtiva]: true }))}
             priority
           />
 
@@ -49,7 +53,7 @@ export default function Galeria({ imagens, nome, cor }: { imagens: string[], nom
             <div
               className="absolute inset-0 pointer-events-none transition-transform duration-150"
               style={{
-                backgroundImage: `url(${imagens[fotoAtiva]})`,
+                backgroundImage: `url(${imagemExibida})`,
                 backgroundPosition: `${zoomPos.x}% ${zoomPos.y}%`,
                 backgroundSize: "250%", // Nível do zoom
                 backgroundRepeat: "no-repeat"
@@ -88,7 +92,7 @@ export default function Galeria({ imagens, nome, cor }: { imagens: string[], nom
               className={`relative w-16 h-20 rounded-lg overflow-hidden border-2 transition-all ${fotoAtiva === index ? "border-purple-500 scale-105" : "border-transparent opacity-50"
                 }`}
             >
-              <Image src={img} alt="preview" fill sizes="80px" className="object-cover" />
+              <FallbackImage src={img} alt="preview" fill sizes="80px" className="object-cover" />
             </button>
           ))}
         </div>

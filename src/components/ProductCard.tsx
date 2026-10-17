@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { ShoppingCart, Sparkles, Download, Package } from "lucide-react";
+import FallbackImage from "@/components/FallbackImage";
 import { formatCurrency } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
 
@@ -64,7 +64,7 @@ export default function ProductCard({
         className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 rounded-3xl"
       >
         <div className={`relative aspect-square rounded-[2rem] overflow-hidden mb-6 shadow-lg ${cor} bg-gradient-to-br ${cor}/10`}>
-          <Image
+          <FallbackImage
             src={imagemPrincipal}
             alt={nome}
             fill

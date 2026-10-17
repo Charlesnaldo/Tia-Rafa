@@ -2,9 +2,9 @@
 
 import { useState, Suspense, useMemo, useEffect } from "react";
 import { ShoppingCart, FileText, SearchX, Zap, ChevronLeft, ChevronRight, Download, X, Sparkles, Package, ShieldCheck } from "lucide-react";
-import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation"; // Import useRouter
 import { type Produto } from "@/constants/produtos"; // Import Produto type
+import FallbackImage from "@/components/FallbackImage";
 import { formatCurrency } from "@/lib/utils";
 import { useCart } from "@/context/CartContext"; // Import useCart
 import { useProductsCatalog } from "@/lib/products/useProductsCatalog";
@@ -252,7 +252,7 @@ function CatalogContent() {
                       aria-label={`Abrir detalhes de ${produto.nome}`}
                       className="relative mb-2 aspect-square w-full cursor-pointer overflow-hidden rounded-2xl border border-white/60 bg-white shadow-inner"
                     >
-                      <Image
+                      <FallbackImage
                         src={imagemFinal}
                         alt={produto.nome}
                         width={300}
@@ -296,7 +296,7 @@ function CatalogContent() {
                                   : "border-transparent opacity-80 hover:opacity-100"
                               }`}
                             >
-                              <Image
+                              <FallbackImage
                                 src={img}
                                 alt={`${produto.nome} miniatura ${index + 1}`}
                                 fill
@@ -465,7 +465,7 @@ function CatalogContent() {
                       </div>
 
                       <div className="relative h-[38vh] min-h-[300px] w-full md:h-[52vh]">
-                        <Image
+                        <FallbackImage
                           src={imagemAtualModal}
                           alt={produtoSelecionado.nome}
                           fill
@@ -519,7 +519,7 @@ function CatalogContent() {
                                 : "border-transparent opacity-80 hover:opacity-100"
                             }`}
                           >
-                            <Image
+                            <FallbackImage
                               src={img}
                               alt={`${produtoSelecionado.nome} miniatura ${index + 1}`}
                               fill

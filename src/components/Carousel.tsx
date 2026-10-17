@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef } from "react";
+import React, { useMemo, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
 import ProductCard from "./ProductCard";
@@ -10,21 +10,21 @@ import { useProductsCatalog } from "@/lib/products/useProductsCatalog";
 export default function DualCarousel() {
   const { productsArray: produtos, loaded } = useProductsCatalog();
 
-  const autoplayTop = useRef(
+  const [autoplayTop] = useState(() =>
     Autoplay({ delay: 3500, stopOnInteraction: false, stopOnMouseEnter: true, playOnInit: true })
   );
-  const autoplayBottom = useRef(
+  const [autoplayBottom] = useState(() =>
     Autoplay({ delay: 3500, stopOnInteraction: false, stopOnMouseEnter: true, playOnInit: true })
   );
 
   const [emblaRefTop, emblaApiTop] = useEmblaCarousel(
     { loop: true, align: "start", dragFree: false, containScroll: "trimSnaps" },
-    [autoplayTop.current]
+    [autoplayTop]
   );
 
   const [emblaRefBottom, emblaApiBottom] = useEmblaCarousel(
     { loop: true, align: "start", dragFree: false, containScroll: "trimSnaps", direction: "rtl" },
-    [autoplayBottom.current]
+    [autoplayBottom]
   );
 
   const { linhaSuperior, linhaInferior } = useMemo(() => {
@@ -44,13 +44,13 @@ export default function DualCarousel() {
   }, [produtos]);
 
   const pauseAutoPlay = () => {
-    autoplayTop.current.stop();
-    autoplayBottom.current.stop();
+    autoplayTop.stop();
+    autoplayBottom.stop();
   };
 
   const resumeAutoPlay = () => {
-    autoplayTop.current.play();
-    autoplayBottom.current.play();
+    autoplayTop.play();
+    autoplayBottom.play();
   };
 
   return (

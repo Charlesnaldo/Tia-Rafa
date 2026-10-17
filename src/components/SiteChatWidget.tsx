@@ -147,6 +147,7 @@ export default function SiteChatWidget() {
           <div className="border-t border-gray-100 bg-white p-3">
             <div className="flex items-end gap-2">
               <textarea
+                maxLength={2000}
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 onKeyDown={(event) => {

@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createPaymentOwner, hashPaymentOwner, setPaymentOwner } from "@/lib/payment-owner";
 
 type PointOfInteraction = {
   type?: string;
@@ -81,7 +82,7 @@ async function getProductSnapshots(ids: string[]): Promise<Record<string, Produc
   return snapshots;
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body: ProcessPaymentRequest = await request.json();
     const cartItems = body.cartItems ?? [];
@@ -143,7 +144,9 @@ export async function POST(request: Request) {
         number: cpfLimpo,
       },
     };
+    const paymentOwner = createPaymentOwner(request);
     const metadata = {
+      payment_status_owner: hashPaymentOwner(paymentOwner),
       email_comprador: emailCliente,
       nome_comprador: nomeCliente,
       cpf_comprador: cpfLimpo,
@@ -152,16 +155,12 @@ export async function POST(request: Request) {
       cart_items: JSON.stringify(cartItems),
     };
     const baseUrl = process.env.NEXT_PUBLIC_URL?.trim();
-    const webhookSecret = process.env.MP_WEBHOOK_SECRET?.trim();
     let notificationUrl: string | undefined;
     if (baseUrl) {
       try {
         const parsed = new URL(baseUrl);
         if ((parsed.protocol === "https:" || parsed.protocol === "http:") && isPublicHost(parsed.hostname)) {
           notificationUrl = `${parsed.origin}/api/webhook/mercadopago`;
-          if (webhookSecret) {
-            notificationUrl += `?secret=${encodeURIComponent(webhookSecret)}`;
-          }
         }
       } catch {
         notificationUrl = undefined;
@@ -216,12 +215,12 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Checkout de cartao sem URL de redirecionamento." }, { status: 500 });
       }
 
-      return NextResponse.json({
+      return setPaymentOwner(NextResponse.json({
         id: typedPreferenceData.id,
         status: "pending",
         payment_method_id: "credit_card",
         checkout_url: checkoutUrl,
-      });
+      }), paymentOwner);
     }
 
     const createPaymentBody = {
@@ -250,14 +249,14 @@ export async function POST(request: Request) {
 
     const typedPaymentData = paymentData as MercadoPagoCreatePaymentResponse;
 
-    return NextResponse.json({
+    return setPaymentOwner(NextResponse.json({
       id: typedPaymentData.id,
       status: typedPaymentData.status ?? "pending",
       status_detail: typedPaymentData.status_detail,
       payment_method_id: typedPaymentData.payment_method_id ?? "pix",
       order_id: String(typedPaymentData.id),
       point_of_interaction: typedPaymentData.point_of_interaction,
-    });
+    }), paymentOwner);
   } catch (error: unknown) {
     console.error("Erro interno no servidor ao processar pagamento:", error);
     return NextResponse.json({ error: "Erro interno no servidor ao processar pagamento." }, { status: 500 });

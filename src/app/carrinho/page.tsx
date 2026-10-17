@@ -1,7 +1,7 @@
 "use client";
 
 import { useCart } from "@/context/CartContext";
-import Image from "next/image";
+import FallbackImage from "@/components/FallbackImage";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
 import { Trash2, PlusCircle, MinusCircle, XCircle, ShoppingBag, ArrowRight, ArrowLeft } from "lucide-react";
@@ -78,7 +78,7 @@ export default function CartPage() {
                 className="flex flex-col gap-4 rounded-[1.8rem] border border-white/80 bg-white/90 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.08)] sm:flex-row sm:items-center sm:gap-5 sm:p-5"
               >
                 <div className="relative h-24 w-full overflow-hidden rounded-2xl sm:w-24 sm:flex-shrink-0">
-                  <Image src={getItemImage(item)} alt={item.nome} fill sizes="96px" className="object-cover" />
+                  <FallbackImage src={getItemImage(item)} alt={item.nome} fill sizes="96px" className="object-cover" />
                 </div>
                 <div className="flex-grow">
                   <h2 className="text-lg font-black text-gray-800">{item.nome}</h2>
