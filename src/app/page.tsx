@@ -1,6 +1,5 @@
 import Hero from "@/components/Hero";
 import HowItWorks from "@/components/HowItWorks";
-import Catalog from "@/components/Catalog";
 import dynamic from "next/dynamic";
 
 const Carousel = dynamic(() => import("@/components/Carousel"), {
@@ -22,8 +21,6 @@ export default function Home() {
   return (
     <>
       <Hero />
-      
-      <Catalog />
       
       <HowItWorks />
       

@@ -1,102 +1,21 @@
-import Image from "next/image";
-import Link from "next/link";
-
-import { Sparkles, ArrowRight, Star } from "lucide-react";
+﻿import Image from "next/image";
+import Catalog from "@/components/Catalog";
 
 export default function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden font-fredoka pt-39 pb-28 lg:pt-0 lg:pb-0">
-
-
-      {/* --- IMAGEM DE FUNDO E OVERLAY --- */}
-      <div className="absolute inset-0 -z-10">
+    <div className="relative isolate overflow-hidden pt-[235px] lg:pt-[330px]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[900px] lg:h-[1050px]" aria-hidden="true">
         <Image
-          src="/fundo-hero.webp" // Certifique-se que o arquivo existe em /public
-          alt="Fundo lúdico infantil"
+          src="/fundo-hero.webp"
+          alt=""
           fill
           sizes="100vw"
-          className="object-cover opacity-95"
-          priority
+          className="object-cover object-top opacity-95"
+          preload
         />
-        {/* Gradiente para suavizar a imagem e dar leitura ao header e conteúdo */}
-        <div className="absolute inset-0 bg-gradient-to-b from-white/30 via-white/20 to-zinc-50" />
+        <div className="absolute inset-0 bg-gradient-to-b from-white/30 via-white/20 to-white" />
       </div>
-
-      {/* --- ELEMENTOS FLUTUANTES --- */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[25%] left-[5%] w-64 h-64 bg-purple-200/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-[20%] right-[5%] w-80 h-80 bg-pink-200/80 rounded-full blur-3xl animate-pulse delay-700" />
-
-        <div className="absolute top-[44%] right-[10%] text-yellow-200 animate-bounce hidden md:block">
-          <Star size={20} fill="currentColor" />
-        </div>
-
-        <div className="absolute top-[34%] right-[21%] text-yellow-200 animate-bounce hidden md:block">
-          <Star size={30} fill="currentColor" />
-        </div>
-
-        <div className="absolute top-[50%] right-[17%] text-yellow-200 animate-bounce hidden md:block">
-          <Star size={40} fill="currentColor" />
-        </div>
-
-        <div className="absolute bottom-[40%] left-[21%] text-blue-300 animate-bounce delay-200 hidden md:block">
-          <Sparkles size={20} />
-        </div>
-
-        <div className="absolute bottom-[50%] left-[28%] text-blue-300 animate-bounce delay-500 hidden md:block">
-          <Sparkles size={30} />
-        </div>
-
-        <div className="absolute bottom-[30%] left-[32%] text-blue-300 animate-bounce delay-500 hidden md:block">
-          <Sparkles size={40} />
-        </div>
-      </div>
-
-      {/* --- CONTEÚDO PRINCIPAL --- */}
-      <div className="max-w-7xl mx-auto px-4 pt-12 md:pt-40 pb-20 relative z-10">
-        <div className="text-center">
-
-
-
-
-          {/* Título de Impacto */}
-          <h1 className="pt-10 md:pt-48 lg:pt-64 text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-esmerald-900 to-orange-400 text-5xl md:text-7xl lg:text-8xl font-black leading-[1.1] tracking-tighter text-gray-900 mb-10">
-            Educar com <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400">
-              Amor e Cor
-            </span>
-          </h1>
-
-          <p className="max-w-2xl mx-auto text-lg md:text-xl text-blue-400 font-bold mb-14 leading-relaxed">
-            Apoio pedagógico lúdico para professores e pais. <br className="hidden md:block" />
-            Baixe agora e receba seus PDFs instantaneamente! 📥
-          </p>
-
-          {/* Botões de Ação */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-            <Link
-              href="#catalogo"
-              className="group bg-sky-200 text-purple-500 font-black px-12 py-6 rounded-[2.5rem] text-xl shadow-[0_20px_40px_rgba(147,51,234,0.3)] hover:bg-purple-600 hover:text-white hover:-translate-y-1.5 transition-all active:scale-95 flex items-center gap-3"
-            >
-              Ver Catálogo <ArrowRight className="group-hover:translate-x-2 transition-transform" />
-            </Link>
-
-            <Link
-              href="/atividades"
-              className="bg-white/80 backdrop-blur-sm text-purple-600 border-4 border-white font-black px-12 py-6 rounded-[2.5rem] text-xl hover:bg-white hover:scale-105 hover:shadow-2xl shadow-lg transition-all flex items-center gap-3 w-fit group"
-            >
-              Material Grátis <span className="group-hover:animate-bounce">🎁</span>
-            </Link>
-          </div>
-        </div>
-      </div>
-
-
-      <div className="absolute bottom-0 left-0 w-full leading-[0]">
-        <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="relative block w-full h-16 md:h-24 fill-white">
-          <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"></path>
-        </svg>
-      </div>
-    </section>
+      <Catalog />
+    </div>
   );
 }

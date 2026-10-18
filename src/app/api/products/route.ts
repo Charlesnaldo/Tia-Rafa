@@ -18,6 +18,30 @@ export async function GET() {
   const fallback: ProductView[] = [];
 
   try {
+    // Keep local visual previews usable when no database credentials are configured.
+    const hasAdminConfig = Boolean(
+      (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+      (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)
+    );
+    if (process.env.NODE_ENV === "development" && !hasAdminConfig) {
+      const publicOrigin = "https://www.tiarafaela.com.br";
+      const response = await fetch(`${publicOrigin}/api/products`, {
+        next: { revalidate: 60 },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!response.ok) return NextResponse.json({ products: fallback });
+      const data = await response.json() as { products?: ProductView[] };
+      const imageUrl = (url: string | null) => url?.startsWith("/")
+        ? new URL(url, publicOrigin).href
+        : url;
+      const products = (data.products || []).map((product) => ({
+        ...product,
+        imagem_url: imageUrl(product.imagem_url),
+        imagem_urls: (product.imagem_urls || []).map((url) => imageUrl(url)),
+      }));
+      return NextResponse.json({ products });
+    }
+
     const supabase = getSupabaseAdminClient();
     const { data, error } = await supabase
       .from("products")

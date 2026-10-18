@@ -26,6 +26,7 @@ function FallbackImageSource({
   return (
     <Image
       {...props}
+      unoptimized={props.unoptimized || (process.env.NODE_ENV === "development" && currentSrc.startsWith("https://www.tiarafaela.com.br/"))}
       loader={isProductImageProxy(currentSrc) ? productImageLoader : props.loader}
       src={currentSrc}
       alt={alt}

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, Suspense, useMemo, useEffect } from "react";
-import { ShoppingCart, FileText, SearchX, Zap, ChevronLeft, ChevronRight, Download, X, Sparkles, Package, ShieldCheck } from "lucide-react";
+import { useState, Suspense, useMemo, useEffect, useRef } from "react";
+import { ShoppingCart, FileText, Search, SearchX, Zap, ChevronLeft, ChevronRight, Download, X, Sparkles, Package, ShieldCheck } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation"; // Import useRouter
 import { type Produto } from "@/constants/produtos"; // Import Produto type
 import FallbackImage from "@/components/FallbackImage";
@@ -11,7 +11,8 @@ import { useProductsCatalog } from "@/lib/products/useProductsCatalog";
 
 function CatalogContent() {
   const searchParams = useSearchParams();
-  const busca = searchParams.get("busca")?.toLowerCase() || "";
+  const textoBusca = searchParams.get("busca")?.trim() || "";
+  const busca = textoBusca.toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const router = useRouter(); // Initialize useRouter
   const { addToCart } = useCart(); // Initialize useCart
   const { productsArray: produtosArray, loaded } = useProductsCatalog();
@@ -20,9 +21,9 @@ function CatalogContent() {
 
   const [categoria, setCategoria] = useState<'todos' | 'digital' | 'fisico'>('todos');
   const [tagAtiva, setTagAtiva] = useState<string>('Tudo');
-  const [imagemAtivaPorProduto, setImagemAtivaPorProduto] = useState<Record<string, string>>({});
   const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
   const [indiceFotoModal, setIndiceFotoModal] = useState(0);
+  const modalRef = useRef<HTMLDialogElement>(null);
 
   // LÃƒÂ³gica de PaginaÃƒÂ§ÃƒÂ£o
   const [paginaAtual, setPaginaAtual] = useState(1);
@@ -42,7 +43,7 @@ function CatalogContent() {
   // Filtro de produtos
   const produtosFiltrados = useMemo(() => {
     const filtrados = produtosArray.filter((produto) => {
-      const matchesBusca = produto.nome.toLowerCase().includes(busca);
+      const matchesBusca = produto.nome.toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(busca);
       const matchesCategoria = categoria === 'todos' || produto.tipo === categoria;
       const matchesTag = tagAtiva === 'Tudo' || (produto.tags && produto.tags.includes(tagAtiva));
       return matchesBusca && matchesCategoria && matchesTag;
@@ -85,20 +86,6 @@ function CatalogContent() {
     return imagens.length > 0 ? imagens : ["/embreve.jpg"];
   };
 
-  const handleSelecionarImagem = (produtoId: string, imagem: string) => {
-    setImagemAtivaPorProduto((prev) => ({ ...prev, [produtoId]: imagem }));
-  };
-
-  const handleNavegarMiniatura = (produto: Produto, direcao: "anterior" | "proxima") => {
-    const imagensDoProduto = getImagensDoProduto(produto);
-    const imagemAtual = imagemAtivaPorProduto[produto.id] || imagensDoProduto[0];
-    const indiceAtual = Math.max(imagensDoProduto.indexOf(imagemAtual), 0);
-    const proximoIndice = direcao === "proxima"
-      ? (indiceAtual + 1) % imagensDoProduto.length
-      : (indiceAtual - 1 + imagensDoProduto.length) % imagensDoProduto.length;
-    handleSelecionarImagem(produto.id, imagensDoProduto[proximoIndice]);
-  };
-
   const abrirModalProduto = (produto: Produto, imagemInicial?: string) => {
     const imagens = getImagensDoProduto(produto);
     const indiceInicial = imagemInicial ? Math.max(imagens.indexOf(imagemInicial), 0) : 0;
@@ -118,57 +105,70 @@ function CatalogContent() {
   };
 
   useEffect(() => {
-    const handleEsc = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setProdutoSelecionado(null);
-      }
-    };
+    const modal = modalRef.current;
+    if (!produtoSelecionado || !modal) return;
 
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, []);
-
-  useEffect(() => {
-    if (!produtoSelecionado) return;
-
+    const previousFocus = document.activeElement;
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    // The browser's top layer escapes the hero's isolated stacking context.
+    modal.showModal();
 
     return () => {
+      modal.close();
       document.body.style.overflow = originalOverflow;
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
+        previousFocus.focus({ preventScroll: true });
+      }
     };
   }, [produtoSelecionado]);
 
   return (
     <section
-      className="relative py-16 font-fredoka scroll-mt-10 overflow-hidden"
+      className="relative pb-12 font-fredoka scroll-mt-4"
       id="catalogo"
       aria-labelledby="catalogo-heading"
     >
       {/* BACKGROUND DIRETO NO CÃƒâ€œDIGO */}
       {/* OVERLAY PARA LEITURA (opcional, remova a classe bg-white/60 se quiser a imagem pura) */}
-      <div className="absolute inset-0 -z-10 bg-white/92 backdrop-blur-[2px]" />
 
       <div className="max-w-[1400px] mx-auto px-4 relative z-10">
         {/* CabeÃƒÂ§alho */}
-        <div className="text-center mb-5">
-          <h2 id="catalogo-heading" className="text-5xl md:text-6xl font-black tracking-tighter mb-6 leading-tight">
-            {busca ? (
-              <span className="text-gray-900 bg-white/80 px-4 py-1 rounded-2xl">Ã°Å¸â€Â Resultados para: {busca}</span>
-            ) : (
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400">
-                Nosso Catálogo Mágico
-              </span>
-            )}
-          </h2>
+        <div className="mb-5 rounded-3xl border border-white/90 bg-white/95 p-4 shadow-[0_8px_35px_rgba(88,28,135,0.07)] sm:p-5">
+          <form action="/#catalogo" method="get" role="search" aria-label="Buscar materiais" className="flex min-h-14 overflow-hidden rounded-2xl border-2 border-purple-200 bg-white transition-shadow focus-within:border-purple-600 focus-within:ring-4 focus-within:ring-purple-100">
+            <label htmlFor="busca-materiais" className="sr-only">Buscar materiais</label>
+            <Search size={22} aria-hidden="true" className="ml-4 hidden shrink-0 self-center text-purple-400 sm:block" />
+            <input
+              id="busca-materiais"
+              name="busca"
+              type="search"
+              defaultValue={textoBusca}
+              key={textoBusca}
+              placeholder="O que você quer ensinar hoje?"
+              className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm text-purple-950 outline-none placeholder:text-slate-500 sm:px-4 sm:text-base"
+            />
+            <button type="submit" aria-label="Buscar materiais no catálogo" className="flex shrink-0 items-center justify-center gap-2 bg-purple-700 px-4 font-semibold text-white transition-colors hover:bg-purple-800 focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-white sm:px-6">
+              <Search size={20} aria-hidden="true" />
+              <span className="hidden sm:inline">Buscar</span>
+            </button>
+          </form>
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+            <div>
+              <h1 id="catalogo-heading" className="text-xl font-semibold leading-tight tracking-tight text-purple-950 sm:text-2xl">
+                {textoBusca ? `Resultados para “${textoBusca}”` : "Materiais para sua próxima aula"}
+              </h1>
+              <p className="mt-1 text-sm text-slate-600">Escolha, compre e prepare sua próxima aula.</p>
+            </div>
 
           {/* Filtros de Tipo */}
-          <fieldset className="flex flex-wrap justify-center gap-2 mb-6" aria-label="Filtrar por tipo de material">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <fieldset className="flex flex-wrap gap-2" aria-label="Filtrar por tipo de material">
             <legend className="sr-only">Tipo de material</legend>
             {[
-              { id: 'todos', label: 'Todos', icon: <ShoppingCart size={14} /> },
-              { id: 'digital', label: 'Digital', icon: <FileText size={14} /> },
-              { id: 'fisico', label: 'Físico', icon: <Zap size={14} /> },
+              { id: 'todos', label: 'Todos', icon: <ShoppingCart size={16} /> },
+              { id: 'digital', label: 'PDFs', icon: <FileText size={16} /> },
+              { id: 'fisico', label: 'Físicos', icon: <Zap size={16} /> },
             ].map((filtro) => (
               <button
                 key={filtro.id}
@@ -178,9 +178,9 @@ function CatalogContent() {
                   setPaginaAtual(1);
                 }}
                 aria-pressed={categoria === filtro.id}
-                className={`flex items-center cursor-pointer gap-1 px-4 py-2 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all shadow-sm ${categoria === filtro.id
-                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-200 scale-105'
-                  : 'bg-white/90 text-gray-700 hover:bg-white hover:text-gray-800 border border-gray-100'
+                className={`flex min-h-11 items-center cursor-pointer gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-600 ${categoria === filtro.id
+                  ? 'bg-purple-700 text-white'
+                  : 'bg-purple-50 text-purple-900 hover:bg-purple-100'
                   }`}
               >
                 {filtro.icon}
@@ -188,9 +188,12 @@ function CatalogContent() {
               </button>
             ))}
           </fieldset>
+          {loaded && <p className="text-xs text-slate-500" role="status">{produtosFiltrados.length} {produtosFiltrados.length === 1 ? "material disponível" : "materiais disponíveis"}</p>}
+          </div>
+          </div>
 
           {/* Filtros de Tags */}
-          <fieldset className="flex flex-wrap justify-center gap-1.5 max-w-4xl mx-auto mb-6" aria-label="Filtrar por tags">
+          {todasTags.length > 2 && <fieldset className="mt-3 flex flex-wrap gap-1.5" aria-label="Filtrar por tags">
             <legend className="sr-only">Tags de material</legend>
             {todasTags.slice(0, 8).map((tag) => (
               <button
@@ -209,7 +212,7 @@ function CatalogContent() {
                 {tag}
               </button>
             ))}
-          </fieldset>
+          </fieldset>}
         </div>
 
         {/* Grid de Produtos */}
@@ -227,14 +230,14 @@ function CatalogContent() {
         ) : produtosExibidos.length > 0 ? (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
-              {produtosExibidos.map((produto) => {
+              {produtosExibidos.map((produto, produtoIndex) => {
                 const imagensDoProduto = getImagensDoProduto(produto);
-                const imagemFinal = imagemAtivaPorProduto[produto.id] || imagensDoProduto[0];
+                const imagemFinal = imagensDoProduto[0];
 
                 return (
                   <div
                     key={produto.id}
-                    className="group relative flex h-full flex-col overflow-hidden rounded-[1.65rem] border border-white/70 bg-white/95 p-3 shadow-[0_10px_30px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_22px_40px_rgba(147,51,234,0.16)]"
+                    className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-purple-100 bg-white p-3 shadow-[0_4px_20px_rgba(88,28,135,0.06)] transition-shadow duration-300 hover:shadow-[0_12px_30px_rgba(88,28,135,0.14)]"
                   >
                     <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-purple-100/40 to-transparent" />
 
@@ -257,59 +260,12 @@ function CatalogContent() {
                         alt={produto.nome}
                         width={300}
                         height={300}
+                        loading={produtoIndex < 5 ? "eager" : "lazy"}
                         sizes="(max-width: 767px) 45vw, (max-width: 1023px) 30vw, (max-width: 1279px) 22vw, 18vw"
                         unoptimized={imagemFinal.startsWith("http://") || imagemFinal.startsWith("https://")}
                         className="h-full w-full object-contain p-2.5 transition-transform duration-500 group-hover:scale-105"
                       />
                     </button>
-
-                    {imagensDoProduto.length > 1 && (
-                      <div className="mb-3">
-                        <div className="mb-1.5 flex items-center justify-between md:hidden">
-                          <button
-                            type="button"
-                            onClick={() => handleNavegarMiniatura(produto, "anterior")}
-                            aria-label={`Miniatura anterior de ${produto.nome}`}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-purple-200 bg-white text-purple-700 transition-colors hover:bg-purple-50"
-                          >
-                            <ChevronLeft size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleNavegarMiniatura(produto, "proxima")}
-                            aria-label={`Próxima miniatura de ${produto.nome}`}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-purple-200 bg-white text-purple-700 transition-colors hover:bg-purple-50"
-                          >
-                            <ChevronRight size={14} />
-                          </button>
-                        </div>
-
-                        <div className="flex gap-1.5 overflow-x-auto pb-1">
-                          {imagensDoProduto.slice(0, 5).map((img, index) => (
-                            <button
-                              key={`${produto.id}-thumb-${index}`}
-                              type="button"
-                              onClick={() => handleSelecionarImagem(produto.id, img)}
-                              aria-label={`Ver foto ${index + 1} de ${produto.nome}`}
-                              className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
-                                imagemFinal === img
-                                  ? "border-purple-500 shadow-sm"
-                                  : "border-transparent opacity-80 hover:opacity-100"
-                              }`}
-                            >
-                              <FallbackImage
-                                src={img}
-                                alt={`${produto.nome} miniatura ${index + 1}`}
-                                fill
-                                sizes="48px"
-                                unoptimized={img.startsWith("http://") || img.startsWith("https://")}
-                                className="object-cover"
-                              />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
 
                     {/* Open quick modal with product details */}
                     <button
@@ -319,21 +275,12 @@ function CatalogContent() {
                       aria-label={`Abrir detalhes de ${produto.nome}`}
                     >
                       <div className="flex flex-col flex-1 px-0.5">
-                        <div className="mb-2 flex min-h-5 flex-wrap gap-1.5">
-                          {produto.tags?.slice(0, 2).map(tag => (
-                            <span key={tag} className="rounded-full border border-purple-100 bg-purple-50 px-2 py-0.5 text-[10px] font-bold text-purple-700">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-
                         <h3 className="mb-3 min-h-11 text-[15px] font-black leading-tight text-gray-800 line-clamp-2 transition-colors group-hover:text-purple-700">
                           {produto.nome}
                         </h3>
 
                         <div className="flex flex-col mt-auto">
-                          <span className="mb-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">Investimento</span>
-                          <span className="text-[1.15rem] font-black text-gray-900 transition-colors group-hover:text-purple-600">
+                          <span className="text-xl font-semibold text-purple-950 sm:text-2xl">
                             {formatCurrency(produto.preco)}
                           </span>
                         </div>
@@ -358,9 +305,8 @@ function CatalogContent() {
                         type="button"
                         onClick={() => handleBuyNow(produto)}
                         aria-label={`Comprar agora: ${produto.nome}`}
-                        className="flex h-10 flex-1 cursor-pointer items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-[11px] font-extrabold text-white shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 md:h-11 md:text-xs"
+                        className="flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-1 rounded-xl bg-green-700 px-2 text-xs font-semibold text-white transition-colors hover:bg-green-800 active:bg-green-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 md:text-sm"
                       >
-                        <Download size={19} />
                         Comprar
                       </button>
                     </div>
@@ -415,10 +361,10 @@ function CatalogContent() {
             <div className="w-20 h-20 bg-white/80 rounded-full flex items-center justify-center mb-4 shadow-sm">
               <SearchX size={32} className="text-gray-200" />
             </div>
-            <p className="font-bold text-xl text-gray-500">Nenhum material magico encontrado.</p>
+            <p className="font-bold text-xl text-gray-500">Nenhum material encontrado.</p>
             <button
               type="button"
-              onClick={() => { setCategoria('todos'); setTagAtiva('Tudo'); setPaginaAtual(1); }}
+              onClick={() => { setCategoria('todos'); setTagAtiva('Tudo'); setPaginaAtual(1); if (textoBusca) router.push('/#catalogo'); }}
               className="mt-3 text-purple-600 font-bold hover:underline text-sm cursor-pointer"
             >
               Limpar todos os filtros
@@ -428,12 +374,18 @@ function CatalogContent() {
       </div>
 
       {produtoSelecionado && (
-        <div
-          className="fixed inset-0 z-[130] overflow-y-auto bg-slate-950/55 px-4 py-6 backdrop-blur-md md:px-6 md:py-10"
-          role="dialog"
+        <dialog
+          ref={modalRef}
+          className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none overflow-y-auto overscroll-contain border-0 bg-transparent px-4 py-6 backdrop:bg-slate-950/55 backdrop:backdrop-blur-md md:px-6 md:py-10"
           aria-modal="true"
           aria-label={`Detalhes de ${produtoSelecionado.nome}`}
-          onClick={() => setProdutoSelecionado(null)}
+          onCancel={(event) => {
+            event.preventDefault();
+            setProdutoSelecionado(null);
+          }}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setProdutoSelecionado(null);
+          }}
         >
           <div
             className="mx-auto w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-[0_35px_120px_rgba(15,23,42,0.28)]"
@@ -591,7 +543,7 @@ function CatalogContent() {
                         <button
                           type="button"
                           onClick={() => handleBuyNow(produtoSelecionado)}
-                          className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-500 via-fuchsia-500 to-violet-600 px-5 text-sm font-extrabold text-white shadow-lg shadow-fuchsia-200/70 transition-all hover:-translate-y-0.5 hover:shadow-xl"
+                          className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-green-700 px-5 text-sm font-extrabold text-white shadow-lg shadow-green-200/70 transition-all hover:-translate-y-0.5 hover:bg-green-800 hover:shadow-xl active:bg-green-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2"
                         >
                           {produtoSelecionado.tipo === "digital" ? <Download size={18} /> : <Package size={18} />}
                           Comprar agora
@@ -625,7 +577,7 @@ function CatalogContent() {
               );
             })()}
           </div>
-        </div>
+        </dialog>
       )}
 
 

@@ -25,7 +25,7 @@ const pathname = usePathname();
             alt="Logo Tia Rafa"
             width={240}
             height={70}
-            className="object-contain"
+            className="h-auto w-[240px] object-contain"
           />
         </Link>
       </div>
