@@ -11,6 +11,7 @@ const nextConfig = {
     qualities: [70, 75, 80],
     minimumCacheTTL: 31536000,
     remotePatterns: [
+      { protocol: "https", hostname: "www.tiarafaela.com.br", pathname: "/api/product-image" },
       {
         protocol: "https",
         hostname: "**.supabase.co",
@@ -27,4 +28,8 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+// Production installs may omit devDependencies; load the analyzer only when requested.
+const config = process.env.ANALYZE === "true"
+  ? (await import("@next/bundle-analyzer")).default({ enabled: true, openAnalyzer: false })(nextConfig)
+  : nextConfig;
+export default config;

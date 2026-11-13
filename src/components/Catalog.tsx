@@ -12,5 +12,5 @@ export default function Catalog({ products, search = "", unavailable = false }: 
       <a href="/#catalogo" className="mt-6 inline-flex rounded-xl bg-purple-700 px-6 py-3 text-white">Recarregar catálogo</a>
     </section>
   );
-  return <CatalogClient products={products} search={search} />;
+  return <CatalogClient key={search} products={products} search={search} />;
 }

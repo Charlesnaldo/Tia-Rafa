@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import footerBackground from '../../public/optimized/fundo-footer.webp';
+import logo from '../../public/optimized/logo.webp';
 import { Mail, MessageCircle, Instagram, Youtube, Heart, ShieldCheck, Sparkles } from 'lucide-react';
 
 export default function Footer() {
@@ -38,10 +39,12 @@ export default function Footer() {
                
                 <div className="relative">
                   <Image 
-                    src="/logo.webp" 
+                    src={logo}
                     alt="Logo Tia Rafa" 
                     width={240} 
-                    height={80} 
+                    height={240}
+                    sizes="240px"
+                    loading="lazy"
                     className="object-contain transform group-hover:scale-120 transition-transform duration-600"
                   />
                 </div>

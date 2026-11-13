@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import Image from "next/image";
+import logo from "../../public/optimized/logo.webp";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpen, Heart, MessageCircle, Instagram, Youtube, ShoppingCart } from "lucide-react"; // Import ShoppingCart
@@ -55,10 +56,12 @@ function HeaderContent() {
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-700">
           <Link href="/" className="block group">
             <Image
-              src="/logo.webp"
+              src={logo}
               alt="Logo Tia Rafa"
               width={380}
-              height={100}
+              height={380}
+              sizes="380px"
+              loading="lazy"
               className="h-auto w-[380px] max-w-none object-contain transform group-hover:scale-105 transition-transform duration-500"
             />
           </Link>

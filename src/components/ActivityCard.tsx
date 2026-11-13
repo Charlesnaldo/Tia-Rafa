@@ -20,7 +20,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
   return (
     <article className="group overflow-hidden rounded-[1.7rem] border border-white/70 bg-white/90 shadow-[0_15px_45px_rgba(15,23,42,0.1)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_22px_60px_rgba(15,23,42,0.15)]">
       <div className="relative h-48 w-full">
-        <Image src={image} alt={title} fill className="object-cover" />
+        <Image src={image} alt={title} fill sizes="(max-width: 767px) 90vw, (max-width: 1023px) 45vw, 350px" loading="lazy" className="object-cover" />
         <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-blue-700">
           {category}
         </div>

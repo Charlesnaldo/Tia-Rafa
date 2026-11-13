@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test:security": "node --test scripts/security.test.cjs",
-    "email:test": "node scripts/send-test-email.cjs"
+    "email:test": "node scripts/send-test-email.cjs",
+    "build:analyze": "node scripts/analyze-bundle.mjs",
+    "perf:audit": "node scripts/measure-performance.mjs"
   },
   "browserslist": {
     "production": [
@@ -29,14 +31,12 @@
     "@react-email/render": "^2.0.4",
     "@supabase/supabase-js": "^2.96.0",
     "canvas-confetti": "^1.9.4",
-    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.31.0",
     "lucide-react": "^0.563.0",
     "mercadopago": "^3.6.1",
-    "motion": "^12.33.0",
     "next": "^16.4.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -45,6 +45,7 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.4.2",
     "@tailwindcss/postcss": "^4",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^25",
@@ -52,6 +53,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
+    "lighthouse": "^13.6.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

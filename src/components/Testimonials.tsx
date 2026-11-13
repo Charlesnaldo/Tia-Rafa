@@ -1,6 +1,3 @@
-"use client";
-
-import { motion } from "framer-motion";
 import { Star, Quote, CheckCircle } from "lucide-react";
 import Image from "next/image";
 
@@ -41,12 +38,8 @@ export default function Testimonials() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {depoimentos.map((item, index) => (
-            <motion.div
+            <div
               key={index}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.2 }}
               className="relative bg-purple-50/50 p-8 rounded-[2.5rem] border border-purple-100 hover:shadow-xl transition-all group"
             >
               {/* Ícone de Aspas */}
@@ -87,7 +80,7 @@ export default function Testimonials() {
                   </p>
                 </div>
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
 

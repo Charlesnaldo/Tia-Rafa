@@ -30,7 +30,7 @@ function FallbackImageSource({
     <Image
       {...props}
       className={`${className || ""}${settled ? "" : " image-skeleton"}`}
-      unoptimized={props.unoptimized || (process.env.NODE_ENV === "development" && currentSrc.startsWith("https://www.tiarafaela.com.br/"))}
+      unoptimized={props.unoptimized}
       loader={isProductImageProxy(currentSrc) ? productImageLoader : props.loader}
       src={currentSrc}
       alt={alt}
