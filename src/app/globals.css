@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+.photo-mural-column { animation: photo-mural-drift 10s ease-in-out infinite alternate; }
+.photo-mural-column-reverse { animation-duration: 15s; animation-direction: alternate-reverse; }
+@keyframes photo-mural-drift {
+  from { transform: translateY(-100px); }
+  to { transform: translateY(100px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .photo-mural-column { animation: none; }
+}
+
 .image-skeleton {
   background-color: #f3eefa;
   background-image: linear-gradient(100deg, transparent 30%, #ffffffb3 50%, transparent 70%);

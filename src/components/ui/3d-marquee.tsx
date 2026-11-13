@@ -1,20 +1,16 @@
-"use client";
-
-import { motion } from "motion/react";
+import Image, { type StaticImageData } from "next/image";
 import { cn } from "@/lib/utils";
 export const ThreeDMarquee = ({
   images,
   className,
 }: {
-  images: string[];
+  images: { src: StaticImageData; alt: string }[];
   className?: string;
 }) => {
-  // Split the images array into 4 equal parts
-  const chunkSize = Math.ceil(images.length / 4);
-  const chunks = Array.from({ length: 4 }, (_, colIndex) => {
-    const start = colIndex * chunkSize;
-    return images.slice(start, start + chunkSize);
-  });
+  const repeated = [...images, ...images];
+  const chunks = Array.from({ length: 4 }, (_, column) => repeated
+    .map((image, index) => ({ ...image, repeated: index >= images.length }))
+    .filter((_, index) => index % 4 === column));
   return (
     <div
       className={cn(
@@ -31,38 +27,26 @@ export const ThreeDMarquee = ({
             className="relative top-96 right-[50%] grid size-full origin-top-left grid-cols-4 gap-8 transform-3d"
           >
             {chunks.map((subarray, colIndex) => (
-              <motion.div
-                animate={{ y: colIndex % 2 === 0 ? 100 : -100 }}
-                transition={{
-                  duration: colIndex % 2 === 0 ? 10 : 15,
-                  repeat: Infinity,
-                  repeatType: "reverse",
-                }}
+              <div
                 key={colIndex + "marquee"}
-                className="flex flex-col items-start gap-8"
+                className={`photo-mural-column flex flex-col items-start gap-8 ${colIndex % 2 ? "photo-mural-column-reverse" : ""}`}
               >
                 <GridLineVertical className="-left-4" offset="80px" />
                 {subarray.map((image, imageIndex) => (
-                  <div className="relative" key={imageIndex + image}>
+                  <div className="relative aspect-[970/700] w-full" key={`${image.src.src}-${imageIndex}`} aria-hidden={image.repeated || undefined}>
                     <GridLineHorizontal className="-top-4" offset="20px" />
-                    <motion.img
-                      whileHover={{
-                        y: -10,
-                      }}
-                      transition={{
-                        duration: 0.3,
-                        ease: "easeInOut",
-                      }}
-                      key={imageIndex + image}
-                      src={image}
-                      alt={`Image ${imageIndex + 1}`}
-                      className="aspect-[970/700] rounded-lg object-cover ring ring-gray-950/5 hover:shadow-2xl"
-                      width={970}
-                      height={700}
+                    <Image
+                      src={image.src}
+                      alt={image.repeated ? "" : image.alt}
+                      fill
+                      sizes="(max-width: 639px) 205px, (max-width: 1023px) 310px, 410px"
+                      quality={70}
+                      loading="lazy"
+                      className="rounded-lg object-cover ring ring-gray-950/5 transition-transform duration-300 hover:-translate-y-2 motion-reduce:transition-none"
                     />
                   </div>
                 ))}
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>

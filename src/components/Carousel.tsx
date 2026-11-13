@@ -32,15 +32,7 @@ export default function DualCarousel() {
     const linhaTop = produtos.slice(0, metade);
     const linhaBottom = produtos.slice(metade);
 
-    const garantirMinimo = (items: typeof produtos) => {
-      if (items.length >= 4 || items.length === 0) return items;
-      return Array.from({ length: 4 }, (_, i) => items[i % items.length]);
-    };
-
-    const linhaTopPronta = garantirMinimo(linhaTop);
-    const linhaBottomPronta = garantirMinimo(linhaBottom.length > 0 ? linhaBottom : linhaTop);
-
-    return { linhaSuperior: linhaTopPronta, linhaInferior: linhaBottomPronta };
+    return { linhaSuperior: linhaTop, linhaInferior: linhaBottom };
   }, [produtos]);
 
   const pauseAutoPlay = () => {
