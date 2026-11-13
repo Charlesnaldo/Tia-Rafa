@@ -155,3 +155,14 @@ Os textos sÃ£o bases de revisÃ£o, sem declaraÃ§Ã£o de conformidade automÃ¡tica. 
 - src/lib/products/catalog-model.ts
 - src/lib/products/catalog-server.ts
 - src/lib/products/useProductsCatalog.ts
+
+## Ajuste orientado pelo PageSpeed mobile (13/11/2026)
+
+Relatório público: https://pagespeed.web.dev/analysis/https-www-tiarafaela-com-br/7r0nck0ocv?form_factor=mobile
+
+- Nota mobile: 83; FCP 1,1 s; LCP 4,2 s; TBT 73,5 ms; CLS 0. O elemento LCP é o logo mobile.
+- O relatório aponta aproximadamente 197 KiB de economia em imagens e conexão antecipada ao Supabase não utilizada pelo navegador.
+- O logo recebe preload responsivo somente até 1023 px e decodificação síncrona. Os tamanhos intermediários 192, 320 e 480 px evitam saltos excessivos entre variantes. O catálogo informa a largura real das imagens descontando margens, espaçamento e padding dos cards.
+- O proxy continua validando produto ativo e imagem publicada; seus tamanhos permitidos vêm da mesma lista utilizada pelo loader. Cache e autorização não foram ampliados.
+- Build e 14 testes de segurança passaram; lint sem erros (dois avisos preexistentes no checkout). A validação visual inicial confirmou catálogo, modal, filtros, carrinho, destaques e ausência de overflow em 320/390/768/1440 px, sem erros JS ou imagens quebradas.
+- O laboratório local usa capas públicas de 640 px redimensionadas para simular as variantes ainda não publicadas. Sua execução Lighthouse teve LCP 21,7 s e TBT 10,3 s, portanto não estabelece ganho em relação à medição do Google. Não comparar as notas de ambientes diferentes. Uma nova execução do PageSpeed após publicação é necessária para confirmar o resultado.

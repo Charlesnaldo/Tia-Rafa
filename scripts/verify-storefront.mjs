@@ -100,7 +100,8 @@ try {
   for (const route of ['/privacidade', '/termos', '/sobre', '/blog', '/area-do-aluno']) {
     const response = await page.goto(`${base}${route}`, { waitUntil: 'networkidle2' });
     assert.equal(response.status(), 200, route);
-    assert.ok(await page.$('h1'), `Missing heading: ${route}`);
+    // Suspense can still be revealing the route after the network becomes idle.
+    await page.waitForSelector('h1', { timeout: 15000 });
     report.routes.push({ route, status: response.status() });
   }
   await page.goto(`${base}/privacidade`, { waitUntil: 'networkidle2' });

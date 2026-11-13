@@ -1,6 +1,6 @@
 import type { ImageLoaderProps } from "next/image";
 
-export const PRODUCT_IMAGE_WIDTHS = [32, 48, 64, 96, 128, 256, 384, 640, 750, 828, 1080, 1200, 1600] as const;
+export const PRODUCT_IMAGE_WIDTHS = [32, 48, 64, 96, 128, 192, 256, 320, 384, 480, 640, 750, 828, 1080, 1200, 1600] as const;
 
 export function isProductImageProxy(src: string) {
   return src.startsWith("/api/product-image?");
