@@ -70,18 +70,18 @@ function HeaderContent() {
 
         {/* LADO DIREITO: Menu de Navegação */}
         <div className="flex flex-1 items-center justify-end gap-10">
-          <Link href="/#catalogo" className="flex flex-col items-center gap-1 text-purple-800 font-black hover:text-purple-600 transition-all group">
+          <Link href="/#catalogo" prefetch={false} className="flex flex-col items-center gap-1 text-purple-800 font-black hover:text-purple-600 transition-all group">
             <BookOpen size={40} className="group-hover:scale-110 group-hover:-rotate-6 transition-transform" />
             <span className="text-[10px] uppercase tracking-[0.15em] font-fredoka">Materiais</span>
           </Link>
 
-          <Link href="/sobre" className="flex flex-col items-center gap-1 text-purple-800 font-black hover:text-pink-400 transition-all group">
+          <Link href="/sobre" prefetch={false} className="flex flex-col items-center gap-1 text-purple-800 font-black hover:text-pink-400 transition-all group">
             <Heart size={40} className="group-hover:scale-110 transition-transform" />
             <span className="text-[10px] uppercase tracking-[0.15em] font-fredoka">Sobre</span>
           </Link>
 
           {/* Carrinho de Compras */}
-          <Link href="/carrinho" className="flex flex-col items-center gap-1 text-purple-800 font-black hover:text-green-400 transition-all group relative">
+          <Link href="/carrinho" prefetch={false} className="flex flex-col items-center gap-1 text-purple-800 font-black hover:text-green-400 transition-all group relative">
             <ShoppingCart size={40} className="group-hover:scale-110 transition-transform" />
             <span className="text-[10px] uppercase tracking-[0.15em] font-fredoka">Carrinho</span>
             {itemCount > 0 && (

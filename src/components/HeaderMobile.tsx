@@ -50,6 +50,7 @@ function HeaderMobileContent() {
             <Link
               key={item.name}
               href={item.href}
+              prefetch={false}
               className="flex flex-col items-center justify-center relative min-w-[68px] outline-none"
             >
               {isActive && <div className="absolute inset-0 bg-purple-100/50 rounded-3xl z-0" />}

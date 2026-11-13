@@ -27,7 +27,8 @@ const pathname = usePathname();
             width={240}
             height={240}
             sizes="240px"
-            loading="lazy"
+            loading="eager"
+            fetchPriority="high"
             style={{ height: "auto" }}
             className="h-auto w-[240px] object-contain"
           />

@@ -21,6 +21,7 @@ function load(relative, mocks = {}) {
     const localRequire = (id) => {
       if (Object.hasOwn(mocks, id)) return mocks[id];
       if (id.startsWith("@/")) return read(path.resolve("src", `${id.slice(2)}.ts`));
+      if (id.startsWith(".")) return read(path.resolve(path.dirname(filename), `${id}.ts`));
       return require(id);
     };
     new Function("require", "module", "exports", source)(localRequire, loadedModule, loadedModule.exports);
@@ -223,6 +224,8 @@ test("responsive product images bypass Vercel's incompatible optimizer without d
 test("public catalog excludes paid material paths", async () => {
   const product = { id: "product", nome: "Produto", is_active: true, material_path: "secret/paid.pdf", preco_cents: 100 };
   const { GET } = load("src/app/api/products/route.ts", {
+    "server-only": {},
+    "next/cache": { unstable_cache: (fn) => fn },
     "@/lib/supabase/admin": { getSupabaseAdminClient: () => ({ from: () => ({ select: () => ({ eq: async () => ({ data: [product] }) }) }) }) },
     "@/lib/supabase/storage-images": { resolveProductImageUrls: async () => [], buildProductImageProxyUrl: () => null, resolveStorageImageUrl: async () => null },
   });

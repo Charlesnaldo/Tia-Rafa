@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback, useRef } from 'react';
+import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback, useRef, useSyncExternalStore } from 'react';
 
 export type CartItem = {
   id: string;
@@ -22,6 +22,10 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+const subscribeToHydration = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
+
 const loadInitialCart = (): CartItem[] => {
   if (typeof window === 'undefined') return [];
   try {
@@ -33,6 +37,7 @@ const loadInitialCart = (): CartItem[] => {
 };
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
+  const hydrated = useSyncExternalStore(subscribeToHydration, clientSnapshot, serverSnapshot);
   const [cartItems, setCartItems] = useState<CartItem[]>(loadInitialCart);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -46,9 +51,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!hydrated) return;
     localStorage.setItem('cart', JSON.stringify(cartItems));
-  }, [cartItems]);
+  }, [cartItems, hydrated]);
 
   useEffect(() => {
     return () => {
@@ -88,11 +93,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setCartItems([]);
   }, []);
 
-  const cartTotal = cartItems.reduce((total, item) => total + (item.preco * item.quantity), 0);
-  const itemCount = cartItems.reduce((count, item) => count + item.quantity, 0);
+  // Match the server snapshot on the first client render without erasing saved items.
+  const visibleCartItems = hydrated ? cartItems : [];
+  const cartTotal = visibleCartItems.reduce((total, item) => total + (item.preco * item.quantity), 0);
+  const itemCount = visibleCartItems.reduce((count, item) => count + item.quantity, 0);
 
   const contextValue = {
-    cartItems,
+    cartItems: visibleCartItems,
     addToCart,
     removeFromCart,
     updateQuantity,

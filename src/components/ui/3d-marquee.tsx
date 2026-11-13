@@ -18,13 +18,13 @@ export const ThreeDMarquee = ({
         className,
       )}
     >
-      <div className="flex size-full items-center justify-center">
-        <div className="size-[1720px] shrink-0 scale-50 sm:scale-75 lg:scale-100">
+      <div className="relative size-full [perspective:1600px]">
+        <div className="absolute left-1/2 top-1/2 w-[920px] -translate-x-1/2 -translate-y-1/2 sm:w-[1280px] lg:w-[1720px]">
           <div
             style={{
               transform: "rotateX(55deg) rotateY(0deg) rotateZ(-45deg)",
             }}
-            className="relative top-96 right-[50%] grid size-full origin-top-left grid-cols-4 gap-8 transform-3d"
+            className="grid w-full grid-cols-4 gap-8 transform-3d"
           >
             {chunks.map((subarray, colIndex) => (
               <div

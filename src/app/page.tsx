@@ -4,6 +4,7 @@ import Carousel from "@/components/DeferredCarousel";
 import { ThreeDMarqueeDemo } from "@/components/ThreeDMarqueeDemo";
 import Testimonials from "@/components/Testimonials";
 import { getCatalogProducts } from "@/lib/products/catalog-server";
+import FeaturedMaterials from "@/components/FeaturedMaterials";
 
 export default async function Home({ searchParams }: {
   searchParams: Promise<{ busca?: string | string[] }>;
@@ -16,6 +17,7 @@ export default async function Home({ searchParams }: {
   return (
     <>
       <Hero products={catalog.products} search={typeof query.busca === "string" ? query.busca : ""} unavailable={catalog.unavailable} />
+      <FeaturedMaterials products={catalog.products} />
       
       <HowItWorks />
       

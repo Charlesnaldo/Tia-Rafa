@@ -1,9 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    inlineCss: true,
-    optimizeCss: true,
-  },
   images: {
     deviceSizes: [640, 828, 1080, 1280, 1920],
     imageSizes: [64, 128, 256, 384],

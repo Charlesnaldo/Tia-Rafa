@@ -476,7 +476,7 @@ export default function CatalogClient({ products: produtosArray, search = "" }: 
                               alt={`${produtoSelecionado.nome} miniatura ${index + 1}`}
                               fill
                               sizes="64px"
-                              unoptimized={img.startsWith("http://") || img.startsWith("https://")}
+                              loading="lazy"
                               className="object-cover"
                             />
                           </button>
