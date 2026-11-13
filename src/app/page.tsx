@@ -1,6 +1,7 @@
 import Hero from "@/components/Hero";
 import HowItWorks from "@/components/HowItWorks";
 import dynamic from "next/dynamic";
+import { getCatalogProducts } from "@/lib/products/catalog-server";
 
 const Carousel = dynamic(() => import("@/components/Carousel"), {
   loading: () => <div className="h-[520px] w-full animate-pulse bg-white" />,
@@ -17,14 +18,21 @@ const Testimonials = dynamic(() => import("@/components/Testimonials"), {
   loading: () => <div className="h-[420px] w-full animate-pulse bg-white" />,
 });
 
-export default function Home() {
+export default async function Home({ searchParams }: {
+  searchParams: Promise<{ busca?: string | string[] }>;
+}) {
+  const [query, catalog] = await Promise.all([
+    searchParams,
+    getCatalogProducts().then(products => ({ products, unavailable: false }))
+      .catch(() => ({ products: [], unavailable: true })),
+  ]);
   return (
     <>
-      <Hero />
+      <Hero products={catalog.products} search={typeof query.busca === "string" ? query.busca : ""} unavailable={catalog.unavailable} />
       
       <HowItWorks />
       
-      <Carousel />
+      <Carousel products={catalog.products} />
 
       <ThreeDMarqueeDemo />
       

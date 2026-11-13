@@ -5,10 +5,10 @@ import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
 import ProductCard from "./ProductCard";
 import { Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
-import { useProductsCatalog } from "@/lib/products/useProductsCatalog";
+import type { Produto } from "@/constants/produtos";
 
-export default function DualCarousel() {
-  const { productsArray: produtos, loaded } = useProductsCatalog();
+export default function DualCarousel({ products: produtos }: { products: Produto[] }) {
+  const loaded = true;
 
   const [autoplayTop] = useState(() =>
     Autoplay({ delay: 3500, stopOnInteraction: false, stopOnMouseEnter: true, playOnInit: true })
