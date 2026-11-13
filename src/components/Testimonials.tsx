@@ -9,6 +9,7 @@ const depoimentos = [
     foto: "/testimonials/raniele.jpg",
   },
   {
+    // TODO(owner): confirm whether this customer's name is Alessandra.
     nome: "Alessadra",
     funcao: "Professora Ensino infantil",
     texto: "Comprei o kit Historia da Luva foi a melhor escolha. Meus alunos adoraram!",
@@ -62,9 +63,11 @@ export default function Testimonials() {
                 <div className="relative">
                   <Image
                     src={item.foto}
-                    alt={item.nome}
+                    alt={`Foto de ${item.nome}, ${item.funcao.toLocaleLowerCase("pt-BR")}`}
                     width={56}
                     height={56}
+                    sizes="56px"
+                    loading="lazy"
                     className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-sm"
                   />
                   <div className="absolute -bottom-1 -right-1 bg-green-500 text-white rounded-full p-0.5 border-2 border-white">

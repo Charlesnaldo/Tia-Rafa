@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import Image from "next/image";
 import logo from "../../public/optimized/logo.webp";
+import { contact } from "@/config/contact";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpen, Heart, MessageCircle, Instagram, Youtube, ShoppingCart } from "lucide-react"; // Import ShoppingCart
@@ -18,7 +19,7 @@ function HeaderContent() {
         {/* LADO ESQUERDO: Redes Sociais */}
         <div className="flex items-center gap-4 flex-1">
           <a
-            href="https://www.instagram.com/tia_rafaprof/"
+            href={contact.instagramUrl}
             aria-label="Instagram da Tia Rafa"
             target="_blank"
             rel="noopener noreferrer"
@@ -31,18 +32,18 @@ function HeaderContent() {
             </span>
           </a>
 
-          <a
-            href="https://youtube.com"
+          {contact.youtubeUrl && <a
+            href={contact.youtubeUrl}
             aria-label="YouTube da Tia Rafa"
             target="_blank"
             rel="noopener noreferrer"
             className="group p-3 bg-white/80 text-red-500 rounded-2xl shadow-sm border border-red-50 hover:bg-red-500 hover:text-white transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-red-200 animate-float [animation-delay:0.2s]"
           >
-            < Youtube size={40} className="group-hover:scale-110 transition-transform" />
-          </a>
+            <Youtube size={40} className="group-hover:scale-110 transition-transform" />
+          </a>}
 
           <a
-            href="https://wa.me/5585987455937"
+            href={contact.whatsappUrl}
             aria-label="Falar com a Tia Rafa no WhatsApp"
             target="_blank"
             rel="noopener noreferrer"

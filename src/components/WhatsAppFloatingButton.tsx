@@ -1,8 +1,9 @@
 "use client";
 
 import { MessageCircle } from "lucide-react";
+import { contact } from "@/config/contact";
 
-const whatsappUrl = "https://wa.me/5585985122803?text=Ol%C3%A1%2C%20quero%20tirar%20uma%20d%C3%BAvida.";
+const whatsappUrl = `${contact.whatsappUrl}?text=Ol%C3%A1%2C%20quero%20tirar%20uma%20d%C3%BAvida.`;
 
 export default function WhatsAppFloatingButton() {
   return (

@@ -2,11 +2,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import footerBackground from '../../public/optimized/fundo-footer.webp';
 import logo from '../../public/optimized/logo.webp';
+import { contact } from '@/config/contact';
 import { Mail, MessageCircle, Instagram, Youtube, Heart, ShieldCheck, Sparkles } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="relative pt-8 pb-12 overflow-hidden font-fredoka bg-[#FDFDFF]">
+    <footer className="relative pt-8 pb-[calc(8rem+env(safe-area-inset-bottom))] lg:pb-12 overflow-hidden font-fredoka bg-[#FDFDFF]">
       {/* RESTAURADO: Background Layer original */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 opacity-90">
@@ -57,13 +58,13 @@ export default function Footer() {
             </p>
 
             <div className="flex gap-4 justify-center lg:justify-start">
-              <a href="https://www.instagram.com/tia_rafaprof/" target="_blank" className="w-12 h-12 bg-pink-400 shadow-lg shadow-pink-200 rounded-[1.2rem] flex items-center justify-center text-white hover:-translate-y-2 transition-all duration-300">
+              <a href={contact.instagramUrl} target="_blank" rel="noopener noreferrer" aria-label="Instagram da Tia Rafa" className="w-12 h-12 bg-pink-400 shadow-lg shadow-pink-200 rounded-[1.2rem] flex items-center justify-center text-white hover:-translate-y-2 transition-all duration-300">
                 <Instagram size={22} strokeWidth={2.5} />
               </a>
-              <a href="https://youtube.com" target="_blank" className="w-12 h-12 bg-red-400 shadow-lg shadow-red-200 rounded-[1.2rem] flex items-center justify-center text-white hover:-translate-y-2 transition-all duration-300">
+              {contact.youtubeUrl && <a href={contact.youtubeUrl} target="_blank" rel="noopener noreferrer" aria-label="Canal da Tia Rafa no YouTube" className="w-12 h-12 bg-red-400 shadow-lg shadow-red-200 rounded-[1.2rem] flex items-center justify-center text-white hover:-translate-y-2 transition-all duration-300">
                 <Youtube size={22} strokeWidth={2.5} />
-              </a>
-              <a href="https://wa.me/5500000000000" target="_blank" className="w-12 h-12 bg-green-400 shadow-lg shadow-green-200 rounded-[1.2rem] flex items-center justify-center text-white hover:-translate-y-2 transition-all duration-300">
+              </a>}
+              <a href={contact.whatsappUrl} target="_blank" rel="noopener noreferrer" aria-label="Atendimento da Tia Rafa no WhatsApp" className="w-12 h-12 bg-green-400 shadow-lg shadow-green-200 rounded-[1.2rem] flex items-center justify-center text-white hover:-translate-y-2 transition-all duration-300">
                 <MessageCircle size={22} strokeWidth={2.5} />
               </a>
             </div>
@@ -96,17 +97,17 @@ export default function Footer() {
              <div className="bg-white/60 p-7 rounded-[3rem] border-2 border-white shadow-2xl shadow-purple-100/40 backdrop-blur-md text-center lg:text-left">
                 <h4 className="text-gray-800 font-black text-xl mb-6">Dúvidas? 👋</h4>
                 <div className="space-y-4">
-                  <a href="mailto:sac@tiarafa.com.br" className="flex items-center justify-center lg:justify-start gap-3 p-4 bg-purple-50/50 rounded-[1.8rem] border-2 border-transparent hover:border-purple-100 transition-all group">
+                  <a href={`mailto:${contact.email}`} className="flex items-center justify-center lg:justify-start gap-3 p-4 bg-purple-50/50 rounded-[1.8rem] border-2 border-transparent hover:border-purple-100 transition-all group">
                     <div className="bg-purple-500 text-white p-2.5 rounded-2xl group-hover:rotate-12 transition-transform">
                       <Mail size={20} />
                     </div>
-                    <span className="text-gray-700 font-black text-[14px] break-all">sac@tiarafa.com.br</span>
+                    <span className="text-gray-700 font-black text-[14px] break-all">{contact.email}</span>
                   </a>
-                  <a href="#" className="flex items-center justify-center lg:justify-start gap-3 p-4 bg-green-50/50 rounded-[1.8rem] border-2 border-transparent hover:border-green-100 transition-all group">
+                  <a href={contact.whatsappUrl} className="flex items-center justify-center lg:justify-start gap-3 p-4 bg-green-50/50 rounded-[1.8rem] border-2 border-transparent hover:border-green-100 transition-all group">
                     <div className="bg-green-400 text-white p-2.5 rounded-2xl group-hover:rotate-12 transition-transform">
                       <MessageCircle size={18} />
                     </div>
-                    <span className="text-gray-700 font-black text-[14px]">(85) 98512-2803</span>
+                    <span className="text-gray-700 font-black text-[14px]">{contact.whatsappDisplay}</span>
                   </a>
                 </div>
              </div>
@@ -139,8 +140,8 @@ export default function Footer() {
           </div>
           
           <div className="flex items-center gap-8 text-[10px] font-black text-gray-600 uppercase tracking-[0.15em]">
-            <Link href="#" className="hover:text-purple-600 transition-colors">Privacidade</Link>
-            <Link href="#" className="hover:text-purple-600 transition-colors">Termos</Link>
+            <Link href="/privacidade" className="inline-flex min-h-11 items-center hover:text-purple-600 transition-colors">Privacidade</Link>
+            <Link href="/termos" className="inline-flex min-h-11 items-center hover:text-purple-600 transition-colors">Termos</Link>
           </div>
         </div>
       </div>

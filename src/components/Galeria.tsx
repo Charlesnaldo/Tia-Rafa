@@ -96,7 +96,7 @@ export default function Galeria({ imagens, nome, cor }: { imagens: string[], nom
               className={`relative shrink-0 w-16 h-20 rounded-lg overflow-hidden border-2 transition-all focus-visible:outline-2 focus-visible:outline-purple-600 ${fotoAtiva === index ? "border-purple-500 scale-105" : "border-transparent opacity-50"
                 }`}
             >
-              <FallbackImage src={img} alt="preview" fill sizes="80px" className="object-cover" />
+              <FallbackImage src={img} alt={`Foto ${index + 1} de ${nome}`} fill sizes="64px" loading="lazy" className="object-cover" />
             </button>
           ))}
         </div>
