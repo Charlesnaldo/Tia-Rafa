@@ -1,6 +1,7 @@
 import { ShoppingCart, CreditCard, MailOpen, FileCheck, ArrowRight, Sparkles, Download, Printer, ShieldCheck, Smartphone } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import background from "../../public/optimized/background2.webp";
 
 export default function HowItWorks() {
   const steps = [
@@ -79,10 +80,12 @@ export default function HowItWorks() {
 
       <div className="absolute inset-0 z-0 opacity-25" aria-hidden="true">
         <Image
-          src="/background2.jpg"
+          src={background}
           alt=""
           fill
           sizes="100vw"
+          loading="lazy"
+          quality={70}
           className="object-cover"
         />
       </div>

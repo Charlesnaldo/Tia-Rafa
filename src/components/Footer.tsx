@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import footerBackground from '../../public/optimized/fundo-footer.webp';
 import { Mail, MessageCircle, Instagram, Youtube, Heart, ShieldCheck, Sparkles } from 'lucide-react';
 
 export default function Footer() {
@@ -9,10 +10,12 @@ export default function Footer() {
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 opacity-90">
           <Image
-            src="/fundo-footer.webp"
+            src={footerBackground}
             alt=""
             fill
             sizes="100vw"
+            loading="lazy"
+            quality={70}
             className="object-cover"
           />
         </div>

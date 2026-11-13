@@ -89,7 +89,7 @@ function SobreContent() {
           fill
           sizes="100vw"
           className="object-cover opacity-10 sm:opacity-15"
-          priority
+          loading="lazy"
           quality={75}
         />
         <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-blue-50/80 to-pink-50/80 backdrop-blur-[1px]" />
@@ -147,7 +147,7 @@ function SobreContent() {
                   fill
                   sizes="(max-width: 768px) 100vw, 50vw"
                   className="object-cover object-top"
-                  priority
+                  loading="lazy"
                 />
               </div>
 

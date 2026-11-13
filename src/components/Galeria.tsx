@@ -46,7 +46,7 @@ export default function Galeria({ imagens, nome, cor }: { imagens: string[], nom
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 40vw"
             className={`object-cover transition-opacity duration-500 ${zoomPos.show ? 'opacity-0' : 'opacity-100'}`}
             onError={() => setFailedImages((prev) => ({ ...prev, [imagemAtiva]: true }))}
-            priority
+            loading="lazy"
           />
 
           {/* Efeito de Lupa (Background Image com Zoom) */}

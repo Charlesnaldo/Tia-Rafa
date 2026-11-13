@@ -1,15 +1,17 @@
 ﻿import Image from "next/image";
 import Catalog from "@/components/Catalog";
+import heroBackground from "../../public/optimized/fundo-hero.webp";
 
 export default function Hero() {
   return (
     <div className="relative isolate overflow-hidden pt-[235px] lg:pt-[330px]">
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[900px] lg:h-[1050px]" aria-hidden="true">
         <Image
-          src="/fundo-hero.webp"
+          src={heroBackground}
           alt=""
           fill
           sizes="100vw"
+          quality={75}
           className="object-cover object-top opacity-95"
           preload
         />
