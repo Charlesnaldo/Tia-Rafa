@@ -1,12 +1,17 @@
 "use client";
 
-import Image, { getImageProps } from "next/image";
+import Image, { getImageProps, type ImageLoaderProps } from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import logo from "../../public/optimized/logo.webp";
+import logo from "../../public/optimized/logo-mobile-480.png";
+import logoSmall from "../../public/optimized/logo-mobile-240.png";
+
+// Serve pre-sized PNGs directly: keep alpha out of negotiated AVIF/WebP decoding.
+// Next rounds a 240px slot up to the configured 256px candidate for its 1x URL.
+const mobileLogoLoader = ({ width }: ImageLoaderProps) => width <= 256 ? logoSmall.src : logo.src;
 
 const { props: logoProps } = getImageProps({
-  src: logo, alt: "Logo Tia Rafa", width: 240, height: 240, sizes: "240px",
+  src: logo, loader: mobileLogoLoader, alt: "Logo Tia Rafa", width: 240, height: 240,
 });
 
 export default function HeaderMobileTop() {
@@ -28,13 +33,13 @@ const pathname = usePathname();
         <Link href="/" aria-label="Home">
           <Image
             src={logo}
+            loader={mobileLogoLoader}
             alt="Logo Tia Rafa"
             width={240}
             height={240}
-            sizes="240px"
             loading="eager"
             fetchPriority="high"
-            decoding="sync"
+            decoding="async"
             style={{ height: "auto" }}
             className="h-auto w-[240px] object-contain"
           />

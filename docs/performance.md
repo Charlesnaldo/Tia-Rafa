@@ -158,11 +158,17 @@ Os textos s√£o bases de revis√£o, sem declara√ß√£o de conformidade autom√°tica. 
 
 ## Ajuste orientado pelo PageSpeed mobile (13/11/2026)
 
-RelatÛrio p˙blico: https://pagespeed.web.dev/analysis/https-www-tiarafaela-com-br/7r0nck0ocv?form_factor=mobile
+Relat√≥rio p√∫blico: https://pagespeed.web.dev/analysis/https-www-tiarafaela-com-br/7r0nck0ocv?form_factor=mobile
 
-- Nota mobile: 83; FCP 1,1 s; LCP 4,2 s; TBT 73,5 ms; CLS 0. O elemento LCP È o logo mobile.
-- O relatÛrio aponta aproximadamente 197 KiB de economia em imagens e conex„o antecipada ao Supabase n„o utilizada pelo navegador.
-- O logo recebe preload responsivo somente atÈ 1023 px e decodificaÁ„o sÌncrona. Os tamanhos intermedi·rios 192, 320 e 480 px evitam saltos excessivos entre variantes. O cat·logo informa a largura real das imagens descontando margens, espaÁamento e padding dos cards.
-- O proxy continua validando produto ativo e imagem publicada; seus tamanhos permitidos vÍm da mesma lista utilizada pelo loader. Cache e autorizaÁ„o n„o foram ampliados.
-- Build e 14 testes de seguranÁa passaram; lint sem erros (dois avisos preexistentes no checkout). A validaÁ„o visual inicial confirmou cat·logo, modal, filtros, carrinho, destaques e ausÍncia de overflow em 320/390/768/1440 px, sem erros JS ou imagens quebradas.
-- O laboratÛrio local usa capas p˙blicas de 640 px redimensionadas para simular as variantes ainda n„o publicadas. Sua execuÁ„o Lighthouse teve LCP 21,7 s e TBT 10,3 s, portanto n„o estabelece ganho em relaÁ„o ‡ mediÁ„o do Google. N„o comparar as notas de ambientes diferentes. Uma nova execuÁ„o do PageSpeed apÛs publicaÁ„o È necess·ria para confirmar o resultado.
+- Nota mobile: 83; FCP 1,1 s; LCP 4,2 s; TBT 73,5 ms; CLS 0. O elemento LCP √© o logo mobile.
+- O relat√≥rio aponta aproximadamente 197 KiB de economia em imagens e conex√£o antecipada ao Supabase n√£o utilizada pelo navegador.
+- O logo recebe preload responsivo somente at√© 1023 px e decodifica√ß√£o s√≠ncrona. Os tamanhos intermedi√°rios 192, 320 e 480 px evitam saltos excessivos entre variantes. O cat√°logo informa a largura real das imagens descontando margens, espa√ßamento e padding dos cards.
+- O proxy continua validando produto ativo e imagem publicada; seus tamanhos permitidos v√™m da mesma lista utilizada pelo loader. Cache e autoriza√ß√£o n√£o foram ampliados.
+- Build e 14 testes de seguran√ßa passaram; lint sem erros (dois avisos preexistentes no checkout). A valida√ß√£o visual inicial confirmou cat√°logo, modal, filtros, carrinho, destaques e aus√™ncia de overflow em 320/390/768/1440 px, sem erros JS ou imagens quebradas.
+- O laborat√≥rio local usa capas p√∫blicas de 640 px redimensionadas para simular as variantes ainda n√£o publicadas. Sua execu√ß√£o Lighthouse teve LCP 21,7 s e TBT 10,3 s, portanto n√£o estabelece ganho em rela√ß√£o √† medi√ß√£o do Google. N√£o comparar as notas de ambientes diferentes. Uma nova execu√ß√£o do PageSpeed ap√≥s publica√ß√£o √© necess√°ria para confirmar o resultado.
+
+## Compatibilidade do logo mobile (13/11/2026)
+
+Uma captura enviada pelo usu√°rio mostra um ret√¢ngulo preto sobre parte do topo no Safari de iPhone. A causa exata n√£o foi reproduzida em um dispositivo f√≠sico. Para retirar a convers√£o de imagens transparentes da regi√£o afetada, o cabe√ßalho mobile passa a usar PNGs est√°ticos de 240/480 px (19.872/58.843 bytes), com URLs versionadas pelo build, srcset 1x/2x e preload correspondente. A decodifica√ß√£o volta a ser ass√≠ncrona. O logo desktop e as capas permanecem no fluxo existente.
+
+Regenera√ß√£o: `node scripts/optimize-mobile-logo.mjs`. Build e lint sem erros. A confirma√ß√£o do desaparecimento do artefato deve ser feita tamb√©m no aparelho que apresentou a falha; emula√ß√£o de viewport n√£o equivale ao Safari real.
