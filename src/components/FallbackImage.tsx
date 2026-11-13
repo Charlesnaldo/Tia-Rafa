@@ -18,22 +18,33 @@ function FallbackImageSource({
   fallbackSrc = "/embreve.jpg",
   alt,
   onError,
+  onLoad,
+  className,
   ...props
 }: FallbackImageProps) {
   const normalizedSrc = src || fallbackSrc;
   const [currentSrc, setCurrentSrc] = useState(normalizedSrc);
+  const [settled, setSettled] = useState(false);
 
   return (
     <Image
       {...props}
+      className={`${className || ""}${settled ? "" : " image-skeleton"}`}
       unoptimized={props.unoptimized || (process.env.NODE_ENV === "development" && currentSrc.startsWith("https://www.tiarafaela.com.br/"))}
       loader={isProductImageProxy(currentSrc) ? productImageLoader : props.loader}
       src={currentSrc}
       alt={alt}
+      onLoad={(event) => {
+        setSettled(true);
+        onLoad?.(event);
+      }}
       onError={(event) => {
         onError?.(event);
         if (currentSrc !== fallbackSrc) {
           setCurrentSrc(fallbackSrc);
+          setSettled(false);
+        } else {
+          setSettled(true);
         }
       }}
     />

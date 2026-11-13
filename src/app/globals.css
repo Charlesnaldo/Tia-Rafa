@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+.image-skeleton {
+  background-color: #f3eefa;
+  background-image: linear-gradient(100deg, transparent 30%, #ffffffb3 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: image-skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes image-skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .image-skeleton { animation: none; }
+}
+
 @keyframes bounce-once {
   0%, 100% {
     transform: translateY(0);

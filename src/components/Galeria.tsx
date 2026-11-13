@@ -22,8 +22,9 @@ export default function Galeria({ imagens, nome, cor }: { imagens: string[], nom
     if (!containerRef.current) return;
 
     const { left, top, width, height } = containerRef.current.getBoundingClientRect();
-    const x = ((e.pageX - left) / width) * 100;
-    const y = ((e.pageY - top) / height) * 100;
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    const x = Math.max(0, Math.min(100, ((e.clientX - left) / width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - top) / height) * 100));
 
     setZoomPos({ x, y, show: true });
   };
@@ -71,11 +72,11 @@ export default function Galeria({ imagens, nome, cor }: { imagens: string[], nom
 
         {/* Botões de Navegação */}
         {imagens.length > 1 && !zoomPos.show && (
-          <div className="absolute inset-0 flex items-center justify-between px-4 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button onClick={(e) => { e.stopPropagation(); anterior(); }} className="bg-white/90 p-2 rounded-full shadow-lg hover:bg-white text-purple-600 z-10">
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-4">
+            <button type="button" aria-label="Foto anterior" onClick={(e) => { e.stopPropagation(); anterior(); }} className="pointer-events-auto bg-white/90 p-3 rounded-full shadow-lg hover:bg-white text-purple-600 z-10 focus-visible:outline-2 focus-visible:outline-purple-600">
               <ChevronLeft size={24} />
             </button>
-            <button onClick={(e) => { e.stopPropagation(); próxima(); }} className="bg-white/90 p-2 rounded-full shadow-lg hover:bg-white text-purple-600 z-10">
+            <button type="button" aria-label="Próxima foto" onClick={(e) => { e.stopPropagation(); próxima(); }} className="pointer-events-auto bg-white/90 p-3 rounded-full shadow-lg hover:bg-white text-purple-600 z-10 focus-visible:outline-2 focus-visible:outline-purple-600">
               <ChevronRight size={24} />
             </button>
           </div>
@@ -84,12 +85,15 @@ export default function Galeria({ imagens, nome, cor }: { imagens: string[], nom
 
       {/* Miniaturas */}
       {imagens.length > 1 && (
-        <div className="flex gap-2 justify-center">
+        <div className="flex gap-2 overflow-x-auto py-2 px-1">
           {imagens.map((img, index) => (
             <button
               key={index}
+              type="button"
+              aria-label={`Ver foto ${index + 1} de ${nome}`}
+              aria-pressed={fotoAtiva === index}
               onClick={() => setFotoAtiva(index)}
-              className={`relative w-16 h-20 rounded-lg overflow-hidden border-2 transition-all ${fotoAtiva === index ? "border-purple-500 scale-105" : "border-transparent opacity-50"
+              className={`relative shrink-0 w-16 h-20 rounded-lg overflow-hidden border-2 transition-all focus-visible:outline-2 focus-visible:outline-purple-600 ${fotoAtiva === index ? "border-purple-500 scale-105" : "border-transparent opacity-50"
                 }`}
             >
               <FallbackImage src={img} alt="preview" fill sizes="80px" className="object-cover" />
