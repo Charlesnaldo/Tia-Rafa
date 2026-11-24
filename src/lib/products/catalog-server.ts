@@ -32,7 +32,9 @@ async function loadPublishedProducts(): Promise<PublishedProduct[]> {
   const supabase = getSupabaseAdminClient();
   const { data, error } = await supabase.from("products")
     .select("id, nome, descricao, preco_cents, tipo, imagem_url, is_active")
-    .eq("is_active", true);
+    .eq("is_active", true)
+    // Newest first, so new materials lead the catalog.
+    .order("created_at", { ascending: false });
   if (error) throw error;
   const kits = await loadKitComponents(supabase);
   const componentIds = [...new Set([...kits.values()].flat())];
