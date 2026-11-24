@@ -27,6 +27,7 @@ import {
 import BotaoCompartilhar from "@/components/BotaoCompartilhar";
 import { useCart } from "@/context/CartContext"; // Import useCart
 import { useProductsCatalog } from "@/lib/products/useProductsCatalog";
+import { analytics } from "@/lib/analytics";
 
 export default function ProdutoDetalhes({
   params
@@ -40,6 +41,12 @@ export default function ProdutoDetalhes({
 
   const { id } = React.use(params); // Unwrap the Promise using React.use()
   const produto = productsById[id];
+  const viewedId = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!produto || viewedId.current === produto.id) return;
+    viewedId.current = produto.id;
+    analytics.viewItem({ id: produto.id, nome: produto.nome, preco: produto.preco });
+  }, [produto]);
 
   if (!produto && loaded) notFound();
   if (!produto) {

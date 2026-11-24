@@ -199,6 +199,13 @@ export async function POST(request: NextRequest) {
       },
     };
     const paymentOwner = createPaymentOwner(request);
+    const metaCookie = (name: string) => {
+      const value = request.cookies.get(name)?.value ?? "";
+      return /^fb\.\d\.\d+\.[\w.-]{1,200}$/.test(value) ? value : "";
+    };
+    const clientIp = process.env.VERCEL === "1"
+      ? request.headers.get("x-vercel-forwarded-for")?.split(",")[0].trim() ?? ""
+      : "";
     const metadata = {
       payment_status_owner: hashPaymentOwner(paymentOwner),
       email_comprador: emailCliente,
@@ -209,6 +216,10 @@ export async function POST(request: NextRequest) {
       cart_items: JSON.stringify(cartItems.map((item) => ({ id: item.id, quantity: item.quantity }))),
       ...(enderecoEntrega ? { endereco_entrega: JSON.stringify(enderecoEntrega) } : {}),
       ...(couponCode ? { coupon_code: couponCode, discount_cents: discountCents } : {}),
+      ...(metaCookie("_fbp") ? { meta_fbp: metaCookie("_fbp") } : {}),
+      ...(metaCookie("_fbc") ? { meta_fbc: metaCookie("_fbc") } : {}),
+      ...(clientIp ? { client_ip: clientIp.slice(0, 64) } : {}),
+      client_ua: (request.headers.get("user-agent") ?? "").slice(0, 300),
     };
     const baseUrl = process.env.NEXT_PUBLIC_URL?.trim();
     let notificationUrl: string | undefined;

@@ -88,7 +88,15 @@ function SucessoContent() {
 
   const purchaseId = paymentIdFromUrl || (lastPayment?.id ? String(lastPayment.id) : null);
   useEffect(() => {
-    if (isApproved && purchaseId) analytics.purchase(purchaseId, null);
+    if (!isApproved || !purchaseId) return;
+    let totalCents: number | null = null;
+    try {
+      const stored = Number(window.sessionStorage.getItem("checkoutTotalCents"));
+      totalCents = Number.isInteger(stored) && stored > 0 ? stored : null;
+    } catch {
+      totalCents = null;
+    }
+    analytics.purchase(purchaseId, totalCents);
   }, [isApproved, purchaseId]);
 
   useEffect(() => {

@@ -11,6 +11,7 @@ import HideOnAdmin from "@/components/HideOnAdmin";
 import WhatsAppFloatingButton from "@/components/WhatsAppFloatingButton";
 import { CartProvider } from "@/context/CartContext";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import MetaPixel from "@/components/MetaPixel";
 import { getSiteUrl } from "@/lib/site-url";
 import { baseOpenGraph, siteDescription, siteTitle } from "@/lib/site-metadata";
 
@@ -44,6 +45,7 @@ export default function RootLayout({
       <body className={`${fredoka.className} antialiased flex flex-col min-h-screen bg-white`}>
         <Suspense fallback={null}>
           <GoogleAnalytics />
+          <MetaPixel />
         </Suspense>
         <CartProvider>
           {/* HEADER DESKTOP */}

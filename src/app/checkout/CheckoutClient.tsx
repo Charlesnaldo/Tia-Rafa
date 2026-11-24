@@ -184,6 +184,11 @@ export default function CheckoutClient() {
       }
 
       analytics.addPaymentInfo(cartItems, paymentMethod, coupon?.code);
+      try {
+        window.sessionStorage.setItem("checkoutTotalCents", String(totalCents));
+      } catch {
+        // Storage blocked: the server-side purchase event still reports the value.
+      }
 
       if (paymentMethod === "credit_card") {
         if (!paymentData.checkout_url) {

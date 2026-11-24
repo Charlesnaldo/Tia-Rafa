@@ -13,6 +13,8 @@ import {
 } from "@/lib/email/delivery";
 import { escapeHtml } from "@/lib/html";
 import { contact } from "@/config/contact";
+import { sendMetaPurchase } from "@/lib/meta/capi";
+import { getSiteUrl } from "@/lib/site-url";
 
 export const dynamic = "force-dynamic";
 
@@ -190,6 +192,22 @@ export async function POST(request: Request) {
         : buildPhysicalConfirmationEmail(emailCliente, produto, enderecoEntrega);
       await sendPaymentEmailOnce(resend, paymentId, produto.id, email);
     }
+
+    const text = (value: unknown) => (typeof value === "string" ? value : undefined);
+    await sendMetaPurchase({
+      paymentId,
+      value: Number(paymentData.transaction_amount || 0),
+      email: emailCliente,
+      phone: text(telefoneCliente),
+      firstName: text(nomeCliente),
+      contentIds: idsProdutos,
+      fbp: text(metadata.meta_fbp),
+      fbc: text(metadata.meta_fbc),
+      clientIp: text(metadata.client_ip),
+      userAgent: text(metadata.client_ua),
+      eventSourceUrl: `${getSiteUrl()}/sucesso`,
+      eventTime: paymentData.date_approved ? Math.floor(new Date(paymentData.date_approved).getTime() / 1000) : undefined,
+    });
 
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {

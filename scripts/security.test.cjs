@@ -361,3 +361,28 @@ test("leads validate input before touching the database", async () => {
   assert.equal((await post({ email: "ana@example.com" })).status, 400);
   assert.equal(touched, false);
 });
+
+test("Meta Conversions API hashes personal data and shares the browser event id", async (t) => {
+  const { createHash } = require("node:crypto");
+  const sha = (value) => createHash("sha256").update(value).digest("hex");
+  const capi = load("src/lib/meta/capi.ts");
+  const payload = capi.buildPurchasePayload({
+    paymentId: "123", value: 18, email: " Ana@Example.com ", phone: "(85) 98512-2803", firstName: "Ana Maria",
+    contentIds: ["kit"], fbp: "fb.1.1700000000.123", eventSourceUrl: "https://example.com/sucesso", eventTime: 1700000000,
+  });
+  const event = payload.data[0];
+  assert.equal(event.event_id, "purchase_123");
+  assert.deepEqual(event.user_data.em, [sha("ana@example.com")]);
+  assert.deepEqual(event.user_data.ph, [sha("5585985122803")]);
+  assert.deepEqual(event.user_data.fn, [sha("ana")]);
+  assert.equal(JSON.stringify(payload).includes("Ana@Example.com"), false);
+  assert.equal(event.custom_data.value, 18);
+
+  const previous = process.env.META_CAPI_TOKEN;
+  delete process.env.META_CAPI_TOKEN;
+  let called = false;
+  t.mock.method(global, "fetch", async () => { called = true; return Response.json({}); });
+  assert.deepEqual(await capi.sendMetaPurchase({ paymentId: "1", value: 1, email: "a@b.co", contentIds: [], eventSourceUrl: "x" }), { sent: false, reason: "not-configured" });
+  assert.equal(called, false);
+  if (previous !== undefined) process.env.META_CAPI_TOKEN = previous;
+});
