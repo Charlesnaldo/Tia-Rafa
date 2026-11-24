@@ -3,6 +3,7 @@ import Image from 'next/image';
 import footerBackground from '../../public/optimized/fundo-footer.webp';
 import logo from '../../public/optimized/logo.webp';
 import { contact } from '@/config/contact';
+import { CookiePreferencesLink } from '@/components/CookieConsent';
 import { Mail, MessageCircle, Instagram, Youtube, Heart, ShieldCheck, Sparkles } from 'lucide-react';
 
 export default function Footer() {
@@ -140,6 +141,7 @@ export default function Footer() {
           <div className="flex items-center gap-8 text-[10px] font-black text-gray-600 uppercase tracking-[0.15em]">
             <Link href="/privacidade" className="inline-flex min-h-11 items-center hover:text-purple-600 transition-colors">Privacidade</Link>
             <Link href="/termos" className="inline-flex min-h-11 items-center hover:text-purple-600 transition-colors">Termos</Link>
+            <CookiePreferencesLink className="inline-flex min-h-11 items-center hover:text-purple-600 transition-colors" />
           </div>
         </div>
       </div>

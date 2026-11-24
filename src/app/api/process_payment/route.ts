@@ -24,6 +24,7 @@ type ProcessPaymentRequest = {
   paymentMethod?: "pix" | "credit_card";
   enderecoEntrega?: unknown;
   couponCode?: string;
+  adConsent?: boolean;
 };
 
 type MercadoPagoCreatePaymentResponse = {
@@ -199,7 +200,9 @@ export async function POST(request: NextRequest) {
       },
     };
     const paymentOwner = createPaymentOwner(request);
+    const adConsent = body.adConsent === true;
     const metaCookie = (name: string) => {
+      if (!adConsent) return "";
       const value = request.cookies.get(name)?.value ?? "";
       return /^fb\.\d\.\d+\.[\w.-]{1,200}$/.test(value) ? value : "";
     };
@@ -218,8 +221,10 @@ export async function POST(request: NextRequest) {
       ...(couponCode ? { coupon_code: couponCode, discount_cents: discountCents } : {}),
       ...(metaCookie("_fbp") ? { meta_fbp: metaCookie("_fbp") } : {}),
       ...(metaCookie("_fbc") ? { meta_fbc: metaCookie("_fbc") } : {}),
-      ...(clientIp ? { client_ip: clientIp.slice(0, 64) } : {}),
-      client_ua: (request.headers.get("user-agent") ?? "").slice(0, 300),
+      // Advertising data is kept only with the buyer's consent (LGPD).
+      meta_consent: adConsent ? "1" : "0",
+      ...(adConsent && clientIp ? { client_ip: clientIp.slice(0, 64) } : {}),
+      ...(adConsent ? { client_ua: (request.headers.get("user-agent") ?? "").slice(0, 300) } : {}),
     };
     const baseUrl = process.env.NEXT_PUBLIC_URL?.trim();
     let notificationUrl: string | undefined;

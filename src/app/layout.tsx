@@ -12,6 +12,7 @@ import WhatsAppFloatingButton from "@/components/WhatsAppFloatingButton";
 import { CartProvider } from "@/context/CartContext";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import MetaPixel from "@/components/MetaPixel";
+import CookieConsent from "@/components/CookieConsent";
 import { getSiteUrl } from "@/lib/site-url";
 import { baseOpenGraph, siteDescription, siteTitle } from "@/lib/site-metadata";
 
@@ -73,6 +74,7 @@ export default function RootLayout({
             <Footer />
             <WhatsAppFloatingButton />
           </HideOnAdmin>
+          <CookieConsent />
         </CartProvider>
       </body>
     </html>

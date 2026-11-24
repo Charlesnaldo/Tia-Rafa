@@ -26,6 +26,7 @@ import { LastPaymentSessionData, PaymentPointOfInteraction } from "@/types/payme
 import { useProductsCatalog } from "@/lib/products/useProductsCatalog";
 import { EMPTY_SHIPPING_ADDRESS, parseShippingAddress, type ShippingAddress } from "@/lib/shipping-address";
 import { analytics } from "@/lib/analytics";
+import { readConsent } from "@/lib/consent";
 
 type AppliedCoupon = { code: string; discountCents: number; description: string | null };
 
@@ -171,6 +172,7 @@ export default function CheckoutClient() {
           paymentMethod,
           ...(needsAddress ? { enderecoEntrega: endereco } : {}),
           ...(coupon ? { couponCode: coupon.code } : {}),
+          adConsent: readConsent() === "granted",
         }),
       });
       const paymentData = await processResponse.json();

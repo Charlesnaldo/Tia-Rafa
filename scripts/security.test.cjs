@@ -386,3 +386,29 @@ test("Meta Conversions API hashes personal data and shares the browser event id"
   assert.equal(called, false);
   if (previous !== undefined) process.env.META_CAPI_TOKEN = previous;
 });
+
+test("checkout keeps advertising data only when the buyer accepted cookies", async (t) => {
+  const previous = process.env.MP_ACCESS_TOKEN;
+  process.env.MP_ACCESS_TOKEN = "test";
+  t.after(() => { if (previous === undefined) delete process.env.MP_ACCESS_TOKEN; else process.env.MP_ACCESS_TOKEN = previous; });
+  const captures = [];
+  t.mock.method(global, "fetch", async (url, options) => { captures.push(JSON.parse(options.body)); return Response.json({ id: "9", status: "pending", payment_method_id: "pix" }); });
+  const db = fakeSupabase({ products: [{ id: "p", nome: "Produto", preco_cents: 500, tipo: "digital" }] });
+  const { POST } = load("src/app/api/process_payment/route.ts", { "@/lib/supabase/admin": { getSupabaseAdminClient: () => db } });
+  const pay = (adConsent) => POST(new NextRequest("https://example.com/api/process_payment", {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie: "_fbp=fb.1.1700000000.123", "user-agent": "TestAgent" },
+    body: JSON.stringify({ cartItems: [{ id: "p", quantity: 1 }], emailCliente: "buyer@example.com", nomeCliente: "Cliente", cpfCliente: "12345678901", telefoneCliente: "11999999999", paymentMethod: "pix", adConsent }),
+  }));
+
+  await pay(false);
+  let metadata = captures.at(-1).metadata;
+  assert.equal(metadata.meta_consent, "0");
+  assert.equal("meta_fbp" in metadata || "client_ua" in metadata, false);
+
+  await pay(true);
+  metadata = captures.at(-1).metadata;
+  assert.equal(metadata.meta_consent, "1");
+  assert.equal(metadata.meta_fbp, "fb.1.1700000000.123");
+  assert.equal(metadata.client_ua, "TestAgent");
+});

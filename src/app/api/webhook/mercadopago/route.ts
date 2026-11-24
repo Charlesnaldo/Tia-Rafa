@@ -194,7 +194,8 @@ export async function POST(request: Request) {
     }
 
     const text = (value: unknown) => (typeof value === "string" ? value : undefined);
-    await sendMetaPurchase({
+    // Report to Meta only when the buyer accepted advertising cookies at checkout (LGPD).
+    if (metadata.meta_consent === "1") await sendMetaPurchase({
       paymentId,
       value: Number(paymentData.transaction_amount || 0),
       email: emailCliente,

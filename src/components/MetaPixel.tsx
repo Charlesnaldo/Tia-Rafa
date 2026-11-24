@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Script from "next/script";
 import { META_PIXEL_ID } from "@/config/meta";
+import { useConsent } from "@/lib/consent";
 
 declare global {
   interface Window {
@@ -14,7 +15,9 @@ declare global {
 // Loads the Meta Pixel in production, outside the admin panel, and tracks client-side navigations.
 export default function MetaPixel() {
   const pathname = usePathname();
-  const enabled = Boolean(META_PIXEL_ID) && process.env.NODE_ENV === "production" && !pathname.startsWith("/admin");
+  const consent = useConsent();
+  // Loads only after the visitor accepts advertising cookies (LGPD).
+  const enabled = consent === "granted" && Boolean(META_PIXEL_ID) && process.env.NODE_ENV === "production" && !pathname.startsWith("/admin");
 
   useEffect(() => {
     // The first PageView is sent by the init snippet; later route changes are sent here.

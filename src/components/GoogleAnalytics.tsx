@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Script from "next/script";
+import { useConsent } from "@/lib/consent";
 
 declare global {
   interface Window {
@@ -15,16 +16,18 @@ const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 export default function GoogleAnalytics() {
   const pathname = usePathname();
+  const consent = useConsent();
 
   useEffect(() => {
-    if (!measurementId || typeof window.gtag !== "function") {
+    if (consent !== "granted" || !measurementId || typeof window.gtag !== "function") {
       return;
     }
 
     window.gtag("config", measurementId, { page_path: pathname });
-  }, [pathname]);
+  }, [pathname, consent]);
 
-  if (!measurementId || process.env.NODE_ENV !== "production") {
+  // Loads only after the visitor accepts analytics cookies (LGPD).
+  if (consent !== "granted" || !measurementId || process.env.NODE_ENV !== "production") {
     return null;
   }
 
