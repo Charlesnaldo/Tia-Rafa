@@ -8,6 +8,7 @@ import { CheckCircle, Mail, Download, ArrowRight, Sparkles } from "lucide-react"
 import { LastPaymentSessionData } from "@/types/payment";
 import { formatPaymentStatus } from "@/lib/utils";
 import confetti from "canvas-confetti";
+import { analytics } from "@/lib/analytics";
 
 function SucessoContent() {
   const searchParams = useSearchParams();
@@ -85,6 +86,11 @@ function SucessoContent() {
     };
   }, [paymentIdFromUrl]);
 
+  const purchaseId = paymentIdFromUrl || (lastPayment?.id ? String(lastPayment.id) : null);
+  useEffect(() => {
+    if (isApproved && purchaseId) analytics.purchase(purchaseId, null);
+  }, [isApproved, purchaseId]);
+
   useEffect(() => {
     if (!isApproved || confettiPlayedRef.current) return;
 
@@ -144,8 +150,8 @@ function SucessoContent() {
 
           <div className="bg-blue-50 p-6 rounded-[2rem] border border-blue-100 text-left">
             <Download className="text-blue-500 mb-3" />
-            <h3 className="font-black text-gray-800 text-sm uppercase">Acesso Vitalicio</h3>
-            <p className="text-xs text-gray-500 mt-1">O link enviado nao expira. Voce pode baixar quando quiser.</p>
+            <h3 className="font-black text-gray-800 text-sm uppercase">O arquivo é seu</h3>
+            <p className="text-xs text-gray-500 mt-1">O PDF vai anexado ao e-mail: guarde e use quando quiser. Perdeu? Pedimos o reenvio pelo atendimento.</p>
           </div>
         </div>
 

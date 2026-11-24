@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createPaymentOwner, hashPaymentOwner, setPaymentOwner } from "@/lib/payment-owner";
 import { parseShippingAddress, type ShippingAddress } from "@/lib/shipping-address";
+import { computeCouponDiscount, loadCoupon, normalizeCouponCode } from "@/lib/coupons";
+import { loadKitComponents } from "@/lib/products/kits";
+import { isMissingSchema } from "@/lib/supabase/missing-schema";
 
 type PointOfInteraction = {
   type?: string;
@@ -20,6 +23,7 @@ type ProcessPaymentRequest = {
   telefoneCliente?: string;
   paymentMethod?: "pix" | "credit_card";
   enderecoEntrega?: unknown;
+  couponCode?: string;
 };
 
 type MercadoPagoCreatePaymentResponse = {
@@ -51,6 +55,27 @@ type ProductSnapshot = {
   preco: number;
   tipo: "digital" | "fisico";
 };
+
+// A kit needs shipping when any of its components is physical (components may be hidden from the catalog).
+async function cartHasPhysicalComponent(kitIds: string[]) {
+  const supabase = getSupabaseAdminClient();
+  const kits = await loadKitComponents(supabase, kitIds);
+  const componentIds = [...new Set([...kits.values()].flat())];
+  if (componentIds.length === 0) return false;
+  const { data, error } = await supabase.from("products").select("id, tipo").in("id", componentIds);
+  if (error) throw new Error("Falha ao consultar componentes do kit.");
+  return (data || []).some((row) => row.tipo === "fisico");
+}
+
+// Funnel and Pix reminder data. Optional: a failure here must never block a payment.
+async function recordPendingPayment(row: Record<string, unknown>) {
+  try {
+    const { error } = await getSupabaseAdminClient().from("pending_payments").insert(row);
+    if (error && !isMissingSchema(error)) console.error("Falha ao registrar Pix gerado:", error.message);
+  } catch (error) {
+    console.error("Falha ao registrar Pix gerado:", error);
+  }
+}
 
 async function getProductSnapshots(ids: string[]): Promise<Record<string, ProductSnapshot>> {
   const snapshots: Record<string, ProductSnapshot> = {};
@@ -119,7 +144,8 @@ export async function POST(request: NextRequest) {
     const idsCarrinho = cartItems.map((item) => item.id);
     const productSnapshots = await getProductSnapshots(idsCarrinho);
 
-    let totalAmount = 0;
+    let subtotalCents = 0;
+    let itemCount = 0;
     const idsProdutos: string[] = [];
     for (const item of cartItems) {
       const produto = productSnapshots[item.id];
@@ -129,13 +155,29 @@ export async function POST(request: NextRequest) {
       if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
         return NextResponse.json({ error: `Quantidade invalida para o produto ${item.id}.` }, { status: 400 });
       }
-      totalAmount += (produto.preco / 100) * item.quantity;
+      subtotalCents += produto.preco * item.quantity;
+      itemCount += item.quantity;
       idsProdutos.push(item.id);
     }
 
+    // Coupons are always re-validated here; the checkout preview is only informative.
+    const couponCode = normalizeCouponCode(body.couponCode);
+    let discountCents = 0;
+    if (couponCode) {
+      const coupon = computeCouponDiscount(await loadCoupon(getSupabaseAdminClient(), couponCode), subtotalCents, itemCount);
+      if (!coupon.ok) {
+        return NextResponse.json({ error: coupon.error, code: "COUPON_INVALID" }, { status: 400 });
+      }
+      discountCents = coupon.discountCents;
+    }
+    const totalCents = subtotalCents - discountCents;
+    const totalAmount = totalCents / 100;
+
     // The server decides whether shipping is needed; the client flag is only a UI hint.
     let enderecoEntrega: ShippingAddress | null = null;
-    if (cartItems.some((item) => productSnapshots[item.id]?.tipo === "fisico")) {
+    const needsShipping = cartItems.some((item) => productSnapshots[item.id]?.tipo === "fisico")
+      || await cartHasPhysicalComponent(idsProdutos);
+    if (needsShipping) {
       const parsedAddress = parseShippingAddress(body.enderecoEntrega);
       if ("error" in parsedAddress) {
         return NextResponse.json({ error: parsedAddress.error, code: "ADDRESS_REQUIRED" }, { status: 400 });
@@ -166,6 +208,7 @@ export async function POST(request: NextRequest) {
       id_produtos: JSON.stringify(idsProdutos),
       cart_items: JSON.stringify(cartItems.map((item) => ({ id: item.id, quantity: item.quantity }))),
       ...(enderecoEntrega ? { endereco_entrega: JSON.stringify(enderecoEntrega) } : {}),
+      ...(couponCode ? { coupon_code: couponCode, discount_cents: discountCents } : {}),
     };
     const baseUrl = process.env.NEXT_PUBLIC_URL?.trim();
     let notificationUrl: string | undefined;
@@ -182,8 +225,18 @@ export async function POST(request: NextRequest) {
 
     if (paymentMethod === "credit_card") {
       const requestOrigin = new URL(request.url).origin;
+      // Mercado Pago has no negative line items: with a coupon, charge one line with the discounted total.
+      const preferenceItems = discountCents > 0
+        ? [{
+          id: "pedido",
+          title: `Materiais Tia Rafa (${itemCount} ${itemCount === 1 ? "item" : "itens"}) - cupom ${couponCode}`,
+          quantity: 1,
+          currency_id: "BRL",
+          unit_price: totalAmount,
+        }]
+        : null;
       const preferenceBody = {
-        items: cartItems.map((item) => {
+        items: preferenceItems ?? cartItems.map((item) => {
           const produto = productSnapshots[item.id];
           if (!produto) {
             throw new Error(`Produto ${item.id} nao encontrado para checkout de cartao.`);
@@ -261,6 +314,17 @@ export async function POST(request: NextRequest) {
     }
 
     const typedPaymentData = paymentData as MercadoPagoCreatePaymentResponse;
+    await recordPendingPayment({
+      mp_payment_id: String(typedPaymentData.id),
+      email: emailCliente,
+      nome: nomeCliente,
+      telefone: telefoneLimpo,
+      payment_method: "pix",
+      total_amount: totalAmount,
+      items: cartItems.map((item) => ({ id: item.id, quantity: item.quantity })),
+      coupon_code: couponCode || null,
+      status: typedPaymentData.status ?? "pending",
+    });
 
     return setPaymentOwner(NextResponse.json({
       id: typedPaymentData.id,

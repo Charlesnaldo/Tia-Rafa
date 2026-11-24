@@ -38,7 +38,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
           className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-blue-700"
         >
           <Download size={15} />
-          Baixar gratis
+          Baixar grátis
         </a>
       </div>
     </article>

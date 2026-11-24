@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Loader2,
   Sparkles,
@@ -12,7 +12,9 @@ import {
   ArrowRight,
   CreditCard,
   QrCode,
-  Truck
+  Truck,
+  Tag,
+  X
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -23,6 +25,9 @@ import { useCart } from "@/context/CartContext";
 import { LastPaymentSessionData, PaymentPointOfInteraction } from "@/types/payment";
 import { useProductsCatalog } from "@/lib/products/useProductsCatalog";
 import { EMPTY_SHIPPING_ADDRESS, parseShippingAddress, type ShippingAddress } from "@/lib/shipping-address";
+import { analytics } from "@/lib/analytics";
+
+type AppliedCoupon = { code: string; discountCents: number; description: string | null };
 
 const inputClassName = "w-full px-6 py-4 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg";
 const labelClassName = "text-xs font-bold uppercase tracking-[0.3em] text-gray-400 block";
@@ -44,6 +49,52 @@ export default function CheckoutClient() {
   const [serverRequiresAddress, setServerRequiresAddress] = useState(false);
   const [endereco, setEndereco] = useState<ShippingAddress>(EMPTY_SHIPPING_ADDRESS);
   const needsAddress = serverRequiresAddress || cartItems.some((item) => productsById[item.id]?.tipo === "fisico");
+
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<AppliedCoupon | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const discountCents = coupon?.discountCents ?? 0;
+  const totalCents = Math.max(cartTotal - discountCents, 0);
+
+  // The discount depends on the cart: changing it drops the coupon so the preview never lies.
+  const cartSignature = cartItems.map((item) => `${item.id}:${item.quantity}`).join(",");
+  const lastSignature = useRef(cartSignature);
+  useEffect(() => {
+    if (lastSignature.current === cartSignature) return;
+    lastSignature.current = cartSignature;
+    setCoupon(null);
+  }, [cartSignature]);
+
+  const checkoutTracked = useRef(false);
+  useEffect(() => {
+    if (checkoutTracked.current || cartItems.length === 0) return;
+    checkoutTracked.current = true;
+    analytics.beginCheckout(cartItems);
+  }, [cartItems]);
+
+  const applyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setCouponLoading(true);
+    setCouponError(null);
+    try {
+      const response = await fetch("/api/coupons/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, cartItems: cartItems.map(({ id, quantity }) => ({ id, quantity })) }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Cupom invalido.");
+      setCoupon({ code: data.code, discountCents: data.discountCents, description: data.description });
+      setCouponInput("");
+    } catch (error) {
+      setCoupon(null);
+      setCouponError(error instanceof Error ? error.message : "Cupom invalido.");
+    } finally {
+      setCouponLoading(false);
+    }
+  };
 
   const updateEndereco = (field: keyof ShippingAddress, value: string) =>
     setEndereco((prev) => ({ ...prev, [field]: value }));
@@ -119,13 +170,20 @@ export default function CheckoutClient() {
           telefoneCliente: telefone,
           paymentMethod,
           ...(needsAddress ? { enderecoEntrega: endereco } : {}),
+          ...(coupon ? { couponCode: coupon.code } : {}),
         }),
       });
       const paymentData = await processResponse.json();
       if (!processResponse.ok) {
         if (paymentData.code === "ADDRESS_REQUIRED") setServerRequiresAddress(true);
+        if (paymentData.code === "COUPON_INVALID") {
+          setCoupon(null);
+          setCouponError(paymentData.error);
+        }
         throw new Error(paymentData.error || "Erro ao processar pagamento.");
       }
+
+      analytics.addPaymentInfo(cartItems, paymentMethod, coupon?.code);
 
       if (paymentMethod === "credit_card") {
         if (!paymentData.checkout_url) {
@@ -272,6 +330,40 @@ export default function CheckoutClient() {
                   <span>Subtotal</span>
                   <span>{formatCurrency(cartTotal)}</span>
                 </div>
+                {coupon ? (
+                  <div className="flex items-center justify-between rounded-xl bg-purple-50 px-3 py-2 text-sm text-purple-700">
+                    <span className="flex items-center gap-2 font-bold">
+                      <Tag size={14} /> Cupom {coupon.code}
+                      <button type="button" onClick={() => setCoupon(null)} aria-label="Remover cupom" className="rounded-full p-0.5 hover:bg-purple-100">
+                        <X size={12} />
+                      </button>
+                    </span>
+                    <span className="font-black">- {formatCurrency(coupon.discountCents)}</span>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={couponInput}
+                        onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void applyCoupon(); } }}
+                        placeholder="Cupom de desconto"
+                        aria-label="Cupom de desconto"
+                        className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold uppercase text-gray-700 outline-none focus:border-purple-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void applyCoupon()}
+                        disabled={couponLoading || !couponInput.trim()}
+                        className="rounded-xl bg-purple-600 px-4 py-2 text-xs font-black uppercase tracking-wider text-white transition hover:bg-purple-700 disabled:bg-gray-200 disabled:text-gray-400"
+                      >
+                        {couponLoading ? <Loader2 size={14} className="animate-spin" /> : "Aplicar"}
+                      </button>
+                    </div>
+                    {couponError ? <p className="text-xs font-bold text-red-500" role="alert">{couponError}</p> : null}
+                  </div>
+                )}
                 {needsAddress ? (
                   <div className="flex items-center gap-2 bg-orange-50 px-3 py-2 rounded-xl text-orange-600 text-sm">
                     <Truck size={14} />
@@ -288,7 +380,7 @@ export default function CheckoutClient() {
                 )}
                 <div className="flex justify-between items-center pt-4">
                   <span className="text-lg font-black text-gray-800 uppercase tracking-tighter">Total</span>
-                  <span className="text-3xl font-black text-blue-500 tracking-tight">{formatCurrency(cartTotal)}</span>
+                  <span className="text-3xl font-black text-blue-500 tracking-tight">{formatCurrency(totalCents)}</span>
                 </div>
               </div>
             </div>

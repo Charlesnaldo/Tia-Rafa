@@ -273,6 +273,11 @@ export default function CatalogClient({ products: produtosArray, search = "" }: 
                       aria-label={`Abrir detalhes de ${produto.nome}`}
                     >
                       <div className="flex flex-col flex-1 px-0.5">
+                        {produto.inclui?.length ? (
+                          <span className="mb-2 self-start rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-purple-700">
+                            Kit com {produto.inclui.length} materiais
+                          </span>
+                        ) : null}
                         <h3 className="mb-3 min-h-11 text-[15px] font-black leading-tight text-gray-800 line-clamp-2 transition-colors group-hover:text-purple-700">
                           {produto.nome}
                         </h3>

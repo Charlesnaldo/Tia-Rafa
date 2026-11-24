@@ -4,11 +4,13 @@ import { useCart } from "@/context/CartContext";
 import FallbackImage from "@/components/FallbackImage";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
+import CartSuggestions, { useRestoreCartFromUrl } from "@/components/CartSuggestions";
 import { Trash2, PlusCircle, MinusCircle, XCircle, ShoppingBag, ArrowRight, ArrowLeft } from "lucide-react";
 
 export default function CartPage() {
   const { cartItems, removeFromCart, updateQuantity, clearCart, cartTotal, itemCount } = useCart();
   const getItemImage = (item: { imagem?: string }) => item.imagem || "/embreve.jpg";
+  useRestoreCartFromUrl();
 
   if (itemCount === 0) {
     return (
@@ -26,7 +28,7 @@ export default function CartPage() {
           </div>
           <h1 className="mb-2 text-3xl font-black text-gray-900">Seu carrinho está vazio</h1>
           <p className="mb-8 max-w-md text-gray-600">
-            Adicione seus materiais para continuar. Assim que finalizar, voce recebe tudo por e-mail.
+            Adicione seus materiais para continuar. Assim que finalizar, você recebe tudo por e-mail.
           </p>
           <Link
             href="/#catalogo"
@@ -152,6 +154,7 @@ export default function CartPage() {
             </div>
           </div>
         </div>
+        <CartSuggestions />
       </div>
     </div>
   );

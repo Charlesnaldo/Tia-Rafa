@@ -3,6 +3,7 @@ import { unstable_cache } from "next/cache";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { buildProductImageProxyUrl, resolveProductImageUrls, resolveStorageImageUrl } from "@/lib/supabase/storage-images";
 import { buildCatalogWithOverrides, type PublishedProduct } from "./catalog-model";
+import { loadKitComponents } from "./kits";
 
 async function loadPublishedProducts(): Promise<PublishedProduct[]> {
   const configured = Boolean(
@@ -33,6 +34,15 @@ async function loadPublishedProducts(): Promise<PublishedProduct[]> {
     .select("id, nome, descricao, preco_cents, tipo, imagem_url, is_active")
     .eq("is_active", true);
   if (error) throw error;
+  const kits = await loadKitComponents(supabase);
+  const componentIds = [...new Set([...kits.values()].flat())];
+  // Component names come from all products: a kit may include materials sold only inside it.
+  const names = new Map<string, string>();
+  if (componentIds.length > 0) {
+    const { data: components, error: componentsError } = await supabase.from("products").select("id, nome").in("id", componentIds);
+    if (componentsError) throw componentsError;
+    for (const component of components || []) names.set(component.id, component.nome || component.id);
+  }
   return Promise.all((data || []).map(async row => {
     const images = await resolveProductImageUrls(supabase, row.id, row.imagem_url ?? null);
     const primary = images[0] || buildProductImageProxyUrl(row.imagem_url ?? null) ||
@@ -42,6 +52,7 @@ async function loadPublishedProducts(): Promise<PublishedProduct[]> {
       preco_cents: Number.isFinite(row.preco_cents) ? Number(row.preco_cents) : 0,
       tipo: row.tipo === "fisico" ? "fisico" as const : "digital" as const,
       imagem_url: primary, imagem_urls: images,
+      inclui: (kits.get(row.id) || []).map((id) => ({ id, nome: names.get(id) || id })),
     };
   }));
 }

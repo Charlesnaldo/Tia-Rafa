@@ -142,6 +142,22 @@ export default function ProdutoDetalhes({
             {produto.descricao || "Desenvolvido para facilitar o aprendizado de forma lúdica e eficaz, ideal para reforço escolar ou sala de aula."}
           </p>
 
+          {produto.inclui?.length ? (
+            <div className="mb-8 rounded-2xl border border-purple-100 bg-purple-50/60 p-5">
+              <p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-purple-600">
+                Este kit inclui {produto.inclui.length} materiais
+              </p>
+              <ul className="space-y-2">
+                {produto.inclui.map((item) => (
+                  <li key={item.id} className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    <CheckCircle2 size={16} className="shrink-0 text-purple-500" />
+                    {item.nome}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-2 gap-4 mb-10">
             {produto.tipo === 'digital' ? (
               <>

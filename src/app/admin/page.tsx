@@ -2,395 +2,200 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { LogOut, Mail, Phone, RefreshCcw, ShoppingCart, Users } from "lucide-react";
-import { formatCurrency, formatPaymentStatus } from "@/lib/utils";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { formatShippingAddress, parseShippingAddress } from "@/lib/shipping-address";
-
-// The webhook stores the Mercado Pago payment in orders.metadata; the address is a JSON string inside it.
-function readShippingAddress(value: unknown) {
-  if (typeof value !== "string" || !value) return null;
-  try {
-    const parsed = parseShippingAddress(JSON.parse(value));
-    return "address" in parsed ? formatShippingAddress(parsed.address) : null;
-  } catch {
-    return null;
-  }
-}
-
-export const dynamic = "force-dynamic";
-
-type CustomerRow = {
-  id: string;
-  nome: string;
-  email: string;
-  telefone: string | null;
-  created_at: string;
-};
-
-type OrderItemRow = {
-  product_id: string;
-  product_name: string;
-  quantity: number;
-  unit_price_cents: number;
-  line_total_cents: number;
-};
+import { RefreshCcw } from "lucide-react";
+import { useAdminSupabase } from "@/lib/admin/useAdminSupabase";
+import { isMissingSchema } from "@/lib/supabase/missing-schema";
+import { formatCurrency } from "@/lib/utils";
+import { formatDateTime } from "@/lib/admin/csv";
+import RevenueChart, { type RevenuePoint } from "@/components/admin/RevenueChart";
+import { Badge, Button, Card, EmptyState, PageHeader, StatTile } from "@/components/admin/ui";
 
 type OrderRow = {
   id: string;
-  mp_payment_id: string;
-  status: string;
-  payment_method: string;
   total_amount: number;
   created_at: string;
-  customers: {
-    nome: string;
-    email: string;
-    telefone: string | null;
-  }[];
-  order_items: OrderItemRow[];
-  shipping_address: string | null;
+  payment_method: string;
+  customers: { nome: string } | { nome: string }[] | null;
+  order_items: { product_id: string; product_name: string; quantity: number; line_total_cents: number }[];
 };
 
-export default function AdminPage() {
-  const router = useRouter();
+type Extras = {
+  pixCreated: number | null;
+  pixPaid: number | null;
+  leads: number | null;
+  toShip: number | null;
+};
 
-  const [loading, setLoading] = useState(true);
-  const [sessionReady, setSessionReady] = useState(false);
+const PERIODS = [7, 30, 90] as const;
+const DAY = 24 * 60 * 60 * 1000;
+const dayKey = (date: Date) => date.toLocaleDateString("sv-SE"); // YYYY-MM-DD in local time
+
+const customerName = (order: OrderRow) =>
+  (Array.isArray(order.customers) ? order.customers[0]?.nome : order.customers?.nome) || "Cliente";
+
+export default function AdminDashboard() {
+  const { supabase, ready, error: sessionError } = useAdminSupabase();
+  const [period, setPeriod] = useState<(typeof PERIODS)[number]>(30);
   const [orders, setOrders] = useState<OrderRow[]>([]);
-  const [customers, setCustomers] = useState<CustomerRow[]>([]);
-  const [totalSoldItems, setTotalSoldItems] = useState(0);
+  const [extras, setExtras] = useState<Extras>({ pixCreated: null, pixPaid: null, leads: null, toShip: null });
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Time of the last load: charts are bucketed against it, never against render time.
+  const [loadedAt, setLoadedAt] = useState<number | null>(null);
 
-  const loadData = useCallback(async () => {
-    setError(null);
+  const load = useCallback(async () => {
+    if (!supabase) return;
     setLoading(true);
+    setError(null);
+    const now = Date.now();
+    const since = new Date(now - period * DAY).toISOString();
+    // Optional counts return null before the migration instead of failing the page.
+    const optionalCount = async (query: PromiseLike<{ count: number | null; error: { code?: string; message?: string } | null }>) => {
+      const { count, error: countError } = await query;
+      return countError ? (isMissingSchema(countError) ? null : 0) : count ?? 0;
+    };
 
-    let supabase;
-    try {
-      supabase = getSupabaseBrowserClient();
-    } catch {
-      setError("Supabase nao configurado. Verifique as variaveis NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.");
-      setLoading(false);
-      return;
-    }
-
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-
-    if (sessionError || !session) {
-      router.push("/admin/login");
-      return;
-    }
-
-    setSessionReady(true);
-
-    const [ordersResult, customersResult, orderItemsResult] = await Promise.all([
-      supabase
-        .from("orders")
-        .select("id, mp_payment_id, status, payment_method, total_amount, created_at, endereco_entrega:metadata->metadata->>endereco_entrega, customers(nome, email, telefone), order_items(product_id, product_name, quantity, unit_price_cents, line_total_cents)")
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase
-        .from("customers")
-        .select("id, nome, email, telefone, created_at")
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase
-        .from("order_items")
-        .select("product_id, quantity"),
+    const [ordersResult, pixCreated, pixPaid, leads, toShip] = await Promise.all([
+      supabase.from("orders")
+        .select("id, total_amount, created_at, payment_method, customers(nome), order_items(product_id, product_name, quantity, line_total_cents)")
+        .eq("status", "approved").gte("created_at", since).order("created_at", { ascending: false }).limit(2000),
+      optionalCount(supabase.from("pending_payments").select("*", { count: "exact", head: true }).gte("created_at", since)),
+      optionalCount(supabase.from("pending_payments").select("*", { count: "exact", head: true }).gte("created_at", since).eq("status", "approved")),
+      optionalCount(supabase.from("leads").select("*", { count: "exact", head: true }).gte("created_at", since)),
+      optionalCount(supabase.from("orders").select("*", { count: "exact", head: true }).eq("fulfillment_status", "pendente")),
     ]);
-
-    if (ordersResult.error) {
-      setError(ordersResult.error.message);
-    } else {
-      const normalizedOrders: OrderRow[] = (ordersResult.data || []).map((order) => {
-        const rawCustomer = (order as { customers?: unknown }).customers;
-        const customers = Array.isArray(rawCustomer)
-          ? rawCustomer
-          : rawCustomer
-            ? [rawCustomer]
-            : [];
-        const rawOrderItems = (order as { order_items?: unknown }).order_items;
-        const orderItems = Array.isArray(rawOrderItems)
-          ? rawOrderItems
-          : rawOrderItems
-            ? [rawOrderItems]
-            : [];
-
-        return {
-          id: String(order.id),
-          mp_payment_id: String(order.mp_payment_id),
-          status: String(order.status),
-          payment_method: String(order.payment_method),
-          total_amount: Number(order.total_amount || 0),
-          created_at: String(order.created_at),
-          shipping_address: readShippingAddress((order as { endereco_entrega?: unknown }).endereco_entrega),
-          customers: customers.map((customer) => ({
-            nome: String((customer as { nome?: unknown }).nome || "Cliente"),
-            email: String((customer as { email?: unknown }).email || ""),
-            telefone: (customer as { telefone?: string | null }).telefone ?? null,
-          })),
-          order_items: orderItems.map((item) => {
-            const quantity = Number((item as { quantity?: unknown }).quantity || 0);
-            const unitPrice = Number((item as { unit_price_cents?: unknown }).unit_price_cents || 0);
-            const lineTotal = Number((item as { line_total_cents?: unknown }).line_total_cents || 0);
-
-            return {
-              product_id: String((item as { product_id?: unknown }).product_id || ""),
-              product_name: String((item as { product_name?: unknown }).product_name || "Produto"),
-              quantity,
-              unit_price_cents: unitPrice,
-              line_total_cents: lineTotal || unitPrice * quantity,
-            };
-          }),
-        };
-      });
-
-      setOrders(normalizedOrders);
-    }
-
-    if (customersResult.error) {
-      setError(customersResult.error.message);
-    } else {
-      setCustomers(customersResult.data || []);
-    }
-
-    if (orderItemsResult.error) {
-      setError(orderItemsResult.error.message);
-    } else {
-      const totalQuantity = (orderItemsResult.data || []).reduce((sum, row) => {
-        return sum + Number(row.quantity || 0);
-      }, 0);
-      setTotalSoldItems(totalQuantity);
-    }
-
+    if (ordersResult.error) setError(ordersResult.error.message);
+    setOrders((ordersResult.data as OrderRow[] | null) ?? []);
+    setExtras({ pixCreated, pixPaid, leads, toShip });
+    setLoadedAt(now);
     setLoading(false);
-  }, [router]);
+  }, [supabase, period]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      void loadData();
-    }, 0);
+    const timer = setTimeout(() => void load(), 0);
     return () => clearTimeout(timer);
-  }, [loadData]);
+  }, [load]);
 
-  const handleLogout = async () => {
-    let supabase;
-    try {
-      supabase = getSupabaseBrowserClient();
-    } catch {
-      router.push("/admin/login");
-      return;
+  const stats = useMemo(() => {
+    const revenueCents = orders.reduce((sum, order) => sum + Math.round(Number(order.total_amount || 0) * 100), 0);
+    const days: RevenuePoint[] = [];
+    for (let i = period - 1; loadedAt !== null && i >= 0; i--) {
+      const date = new Date(loadedAt - i * DAY);
+      days.push({ key: dayKey(date), label: date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), cents: 0, orders: 0 });
     }
-
-    await supabase.auth.signOut();
-    await fetch("/api/admin/session", { method: "DELETE" }).catch(() => null);
-    router.push("/admin/login");
-  };
-
-  const approvedRevenueInCents = orders
-    .filter((order) => order.status === "approved")
-    .reduce((sum, order) => sum + Math.round(Number(order.total_amount || 0) * 100), 0);
-
-  const salesChart = useMemo(() => {
-    const now = new Date();
-    const days: { key: string; label: string; valueInCents: number }[] = [];
-
-    for (let i = 6; i >= 0; i--) {
-      const day = new Date(now);
-      day.setDate(now.getDate() - i);
-      const key = day.toISOString().slice(0, 10);
-      const label = day.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-      days.push({ key, label, valueInCents: 0 });
-    }
-
+    const byDay = new Map(days.map((point) => [point.key, point]));
+    const byProduct = new Map<string, { nome: string; cents: number; quantity: number }>();
     for (const order of orders) {
-      if (order.status !== "approved") continue;
-      const key = order.created_at.slice(0, 10);
-      const match = days.find((day) => day.key === key);
-      if (!match) continue;
-      match.valueInCents += Math.round(Number(order.total_amount || 0) * 100);
+      const point = byDay.get(dayKey(new Date(order.created_at)));
+      if (point) {
+        point.cents += Math.round(Number(order.total_amount || 0) * 100);
+        point.orders += 1;
+      }
+      for (const item of order.order_items || []) {
+        const entry = byProduct.get(item.product_id) || { nome: item.product_name, cents: 0, quantity: 0 };
+        entry.cents += item.line_total_cents;
+        entry.quantity += item.quantity;
+        byProduct.set(item.product_id, entry);
+      }
     }
+    const topProducts = [...byProduct.values()].sort((a, b) => b.cents - a.cents).slice(0, 5);
+    return {
+      revenueCents,
+      orderCount: orders.length,
+      averageCents: orders.length ? Math.round(revenueCents / orders.length) : 0,
+      days,
+      topProducts,
+      topMax: Math.max(...topProducts.map((product) => product.cents), 1),
+    };
+  }, [orders, period, loadedAt]);
 
-    const maxValue = Math.max(...days.map((day) => day.valueInCents), 1);
-    return { days, maxValue };
-  }, [orders]);
+  if (!ready) return <p className="text-sm text-slate-500">Validando login...</p>;
+  if (sessionError) return <p className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{sessionError}</p>;
 
-  if (!sessionReady && loading) {
-    return (
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_40%,#f5f3ff_100%)] px-4 py-8">
-        <div className="mx-auto max-w-7xl rounded-[2rem] border border-white bg-white/90 p-6 text-sm font-bold text-gray-500 shadow-[0_20px_70px_rgba(2,8,23,0.1)]">
-          Validando login...
-        </div>
-      </div>
-    );
-  }
+  const pixRate = extras.pixCreated ? Math.round(((extras.pixPaid ?? 0) / extras.pixCreated) * 100) : null;
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_40%,#f5f3ff_100%)] px-4 py-8">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <div className="rounded-[2rem] border border-white bg-white/90 p-6 shadow-[0_20px_70px_rgba(2,8,23,0.1)]">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-3xl font-black text-gray-900">Area de Gerenciamento</h1>
-              <p className="text-sm text-gray-500">Vendas, clientes e materiais conectados ao Supabase.</p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Link
-                href="/admin/materiais"
-                className="rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.15em] text-gray-600 transition hover:border-blue-300 hover:text-blue-700"
-              >
-                Produtos
-              </Link>
-              <button
-                onClick={() => void loadData()}
-                className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.15em] text-gray-600 transition hover:border-blue-300 hover:text-blue-700"
-              >
-                <RefreshCcw size={14} />
-                Atualizar
-              </button>
-              <button
-                onClick={handleLogout}
-                className="inline-flex items-center gap-2 rounded-full bg-red-500 px-4 py-2 text-xs font-black uppercase tracking-[0.15em] text-white transition hover:bg-red-600"
-              >
-                <LogOut size={14} />
-                Sair
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {error ? <p className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-600">{error}</p> : null}
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <div className="rounded-2xl border border-white bg-white/90 p-5 shadow-[0_10px_35px_rgba(2,8,23,0.08)]">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-500">Pedidos</p>
-            <p className="mt-2 text-3xl font-black text-gray-900">{orders.length}</p>
-          </div>
-          <div className="rounded-2xl border border-white bg-white/90 p-5 shadow-[0_10px_35px_rgba(2,8,23,0.08)]">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-500">Receita aprovada</p>
-            <p className="mt-2 text-3xl font-black text-gray-900">{formatCurrency(approvedRevenueInCents)}</p>
-          </div>
-          <div className="rounded-2xl border border-white bg-white/90 p-5 shadow-[0_10px_35px_rgba(2,8,23,0.08)]">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-500">Clientes</p>
-            <p className="mt-2 text-3xl font-black text-gray-900">{customers.length}</p>
-          </div>
-          <div className="rounded-2xl border border-white bg-white/90 p-5 shadow-[0_10px_35px_rgba(2,8,23,0.08)]">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-pink-500">Itens vendidos</p>
-            <p className="mt-2 text-3xl font-black text-gray-900">{totalSoldItems}</p>
-          </div>
-        </div>
-
-        <section className="rounded-[2rem] border border-white bg-white/95 p-6 shadow-[0_20px_60px_rgba(2,8,23,0.09)]">
-          <h2 className="text-xl font-black text-gray-900">Grafico de vendas (7 dias)</h2>
-          <p className="mt-1 text-xs text-gray-500">Receita aprovada por dia.</p>
-          <div className="mt-5 flex items-end gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-4">
-            {salesChart.days.map((day) => (
-              <div key={day.key} className="flex min-w-0 flex-1 flex-col items-center gap-2">
-                <div className="flex h-40 w-full items-end rounded-xl bg-white p-1">
-                  <div
-                    className="w-full rounded-lg bg-gradient-to-t from-blue-500 to-cyan-400"
-                    style={{ height: `${Math.max(8, (day.valueInCents / salesChart.maxValue) * 100)}%` }}
-                    title={`${day.label}: ${formatCurrency(day.valueInCents)}`}
-                  />
-                </div>
-                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-gray-500">{day.label}</p>
-                <p className="text-[10px] font-bold text-gray-700">{formatCurrency(day.valueInCents)}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <section className="rounded-[2rem] border border-white bg-white/95 p-6 shadow-[0_20px_60px_rgba(2,8,23,0.09)]">
-            <div className="mb-4 flex items-center gap-2">
-              <ShoppingCart className="text-blue-600" size={18} />
-              <h2 className="text-xl font-black text-gray-900">Ultimas vendas</h2>
-            </div>
-            <div className="space-y-3">
-              {loading && !sessionReady ? <p className="text-sm text-gray-500">Carregando...</p> : null}
-              {!loading && orders.length === 0 ? <p className="text-sm text-gray-500">Nenhuma venda registrada.</p> : null}
-              {orders.map((order) => (
-                <div key={order.id} className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-black text-gray-900">{order.customers[0]?.nome || "Cliente"}</p>
-                      <p className="text-xs text-gray-500">{order.customers[0]?.email || "E-mail nao informado"}</p>
-                    </div>
-                    <span className="rounded-full bg-blue-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-blue-700">
-                      {formatPaymentStatus(order.status)}
-                    </span>
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
-                    <span>MP: {order.mp_payment_id}</span>
-                    <span className="font-black text-gray-800">{formatCurrency(Math.round(Number(order.total_amount) * 100))}</span>
-                  </div>
-                  {order.shipping_address ? (
-                    <div className="mt-3 rounded-lg border border-orange-100 bg-orange-50 p-3">
-                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orange-500">Entregar em</p>
-                      <p className="mt-1 text-xs font-semibold text-gray-700">{order.shipping_address}</p>
-                    </div>
-                  ) : null}
-                  <div className="mt-4 rounded-lg border border-gray-100 bg-white p-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Itens comprados</p>
-                    {order.order_items.length > 0 ? (
-                      <div className="mt-2 space-y-2">
-                        {order.order_items.map((item, index) => (
-                          <div
-                            key={`${order.id}-${item.product_id}-${index}`}
-                            className="flex items-start justify-between gap-3 rounded-lg bg-gray-50 px-3 py-2"
-                          >
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-black text-gray-900">{item.product_name}</p>
-                              <p className="mt-0.5 text-[11px] font-semibold text-gray-500">
-                                {item.quantity} unidade{item.quantity === 1 ? "" : "s"} x {formatCurrency(item.unit_price_cents)}
-                              </p>
-                            </div>
-                            <span className="shrink-0 text-xs font-black text-gray-800">
-                              {formatCurrency(item.line_total_cents)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="mt-2 text-xs font-semibold text-gray-500">Itens nao registrados nesta venda.</p>
-                    )}
-                  </div>
-                </div>
+    <>
+      <PageHeader
+        title="Painel"
+        description="Vendas aprovadas e funil do período."
+        actions={
+          <>
+            <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1" role="group" aria-label="Período">
+              {PERIODS.map((days) => (
+                <button key={days} type="button" onClick={() => setPeriod(days)} aria-pressed={period === days}
+                  className={`rounded-lg px-3 py-1 text-sm font-semibold ${period === days ? "bg-violet-600 text-white" : "text-slate-600 hover:bg-slate-100"}`}>
+                  {days} dias
+                </button>
               ))}
             </div>
-          </section>
+            <Button onClick={() => void load()} disabled={loading}><RefreshCcw size={14} className={loading ? "animate-spin" : ""} /> Atualizar</Button>
+          </>
+        }
+      />
+      {error ? <p className="mb-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p> : null}
 
-          <section className="rounded-[2rem] border border-white bg-white/95 p-6 shadow-[0_20px_60px_rgba(2,8,23,0.09)]">
-            <div className="mb-4 flex items-center gap-2">
-              <Users className="text-purple-600" size={18} />
-              <h2 className="text-xl font-black text-gray-900">Clientes recentes</h2>
-            </div>
-            <div className="space-y-3">
-              {loading && !sessionReady ? <p className="text-sm text-gray-500">Carregando...</p> : null}
-              {!loading && customers.length === 0 ? <p className="text-sm text-gray-500">Nenhum cliente salvo.</p> : null}
-              {customers.map((customer) => (
-                <div key={customer.id} className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                  <p className="text-sm font-black text-gray-900">{customer.nome}</p>
-                  <p className="mt-2 inline-flex items-center gap-2 text-xs text-gray-600">
-                    <Mail size={12} />
-                    {customer.email}
-                  </p>
-                  <p className="mt-1 inline-flex items-center gap-2 text-xs text-gray-600">
-                    <Phone size={12} />
-                    {customer.telefone || "Nao informado"}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
+      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <StatTile label="Receita" value={formatCurrency(stats.revenueCents)} hint={`últimos ${period} dias`} />
+        <StatTile label="Pedidos" value={String(stats.orderCount)} hint="aprovados" />
+        <StatTile label="Ticket médio" value={formatCurrency(stats.averageCents)} hint="por pedido" />
+        <StatTile
+          label="Pix pagos"
+          value={pixRate === null ? "—" : `${pixRate}%`}
+          hint={extras.pixCreated === null ? "rode a migração" : `${extras.pixPaid ?? 0} de ${extras.pixCreated} gerados`}
+        />
+        <StatTile label="Leads" value={extras.leads === null ? "—" : String(extras.leads)} hint={extras.leads === null ? "rode a migração" : "materiais grátis"} />
+        <StatTile label="A enviar" value={extras.toShip === null ? "—" : String(extras.toShip)} hint="pedidos físicos" />
       </div>
-    </div>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <Card title="Receita aprovada por dia" className="xl:col-span-2">
+          {stats.orderCount === 0 && !loading ? <EmptyState>Nenhuma venda aprovada neste período.</EmptyState> : <RevenueChart data={stats.days} />}
+        </Card>
+
+        <Card title="Materiais que mais venderam">
+          {stats.topProducts.length === 0 ? (
+            <EmptyState>Sem vendas no período.</EmptyState>
+          ) : (
+            <ul className="space-y-4">
+              {stats.topProducts.map((product) => (
+                <li key={product.nome}>
+                  <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
+                    <span className="truncate font-semibold text-slate-800">{product.nome}</span>
+                    <span className="shrink-0 tabular-nums text-slate-700">{formatCurrency(product.cents)}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-slate-100">
+                    <div className="h-2 rounded-full bg-[#2a78d6]" style={{ width: `${Math.max((product.cents / stats.topMax) * 100, 2)}%` }} />
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">{product.quantity} {product.quantity === 1 ? "unidade" : "unidades"}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
+
+      <Card title="Últimos pedidos" className="mt-6" actions={<Link href="/admin/pedidos" className="text-sm font-semibold text-violet-700 hover:underline">Ver todos</Link>}>
+        {orders.length === 0 ? (
+          <EmptyState>Nenhum pedido aprovado ainda.</EmptyState>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {orders.slice(0, 6).map((order) => (
+              <li key={order.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+                <div className="min-w-0">
+                  <p className="font-semibold text-slate-900">{customerName(order)}</p>
+                  <p className="truncate text-xs text-slate-500">{(order.order_items || []).map((item) => item.product_name).join(", ") || "Itens não registrados"}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge tone={order.payment_method === "pix" ? "green" : "blue"}>{order.payment_method === "pix" ? "Pix" : "Cartão"}</Badge>
+                  <span className="text-xs text-slate-500">{formatDateTime(order.created_at)}</span>
+                  <span className="font-bold tabular-nums">{formatCurrency(Math.round(Number(order.total_amount) * 100))}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </>
   );
 }

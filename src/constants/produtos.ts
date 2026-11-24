@@ -10,6 +10,7 @@ export type Produto = {
   downloadUrl?: string;
   arquivoLocal?: string;
   tags?: string[];
+  inclui?: { id: string; nome: string }[];
   estrelas?: number;
   depoimento?: {
     autor: string;

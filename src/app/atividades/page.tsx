@@ -1,25 +1,9 @@
 import React from "react";
-import ActivityCard from "@/components/ActivityCard";
+import FreeLibrary from "@/components/FreeLibrary";
+import { FREE_MATERIALS } from "@/constants/free-materials";
 
 const AtividadesPage: React.FC = () => {
-  const activities = [
-    {
-      id: 1,
-      title: "Alfabetização Inicial - Nível 1",
-      description: "Folhas práticas para apresentar vogais, consoantes e primeiros encontros de letras.",
-      downloadLink: "/materiais/alfabetiza%C3%A7%C3%A3o.pdf",
-      image: "/img/boasvindas2.png",
-      category: "Alfabetização",
-    },
-    {
-      id: 2,
-      title: "Boas-vindas na Educação Infantil",
-      description: "Material lúdico para acolher a turma no início do ano com atividades de integração.",
-      downloadLink: "/materiais/BoasVindas.pdf",
-      image: "/img/boasvindas2.png",
-      category: "Educação Infantil",
-    },
-  ];
+  const activities = FREE_MATERIALS;
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_45%,#fdf4ff_100%)] px-4 py-10 lg:py-89">
@@ -35,7 +19,7 @@ const AtividadesPage: React.FC = () => {
             Atividades prontas para baixar e aplicar com sua turma
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-gray-600 md:text-base">
-            Materiais organizados para facilitar seu planejamento diário. Escolha a atividade, clique em baixar e use em sala de aula.
+            Materiais organizados para facilitar seu planejamento diário. Informe seu e-mail, baixe e use em sala de aula.
           </p>
 
           <div className="mt-7 grid grid-cols-2 gap-3 md:max-w-xl md:grid-cols-3">
@@ -54,18 +38,7 @@ const AtividadesPage: React.FC = () => {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
-          {activities.map((activity) => (
-            <ActivityCard
-              key={activity.id}
-              title={activity.title}
-              description={activity.description}
-              downloadLink={activity.downloadLink}
-              image={activity.image}
-              category={activity.category}
-            />
-          ))}
-        </section>
+        <FreeLibrary materials={activities} />
       </div>
     </div>
   );

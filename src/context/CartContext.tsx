@@ -1,5 +1,6 @@
 "use client";
 
+import { analytics } from '@/lib/analytics';
 import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback, useRef, useSyncExternalStore } from 'react';
 
 export type CartItem = {
@@ -73,6 +74,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         return [...prevItems, { ...product, quantity }];
       }
     });
+    analytics.addToCart({ id: product.id, nome: product.nome, preco: product.preco, quantity });
     const qtyLabel = quantity > 1 ? ` (${quantity}x)` : '';
     showToast(`${product.nome}${qtyLabel} adicionado ao carrinho`);
   }, [showToast]);

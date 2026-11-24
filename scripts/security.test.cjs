@@ -30,6 +30,29 @@ function load(relative, mocks = {}) {
   return read(path.resolve(relative));
 }
 
+// Supabase stand-in: every filter chains, awaiting resolves to the table's rows.
+// Tables set to an error object simulate a missing migration or a failure.
+function fakeSupabase(tables = {}, extra = {}) {
+  const inserts = [];
+  const query = (table) => {
+    const result = () => {
+      const value = tables[table];
+      if (value && value.error) return { data: null, error: value.error };
+      return { data: value ?? [], error: null };
+    };
+    const builder = new Proxy({}, {
+      get(_target, prop) {
+        if (prop === "then") return (resolve, reject) => Promise.resolve(result()).then(resolve, reject);
+        if (prop === "maybeSingle" || prop === "single") return async () => ({ data: result().data?.[0] ?? null, error: result().error });
+        if (prop === "insert" || prop === "upsert") return (row) => { inserts.push({ table, row }); return builder; };
+        return () => builder;
+      },
+    });
+    return builder;
+  };
+  return { from: query, rpc: async () => ({ data: true, error: null }), inserts, ...extra };
+}
+
 function signedWebhook({ id = "123456", timestamp = String(Math.floor(Date.now() / 1000)), requestId = "request-123", secret = "test-signing-key" } = {}) {
   const hash = createHmac("sha256", secret).update(`id:${id};request-id:${requestId};ts:${timestamp};`).digest("hex");
   return new Request(`https://example.com/api/webhook/mercadopago?type=payment&data.id=${id}`, {
@@ -113,7 +136,7 @@ test("Pix and card creation both bind payment metadata to the browser without le
       : { id: "123", status: "pending", payment_method_id: "pix" });
   });
   const { POST } = load("src/app/api/process_payment/route.ts", {
-    "@/lib/supabase/admin": { getSupabaseAdminClient: () => ({ from: () => ({ select: () => ({ in: () => ({ eq: async () => ({ data: [{ id: "product", nome: "Produto", preco_cents: 1000, tipo: "digital" }] }) }) }) }) }) },
+    "@/lib/supabase/admin": { getSupabaseAdminClient: () => fakeSupabase({ products: [{ id: "product", nome: "Produto", preco_cents: 1000, tipo: "digital" }], kit_items: { error: { code: "PGRST205" } } }) },
   });
   for (const paymentMethod of ["pix", "credit_card"]) {
     const response = await POST(new NextRequest("https://example.com/api/process_payment", {
@@ -176,7 +199,7 @@ test("public catalog excludes paid material paths", async () => {
   const { GET } = load("src/app/api/products/route.ts", {
     "server-only": {},
     "next/cache": { unstable_cache: (fn) => fn },
-    "@/lib/supabase/admin": { getSupabaseAdminClient: () => ({ from: () => ({ select: () => ({ eq: async () => ({ data: [product] }) }) }) }) },
+    "@/lib/supabase/admin": { getSupabaseAdminClient: () => fakeSupabase({ products: [product] }) },
     "@/lib/supabase/storage-images": { resolveProductImageUrls: async () => [], buildProductImageProxyUrl: () => null, resolveStorageImageUrl: async () => null },
   });
   const body = await (await GET()).json();
@@ -230,7 +253,7 @@ test("physical items require a valid shipping address, which is stored in paymen
     return Response.json({ id: "123", status: "pending", payment_method_id: "pix" });
   });
   const { POST } = load("src/app/api/process_payment/route.ts", {
-    "@/lib/supabase/admin": { getSupabaseAdminClient: () => ({ from: () => ({ select: () => ({ in: () => ({ eq: async () => ({ data: [{ id: "kit", nome: "Kit", preco_cents: 5000, tipo: "fisico" }] }) }) }) }) }) },
+    "@/lib/supabase/admin": { getSupabaseAdminClient: () => fakeSupabase({ products: [{ id: "kit", nome: "Kit", preco_cents: 5000, tipo: "fisico" }] }) },
   });
   const pay = (extra) => POST(new NextRequest("https://example.com/api/process_payment", {
     method: "POST", headers: { "content-type": "application/json" },
@@ -249,4 +272,92 @@ test("physical items require a valid shipping address, which is stored in paymen
   const metadata = captures.at(-1).metadata;
   assert.deepEqual(JSON.parse(metadata.endereco_entrega), { cep: "60000000", rua: "Rua A", numero: "10", complemento: "Apto 2", bairro: "Centro", cidade: "Fortaleza", uf: "CE" });
   assert.deepEqual(JSON.parse(metadata.cart_items), [{ id: "kit", quantity: 2 }]);
+});
+
+test("coupons: percent, fixed, minimums, expiry and limits never produce a zero or negative total", () => {
+  const { computeCouponDiscount } = load("src/lib/coupons.ts");
+  const base = { code: "LEVE3", description: null, percent_off: 20, amount_off_cents: null, min_items: 1, min_subtotal_cents: 0, max_uses: null, uses: 0, expires_at: null, is_active: true };
+  assert.deepEqual(computeCouponDiscount(base, 1000, 1), { ok: true, code: "LEVE3", discountCents: 200, description: null });
+  assert.equal(computeCouponDiscount({ ...base, percent_off: null, amount_off_cents: 5000 }, 1000, 1).discountCents, 999);
+  assert.equal(computeCouponDiscount({ ...base, min_items: 3 }, 1000, 2).ok, false);
+  assert.equal(computeCouponDiscount({ ...base, min_subtotal_cents: 2000 }, 1000, 5).ok, false);
+  assert.equal(computeCouponDiscount({ ...base, max_uses: 5, uses: 5 }, 1000, 1).ok, false);
+  assert.equal(computeCouponDiscount({ ...base, expires_at: "2020-01-01T00:00:00Z" }, 1000, 1).ok, false);
+  assert.equal(computeCouponDiscount({ ...base, is_active: false }, 1000, 1).ok, false);
+  assert.equal(computeCouponDiscount(null, 1000, 1).ok, false);
+});
+
+test("kits expand into their components without duplicates", () => {
+  const { expandKits } = load("src/lib/products/kits.ts", { "@/lib/supabase/missing-schema": load("src/lib/supabase/missing-schema.ts") });
+  const kits = new Map([["kit-folclore", ["saci", "curupira"]]]);
+  assert.deepEqual(expandKits(["kit-folclore", "saci", "abayomi"], kits), ["saci", "curupira", "abayomi"]);
+});
+
+test("payment applies coupons server-side and records the Pix for the funnel", async (t) => {
+  const previous = process.env.MP_ACCESS_TOKEN;
+  process.env.MP_ACCESS_TOKEN = "test";
+  t.after(() => { if (previous === undefined) delete process.env.MP_ACCESS_TOKEN; else process.env.MP_ACCESS_TOKEN = previous; });
+  const captures = [];
+  t.mock.method(global, "fetch", async (url, options) => {
+    captures.push(JSON.parse(options.body));
+    return Response.json({ id: "555", status: "pending", payment_method_id: "pix" });
+  });
+  const db = fakeSupabase({
+    products: [{ id: "p", nome: "Produto", preco_cents: 1000, tipo: "digital" }],
+    coupons: [{ code: "DEZ", description: null, percent_off: 10, amount_off_cents: null, min_items: 1, min_subtotal_cents: 0, max_uses: null, uses: 0, expires_at: null, is_active: true }],
+  });
+  const { POST } = load("src/app/api/process_payment/route.ts", { "@/lib/supabase/admin": { getSupabaseAdminClient: () => db } });
+  const pay = (couponCode) => POST(new NextRequest("https://example.com/api/process_payment", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ cartItems: [{ id: "p", quantity: 2 }], emailCliente: "buyer@example.com", nomeCliente: "Cliente", cpfCliente: "12345678901", telefoneCliente: "11999999999", paymentMethod: "pix", couponCode }),
+  }));
+
+  const ok = await pay("dez");
+  assert.equal(ok.status, 200);
+  assert.equal(captures.at(-1).transaction_amount, 18);
+  assert.equal(captures.at(-1).metadata.coupon_code, "DEZ");
+  assert.equal(captures.at(-1).metadata.discount_cents, 200);
+  const pending = db.inserts.find((insert) => insert.table === "pending_payments");
+  assert.equal(pending.row.mp_payment_id, "555");
+  assert.equal(pending.row.total_amount, 18);
+
+  db.inserts.length = 0;
+  const noCoupons = fakeSupabase({ products: [{ id: "p", nome: "Produto", preco_cents: 1000, tipo: "digital" }], coupons: [] });
+  const { POST: postWithoutCoupons } = load("src/app/api/process_payment/route.ts", { "@/lib/supabase/admin": { getSupabaseAdminClient: () => noCoupons } });
+  const invalid = await postWithoutCoupons(new NextRequest("https://example.com/api/process_payment", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ cartItems: [{ id: "p", quantity: 2 }], emailCliente: "buyer@example.com", nomeCliente: "Cliente", cpfCliente: "12345678901", telefoneCliente: "11999999999", paymentMethod: "pix", couponCode: "NAOEXISTE" }),
+  }));
+  assert.equal(invalid.status, 400);
+  assert.equal((await invalid.json()).code, "COUPON_INVALID");
+});
+
+test("daily cron and admin order routes refuse unauthenticated calls", async () => {
+  const previous = process.env.CRON_SECRET;
+  delete process.env.CRON_SECRET;
+  const cron = load("src/app/api/cron/daily/route.ts", {
+    "@/lib/products/catalog-server": { getCatalogProducts: async () => [] },
+  });
+  assert.equal((await cron.GET(new Request("https://example.com/api/cron/daily", { headers: { authorization: "Bearer " } }))).status, 401);
+  process.env.CRON_SECRET = "cron-test-secret";
+  assert.equal((await cron.GET(new Request("https://example.com/api/cron/daily", { headers: { authorization: "Bearer wrong" } }))).status, 401);
+  if (previous === undefined) delete process.env.CRON_SECRET; else process.env.CRON_SECRET = previous;
+
+  for (const route of ["src/app/api/admin/pedidos/[id]/envio/route.ts", "src/app/api/admin/pedidos/[id]/reenviar/route.ts"]) {
+    const { POST } = load(route);
+    const response = await POST(new NextRequest("https://example.com/api/admin/x", { method: "POST", body: "{}" }), { params: Promise.resolve({ id: "1" }) });
+    assert.equal(response.status, 401);
+  }
+});
+
+test("leads validate input before touching the database", async () => {
+  let touched = false;
+  const { POST } = load("src/app/api/leads/route.ts", {
+    "@/lib/rate-limit": { allowRequest: async () => { touched = true; return true; } },
+    "@/lib/supabase/admin": { getSupabaseAdminClient: () => { touched = true; return fakeSupabase(); } },
+  });
+  const post = (body) => POST(new Request("https://example.com/api/leads", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }));
+  assert.equal((await post({ nome: "Ana", email: "nao-e-email" })).status, 400);
+  assert.equal((await post({ email: "ana@example.com" })).status, 400);
+  assert.equal(touched, false);
 });

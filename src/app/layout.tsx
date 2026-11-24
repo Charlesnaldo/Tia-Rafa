@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import HeaderMobile from "@/components/HeaderMobile";
 import HeaderMobileTop from "@/components/HeaderMobileTop";
 import Footer from "@/components/Footer";
+import HideOnAdmin from "@/components/HideOnAdmin";
 import WhatsAppFloatingButton from "@/components/WhatsAppFloatingButton";
 import { CartProvider } from "@/context/CartContext";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
@@ -51,21 +52,25 @@ export default function RootLayout({
           </div>
 
           {/* LOGO MOBILE NO TOPO */}
-          <div className="block lg:hidden">
-            <HeaderMobileTop />
-          </div>
+          <HideOnAdmin>
+            <div className="block lg:hidden">
+              <HeaderMobileTop />
+            </div>
+          </HideOnAdmin>
 
           <main className="flex-grow">
             {children}
           </main>
 
-          {/* MENU MOBILE FLUTUANTE */}
-          <div className="block lg:hidden">
-            <HeaderMobile />
-          </div>
+          <HideOnAdmin>
+            {/* MENU MOBILE FLUTUANTE */}
+            <div className="block lg:hidden">
+              <HeaderMobile />
+            </div>
 
-          <Footer />
-          <WhatsAppFloatingButton />
+            <Footer />
+            <WhatsAppFloatingButton />
+          </HideOnAdmin>
         </CartProvider>
       </body>
     </html>

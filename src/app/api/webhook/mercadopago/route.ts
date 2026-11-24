@@ -1,38 +1,24 @@
 import { NextResponse } from "next/server";
 import { MercadoPagoConfig, Payment } from "mercadopago";
-import { Resend } from "resend";
-import { readFile } from "node:fs/promises";
-import { basename, join } from "node:path";
 import { persistApprovedSale } from "@/lib/supabase/sales";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import { isMissingSchema } from "@/lib/supabase/missing-schema";
 import { verifyMercadoPagoWebhook } from "@/lib/mercadopago-webhook";
 import { sendPaymentEmailOnce } from "@/lib/payment-email";
 import { formatShippingAddress, parseShippingAddress, type ShippingAddress } from "@/lib/shipping-address";
+import { expandKits, loadKitComponents } from "@/lib/products/kits";
+import {
+  buildDigitalDeliveryEmail, buildPhysicalConfirmationEmail, emailLayout, getPurchasedProducts, getResend,
+  resendFrom, type PurchasedProduct,
+} from "@/lib/email/delivery";
+import { escapeHtml } from "@/lib/html";
 import { contact } from "@/config/contact";
 
-// Force dynamic rendering - não gerar estaticamente
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 const client = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN || "",
 });
-
-// Lazy initialization - só cria quando realmente for usar
-let resendInstance: Resend | null = null;
-function getResend() {
-  if (!resendInstance && process.env.RESEND_API_KEY) {
-    resendInstance = new Resend(process.env.RESEND_API_KEY);
-  }
-  return resendInstance;
-}
-const resendFrom = process.env.RESEND_FROM || "Tia Rafa <onboarding@resend.dev>";
-
-type PurchasedProduct = {
-  id: string;
-  nome: string;
-  tipo: "digital" | "fisico";
-  materialPath?: string | null;
-};
 
 function parseMetadataList(value: unknown): string[] {
   if (typeof value !== "string" || !value) return [];
@@ -51,10 +37,8 @@ function parseCartItems(value: unknown): { id: string; quantity: number }[] {
     if (!Array.isArray(parsed)) return [];
     return parsed.filter((item): item is { id: string; quantity: number } => {
       if (!item || typeof item !== "object") return false;
-
       const id = (item as { id?: unknown }).id;
       const quantity = (item as { quantity?: unknown }).quantity;
-
       return typeof id === "string" && typeof quantity === "number" && Number.isInteger(quantity) && quantity > 0;
     });
   } catch {
@@ -72,117 +56,39 @@ function parseAddress(value: unknown): ShippingAddress | null {
   }
 }
 
-function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, (char) => (
-    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] as string
-  ));
-}
+// Growth features (coupons, funnel, fulfillment). Before the migration runs they are skipped;
+// any other failure throws so Mercado Pago retries the webhook.
+async function recordGrowthData(paymentId: string, couponCode: string | null, discountCents: number, hasPhysical: boolean) {
+  const supabase = getSupabaseAdminClient();
+  const tolerate = (error: { code?: string; message?: string } | null, what: string) => {
+    if (error && !isMissingSchema(error)) throw new Error(`Falha ao registrar ${what}.`);
+  };
 
-async function getDownloadLink(
-  request: Request,
-  produto: { materialPath?: string | null }
-) {
-  const origin = new URL(request.url).origin;
-  if (!produto.materialPath) return "";
-  if (produto.materialPath.startsWith("/")) {
-    return `${origin}${produto.materialPath}`;
+  const pending = await supabase.from("pending_payments")
+    .update({ status: "approved", paid_at: new Date().toISOString() })
+    .eq("mp_payment_id", paymentId);
+  tolerate(pending.error, "pagamento no funil");
+
+  const orderUpdate: Record<string, unknown> = {};
+  if (couponCode) Object.assign(orderUpdate, { coupon_code: couponCode, discount_cents: discountCents });
+  if (Object.keys(orderUpdate).length > 0) {
+    const { error } = await supabase.from("orders").update(orderUpdate).eq("mp_payment_id", paymentId);
+    tolerate(error, "cupom no pedido");
   }
-
-  try {
-    const supabase = getSupabaseAdminClient();
-    const signed = await supabase.storage
-      .from("materiais")
-      .createSignedUrl(produto.materialPath, 60 * 60 * 24 * 7);
-    return signed.data?.signedUrl || "";
-  } catch {
-    return "";
+  if (hasPhysical) {
+    // Only the first time: never move an order that was already shipped back to "pendente".
+    const { error } = await supabase.from("orders").update({ fulfillment_status: "pendente" })
+      .eq("mp_payment_id", paymentId).is("fulfillment_status", null);
+    tolerate(error, "status de envio");
   }
-}
-
-async function getPurchasedProducts(idsProdutos: string[]) {
-  const map = new Map<string, PurchasedProduct>();
-  if (idsProdutos.length === 0) return map;
-
-  try {
-    const supabase = getSupabaseAdminClient();
-    const { data, error } = await supabase
-      .from("products")
-      // No is_active filter: a paid product must be delivered even if it was deactivated after checkout.
-      .select("id, nome, tipo, material_path")
-      .in("id", idsProdutos);
-    if (error) throw error;
-
-    for (const row of data || []) {
-      if (!row?.id) continue;
-      map.set(row.id, {
-        id: row.id,
-        nome: row.nome || row.id,
-        tipo: row.tipo === "fisico" ? "fisico" : "digital",
-        materialPath: row.material_path ?? null,
-      });
-    }
-  } catch {
-    throw new Error("Falha ao consultar materiais comprados.");
-  }
-
-  return map;
-}
-
-async function getDigitalAttachment(produto: { id: string; materialPath?: string | null }) {
-  if (!produto.materialPath) {
-    return null;
-  }
-
-  if (produto.materialPath.startsWith("/")) {
-    const arquivoSemQuery = produto.materialPath.split("?")[0].split("#")[0];
-    const arquivoDecodificado = decodeURIComponent(arquivoSemQuery);
-    const caminhoRelativo = arquivoDecodificado.startsWith("/")
-      ? arquivoDecodificado.slice(1)
-      : arquivoDecodificado;
-
-    if (!caminhoRelativo || caminhoRelativo.includes("..")) {
-      return null;
-    }
-
-    const caminhoAbsoluto = join(process.cwd(), "public", caminhoRelativo);
-
-    try {
-      const content = await readFile(caminhoAbsoluto);
-      return {
-        filename: basename(caminhoAbsoluto),
-        content,
-        contentType: "application/pdf",
-      };
-    } catch (error) {
-      console.error(`Arquivo digital nao encontrado para o produto ${produto.id}:`, error);
-      return null;
-    }
-  }
-
-  try {
-    const supabase = getSupabaseAdminClient();
-    const signed = await supabase.storage
-      .from("materiais")
-      .createSignedUrl(produto.materialPath, 60 * 5);
-    const signedUrl = signed.data?.signedUrl;
-    if (!signedUrl) return null;
-
-    const fileResponse = await fetch(signedUrl);
-    if (!fileResponse.ok) return null;
-    const arrayBuffer = await fileResponse.arrayBuffer();
-    const fileBytes = Buffer.from(arrayBuffer);
-    const fileName = produto.materialPath.split("/").pop() || `${produto.id}.pdf`;
-
-    return {
-      filename: decodeURIComponent(fileName),
-      content: fileBytes,
-      contentType: "application/pdf",
-    };
-  } catch (error) {
-    console.error(`Arquivo digital nao encontrado para o produto ${produto.id}:`, error);
-    return null;
+  if (couponCode) {
+    const { error } = await supabase.rpc("redeem_coupon", {
+      p_code: couponCode, p_payment_id: paymentId, p_discount_cents: discountCents,
+    });
+    tolerate(error, "uso do cupom");
   }
 }
+
 export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -195,144 +101,94 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Webhook nao autorizado." }, { status: 401 });
     }
 
-    const type = searchParams.get("type");
+    if (searchParams.get("type") !== "payment") {
+      return NextResponse.json({ received: true }, { status: 200 });
+    }
 
-    // Só processamos se for um evento de pagamento
-    if (type === "payment" && id) {
-      const payment = new Payment(client);
-      const paymentData = await payment.get({ id });
+    const paymentData = await new Payment(client).get({ id });
+    if (paymentData.status !== "approved") {
+      return NextResponse.json({ received: true }, { status: 200 });
+    }
 
-      // VERIFICAÇÃO: O pagamento foi aprovado?
-      if (paymentData.status === "approved") {
-        // Pegamos os da
-        // dos que guardamos no 'metadata' lá no checkout
-        const emailCliente = paymentData.metadata.email_comprador;
-        const nomeCliente = paymentData.metadata.nome_comprador;
-        const cpfCliente = paymentData.metadata.cpf_comprador;
-        const telefoneCliente = paymentData.metadata.telefone_comprador;
-        const idsProdutosRaw = paymentData.metadata.id_produtos;
-        const cartItemsRaw = paymentData.metadata.cart_items;
-        const idsProdutos = [...new Set(parseMetadataList(idsProdutosRaw))];
-        const cartItems = parseCartItems(cartItemsRaw);
-        const enderecoEntrega = parseAddress(paymentData.metadata.endereco_entrega);
+    const metadata = paymentData.metadata || {};
+    const emailCliente = metadata.email_comprador;
+    const nomeCliente = metadata.nome_comprador;
+    const telefoneCliente = metadata.telefone_comprador;
+    const paymentId = String(paymentData.id);
+    const idsProdutos = [...new Set(parseMetadataList(metadata.id_produtos))];
+    const cartItems = parseCartItems(metadata.cart_items);
+    const enderecoEntrega = parseAddress(metadata.endereco_entrega);
+    const couponCode = typeof metadata.coupon_code === "string" && metadata.coupon_code ? metadata.coupon_code : null;
+    const discountCents = Number.isInteger(Number(metadata.discount_cents)) ? Number(metadata.discount_cents) : 0;
 
-        if (typeof emailCliente !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailCliente)) {
-          throw new Error("Pagamento sem destinatario valido.");
-        }
-        if (!getResend()) throw new Error("Provedor de e-mail indisponivel.");
+    if (typeof emailCliente !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailCliente)) {
+      throw new Error("Pagamento sem destinatario valido.");
+    }
+    const resend = getResend();
+    if (!resend) throw new Error("Provedor de e-mail indisponivel.");
 
-        try {
-          await persistApprovedSale({
-            mpPaymentId: String(paymentData.id),
-            status: paymentData.status || "approved",
-            paymentMethod: paymentData.payment_method_id || "pix",
-            totalAmount: Number(paymentData.transaction_amount || 0),
-            email: String(emailCliente || ""),
-            nome: nomeCliente ? String(nomeCliente) : undefined,
-            telefone: telefoneCliente ? String(telefoneCliente) : undefined,
-            cpf: cpfCliente ? String(cpfCliente) : undefined,
-            cartItems: Array.isArray(cartItems) ? cartItems : [],
-            rawPayload: paymentData,
-          });
-        } catch (dbError) {
-          console.error("Falha ao persistir venda no Supabase:", dbError);
-          throw new Error("Falha ao persistir venda.");
-        }
+    try {
+      await persistApprovedSale({
+        mpPaymentId: paymentId,
+        status: paymentData.status || "approved",
+        paymentMethod: paymentData.payment_method_id || "pix",
+        totalAmount: Number(paymentData.transaction_amount || 0),
+        email: emailCliente,
+        nome: nomeCliente ? String(nomeCliente) : undefined,
+        telefone: telefoneCliente ? String(telefoneCliente) : undefined,
+        cpf: metadata.cpf_comprador ? String(metadata.cpf_comprador) : undefined,
+        cartItems,
+        rawPayload: paymentData,
+      });
+    } catch (dbError) {
+      console.error("Falha ao persistir venda no Supabase:", dbError);
+      throw new Error("Falha ao persistir venda.");
+    }
 
-        const purchasedProducts = await getPurchasedProducts(idsProdutos);
-        const missingProducts = idsProdutos.filter((produtoId) => !purchasedProducts.has(produtoId));
-        if (missingProducts.length > 0) {
-          // Throwing makes Mercado Pago retry; the log tells the owner which product is gone.
-          console.error(`Pagamento ${paymentData.id}: produtos nao encontrados para entrega:`, missingProducts);
-          throw new Error("Produto pago nao encontrado para entrega.");
-        }
+    // A kit delivers its components; everything else delivers itself.
+    const kits = await loadKitComponents(getSupabaseAdminClient(), idsProdutos);
+    const entregaveis = expandKits(idsProdutos, kits);
+    const purchasedProducts = await getPurchasedProducts(entregaveis);
+    const missingProducts = entregaveis.filter((produtoId) => !purchasedProducts.has(produtoId));
+    if (missingProducts.length > 0) {
+      console.error(`Pagamento ${paymentId}: produtos nao encontrados para entrega:`, missingProducts);
+      throw new Error("Produto pago nao encontrado para entrega.");
+    }
 
-        const physicalProducts = idsProdutos
-          .map((produtoId) => purchasedProducts.get(produtoId))
-          .filter((produto): produto is PurchasedProduct => produto?.tipo === "fisico");
-        const resendClient = getResend();
-        if (physicalProducts.length > 0 && resendClient) {
-          const enderecoTexto = enderecoEntrega ? formatShippingAddress(enderecoEntrega) : "ENDERECO NAO INFORMADO - contate o cliente";
-          await sendPaymentEmailOnce(resendClient, String(paymentData.id), "loja:pedido-fisico", {
-            from: resendFrom,
-            to: contact.email,
-            subject: `📦 Novo pedido fisico pago (#${paymentData.id})`,
-            html: `
-              <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #f97316;">Novo pedido fisico para enviar</h2>
-                <p><strong>Pagamento:</strong> ${escapeHtml(String(paymentData.id))}</p>
-                <p><strong>Cliente:</strong> ${escapeHtml(String(nomeCliente || "Cliente"))} - ${escapeHtml(emailCliente)}${telefoneCliente ? ` - ${escapeHtml(String(telefoneCliente))}` : ""}</p>
-                <p><strong>Itens:</strong></p>
-                <ul>${physicalProducts.map((produto) => {
-                  const quantidade = cartItems.find((item) => item.id === produto.id)?.quantity ?? 1;
-                  return `<li>${escapeHtml(produto.nome)} x ${quantidade}</li>`;
-                }).join("")}</ul>
-                <p><strong>Entrega:</strong> ${escapeHtml(enderecoTexto)}</p>
-              </div>
-            `,
-          });
-        }
+    const quantidadeDe = (produtoId: string) => cartItems
+      .filter((item) => item.id === produtoId || kits.get(item.id)?.includes(produtoId))
+      .reduce((total, item) => total + item.quantity, 0) || 1;
+    const physicalProducts = entregaveis
+      .map((produtoId) => purchasedProducts.get(produtoId))
+      .filter((produto): produto is PurchasedProduct => produto?.tipo === "fisico");
 
-        for (const produtoId of idsProdutos) {
-          const produto = purchasedProducts.get(produtoId);
-          if (!produto) continue;
-          const nomeProduto = escapeHtml(produto.nome);
+    await recordGrowthData(paymentId, couponCode, discountCents, physicalProducts.length > 0);
 
-          if (produto.tipo === 'digital') {
-            // ENVIAR E-MAIL COM O MATERIAL DIGITAL
-            const resend = getResend();
-            const downloadLink = await getDownloadLink(request, produto);
-            const attachment = await getDigitalAttachment(produto);
-            if (resend) {
-              if (!attachment && !downloadLink) throw new Error("Material indisponivel para entrega.");
-              await sendPaymentEmailOnce(resend, String(paymentData.id), produto.id, {
-                from: resendFrom,
-                to: emailCliente,
-                subject: `🎉 Seu material "${produto.nome}" chegou!`,
-                attachments: attachment ? [attachment] : undefined,
-                html: `
-                  <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: #7c3aed;">Olá! Ficamos felizes com sua compra.</h2>
-                    <p>O seu material <strong>${nomeProduto}</strong> já está disponível.</p>
-                    ${attachment ? `<p>O arquivo foi enviado em anexo neste e-mail.</p>` : ""}
-                    <div style="text-align: center; margin: 30px 0;">
-                      <a href="${escapeHtml(downloadLink || '#')}" style="background: #7c3aed; color: white; padding: 16px 32px; border-radius: 12px; text-decoration: none; display: inline-block; font-weight: bold; font-size: 18px;">BAIXAR MEU MATERIAL</a>
-                    </div>
-                    <p style="font-size: 14px; color: #666;">Se o botão acima não funcionar, copie e cole este link no seu navegador: ${downloadLink ? escapeHtml(downloadLink) : "Link indisponível no momento. Entre em contato com o suporte."}</p>
-                    <br/>
-                    <hr style="border: none; border-top: 1px solid #eee;" />
-                    <p style="font-size: 12px; color: #999;">Tia Rafa - Transformando a educação com amor.</p>
-                  </div>
-                `
-              });
-            }
-          } else if (produto.tipo === 'fisico') {
-            // ENVIAR E-MAIL DE CONFIRMAÇÃO PARA O CLIENTE (FÍSICO)
-            const resend = getResend();
-            if (resend) {
-              await sendPaymentEmailOnce(resend, String(paymentData.id), produto.id, {
-                from: resendFrom,
-                to: emailCliente,
-                subject: '📦 Seu pedido está sendo preparado!',
-                html: `
-                  <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: #f97316;">Oba! Seu pedido foi confirmado.</h2>
-                    <p>Estamos preparando o seu produto <strong>${nomeProduto}</strong> com muito carinho.</p>
-                    <p>Em breve você receberá o código de rastreio por este e-mail.</p>
-                    ${enderecoEntrega ? `
-                    <div style="background: #fff7ed; padding: 20px; border-radius: 12px; border: 1px solid #fed7aa;">
-                    <h4 style="margin-top: 0;">Dados de Entrega:</h4>
-                      <p style="font-size: 14px; margin-bottom: 0;">${escapeHtml(formatShippingAddress(enderecoEntrega))}</p>
-                    </div>` : ''}
-                    <br/>
-                    <p style="font-size: 12px; color: #999;">Dúvidas? Entre em contato conosco pelo WhatsApp.</p>
-                  </div>
-                `
-              });
-            }
-          }
-        }
-      }
+    if (physicalProducts.length > 0) {
+      const enderecoTexto = enderecoEntrega ? formatShippingAddress(enderecoEntrega) : "ENDERECO NAO INFORMADO - contate o cliente";
+      await sendPaymentEmailOnce(resend, paymentId, "loja:pedido-fisico", {
+        from: resendFrom,
+        to: contact.email,
+        subject: `📦 Novo pedido fisico pago (#${paymentId})`,
+        html: emailLayout(`
+          <h2 style="color: #f97316;">Novo pedido fisico para enviar</h2>
+          <p><strong>Pagamento:</strong> ${escapeHtml(paymentId)}</p>
+          <p><strong>Cliente:</strong> ${escapeHtml(String(nomeCliente || "Cliente"))} - ${escapeHtml(emailCliente)}${telefoneCliente ? ` - ${escapeHtml(String(telefoneCliente))}` : ""}</p>
+          <ul>${physicalProducts.map((produto) => `<li>${escapeHtml(produto.nome)} x ${quantidadeDe(produto.id)}</li>`).join("")}</ul>
+          <p><strong>Entrega:</strong> ${escapeHtml(enderecoTexto)}</p>
+          <p>Marque como enviado no painel (Pedidos) para o cliente receber o rastreio.</p>
+        `),
+      });
+    }
+
+    const origin = new URL(request.url).origin;
+    for (const produtoId of entregaveis) {
+      const produto = purchasedProducts.get(produtoId);
+      if (!produto) continue;
+      const email = produto.tipo === "digital"
+        ? await buildDigitalDeliveryEmail(origin, emailCliente, produto)
+        : buildPhysicalConfirmationEmail(emailCliente, produto, enderecoEntrega);
+      await sendPaymentEmailOnce(resend, paymentId, produto.id, email);
     }
 
     return NextResponse.json({ received: true }, { status: 200 });
@@ -341,5 +197,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Webhook Error" }, { status: 500 });
   }
 }
-
-
