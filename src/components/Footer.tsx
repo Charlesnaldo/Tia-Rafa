@@ -79,8 +79,6 @@ export default function Footer() {
               {[
                 { label: "Materiais PDF", href: "/#catalogo" },
                 { label: "Sobre a Tia", href: "/sobre" },
-                { label: "Blog", href: "/blog" },
-                { label: "Area do Aluno", href: "/area-do-aluno" },
               ].map((link) => (
                 <li key={link.label}>
                   <Link href={link.href} className="group text-gray-500 hover:text-purple-500 font-black transition-all flex items-center justify-center lg:justify-start gap-2">

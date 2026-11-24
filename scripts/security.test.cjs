@@ -154,6 +154,7 @@ test("chat rejects oversized input and rate-limited requests before contacting n
 });
 
 test("chat strips raw automation data and upstream error details", async (t) => {
+  process.env.N8N_EVOLUTION_WEBHOOK_URL = "https://n8n.example.test/webhook/chat-site";
   const { POST } = load("src/app/api/chat/evolution/route.ts", { "@/lib/chat-rate-limit": { allowChatRequest: async () => true } });
   t.mock.method(global, "fetch", async () => Response.json({ reply: "Ola", internalSecret: "do-not-expose" }));
   const body = await (await POST(jsonRequest({ text: "oi" }))).json();
@@ -268,4 +269,35 @@ test("email errors are never recorded as successful deliveries", async () => {
   });
   await assert.rejects(sendPaymentEmailOnce({ emails: { send: async () => ({ error: { message: "timeout" } }) } }, "123", "product", { from: "a@example.com", to: "b@example.com", subject: "test", html: "test" }));
   assert.equal(updated, false);
+});
+
+test("physical items require a valid shipping address, which is stored in payment metadata", async (t) => {
+  const previous = process.env.MP_ACCESS_TOKEN;
+  process.env.MP_ACCESS_TOKEN = "test";
+  t.after(() => { if (previous === undefined) delete process.env.MP_ACCESS_TOKEN; else process.env.MP_ACCESS_TOKEN = previous; });
+  const captures = [];
+  t.mock.method(global, "fetch", async (url, options) => {
+    captures.push(JSON.parse(options.body));
+    return Response.json({ id: "123", status: "pending", payment_method_id: "pix" });
+  });
+  const { POST } = load("src/app/api/process_payment/route.ts", {
+    "@/lib/supabase/admin": { getSupabaseAdminClient: () => ({ from: () => ({ select: () => ({ in: () => ({ eq: async () => ({ data: [{ id: "kit", nome: "Kit", preco_cents: 5000, tipo: "fisico" }] }) }) }) }) }) },
+  });
+  const pay = (extra) => POST(new NextRequest("https://example.com/api/process_payment", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ cartItems: [{ id: "kit", quantity: 2, nome: "client-supplied" }], emailCliente: "buyer@example.com", nomeCliente: "Cliente", cpfCliente: "12345678901", telefoneCliente: "11999999999", paymentMethod: "pix", ...extra }),
+  }));
+
+  const missing = await pay({});
+  assert.equal(missing.status, 400);
+  assert.equal((await missing.json()).code, "ADDRESS_REQUIRED");
+  assert.equal((await pay({ enderecoEntrega: { cep: "123", rua: "Rua A", numero: "1", bairro: "B", cidade: "C", uf: "CE" } })).status, 400);
+  assert.equal((await pay({ enderecoEntrega: { cep: "60000-000", rua: "Rua A", numero: "1", bairro: "B", cidade: "C", uf: "XX" } })).status, 400);
+  assert.equal(captures.length, 0);
+
+  const ok = await pay({ enderecoEntrega: { cep: "60000-000", rua: "Rua A", numero: "10", complemento: "Apto 2", bairro: "Centro", cidade: "Fortaleza", uf: "ce" } });
+  assert.equal(ok.status, 200);
+  const metadata = captures.at(-1).metadata;
+  assert.deepEqual(JSON.parse(metadata.endereco_entrega), { cep: "60000000", rua: "Rua A", numero: "10", complemento: "Apto 2", bairro: "Centro", cidade: "Fortaleza", uf: "CE" });
+  assert.deepEqual(JSON.parse(metadata.cart_items), [{ id: "kit", quantity: 2 }]);
 });

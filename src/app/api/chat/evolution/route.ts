@@ -12,7 +12,7 @@ type ChatMessage = {
 };
 
 function getWebhookUrl() {
-  const url = process.env.N8N_EVOLUTION_WEBHOOK_URL?.trim() || "https://n8n.smartrm.com.br/webhook/chat-site";
+  const url = process.env.N8N_EVOLUTION_WEBHOOK_URL?.trim();
   if (!url) {
     throw new Error("N8N_EVOLUTION_WEBHOOK_URL nao configurado.");
   }

@@ -38,7 +38,7 @@ const AtividadesPage: React.FC = () => {
   ];
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_45%,#fdf4ff_100%)] px-4 py-10 lg:py-89">
+    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_45%,#fdf4ff_100%)] px-4 py-10 lg:py-89">
       <div className="pointer-events-none absolute -left-20 top-28 h-52 w-52 rounded-full bg-blue-200/40 blur-3xl" />
       <div className="pointer-events-none absolute -right-20 bottom-10 h-60 w-60 rounded-full bg-pink-200/40 blur-3xl" />
 
@@ -83,7 +83,7 @@ const AtividadesPage: React.FC = () => {
           ))}
         </section>
       </div>
-    </main>
+    </div>
   );
 };
 

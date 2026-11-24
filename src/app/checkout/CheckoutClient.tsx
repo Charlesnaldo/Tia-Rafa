@@ -11,7 +11,8 @@ import {
   ArrowLeft,
   ArrowRight,
   CreditCard,
-  QrCode
+  QrCode,
+  Truck
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -20,6 +21,11 @@ import FallbackImage from "@/components/FallbackImage";
 import { formatCurrency, formatPaymentStatus } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
 import { LastPaymentSessionData, PaymentPointOfInteraction } from "@/types/payment";
+import { useProductsCatalog } from "@/lib/products/useProductsCatalog";
+import { EMPTY_SHIPPING_ADDRESS, parseShippingAddress, type ShippingAddress } from "@/lib/shipping-address";
+
+const inputClassName = "w-full px-6 py-4 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg";
+const labelClassName = "text-xs font-bold uppercase tracking-[0.3em] text-gray-400 block";
 
 export default function CheckoutClient() {
   const { cartItems, cartTotal, itemCount, clearCart } = useCart();
@@ -33,6 +39,34 @@ export default function CheckoutClient() {
   const [pixPaymentId, setPixPaymentId] = useState<string | null>(null);
   const [pixPaymentStatus, setPixPaymentStatus] = useState<string | null>(null);
   const [pixCodeCopied, setPixCodeCopied] = useState(false);
+  const { productsById } = useProductsCatalog();
+  // Set when the server reports a physical item the local catalog did not know about.
+  const [serverRequiresAddress, setServerRequiresAddress] = useState(false);
+  const [endereco, setEndereco] = useState<ShippingAddress>(EMPTY_SHIPPING_ADDRESS);
+  const needsAddress = serverRequiresAddress || cartItems.some((item) => productsById[item.id]?.tipo === "fisico");
+
+  const updateEndereco = (field: keyof ShippingAddress, value: string) =>
+    setEndereco((prev) => ({ ...prev, [field]: value }));
+
+  const handleCepChange = async (value: string) => {
+    updateEndereco("cep", value);
+    const cep = value.replace(/\D/g, "");
+    if (cep.length !== 8) return;
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await response.json();
+      if (!response.ok || data.erro) return;
+      setEndereco((prev) => ({
+        ...prev,
+        rua: prev.rua || data.logradouro || "",
+        bairro: prev.bairro || data.bairro || "",
+        cidade: prev.cidade || data.localidade || "",
+        uf: prev.uf || data.uf || "",
+      }));
+    } catch {
+      // Autofill is optional; the customer can type the address.
+    }
+  };
 
   const persistLastPayment = (payload: LastPaymentSessionData) => {
     if (typeof window === "undefined") return;
@@ -60,6 +94,10 @@ export default function CheckoutClient() {
     if (cpf.replace(/\D/g, "").length < 11) return alert("CPF inválido.");
     if (telefone.replace(/\D/g, "").length < 10) return alert("Telefone inválido.");
     if (!nome.trim()) return alert("Informe o nome completo.");
+    if (needsAddress) {
+      const parsedAddress = parseShippingAddress(endereco);
+      if ("error" in parsedAddress) return alert(parsedAddress.error);
+    }
     if (itemCount === 0) {
       return alert("Seu carrinho está vazio.");
     }
@@ -80,10 +118,12 @@ export default function CheckoutClient() {
           cpfCliente: cpf,
           telefoneCliente: telefone,
           paymentMethod,
+          ...(needsAddress ? { enderecoEntrega: endereco } : {}),
         }),
       });
       const paymentData = await processResponse.json();
       if (!processResponse.ok) {
+        if (paymentData.code === "ADDRESS_REQUIRED") setServerRequiresAddress(true);
         throw new Error(paymentData.error || "Erro ao processar pagamento.");
       }
 
@@ -232,13 +272,20 @@ export default function CheckoutClient() {
                   <span>Subtotal</span>
                   <span>{formatCurrency(cartTotal)}</span>
                 </div>
-                <div className="flex justify-between items-center bg-green-50 px-3 py-2 rounded-xl text-green-600 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Zap size={14} className="fill-green-600" />
-                    <span className="font-bold">Entrega Digital</span>
+                {needsAddress ? (
+                  <div className="flex items-center gap-2 bg-orange-50 px-3 py-2 rounded-xl text-orange-600 text-sm">
+                    <Truck size={14} />
+                    <span className="font-bold">Item físico: enviado para o endereço informado</span>
                   </div>
-                  <span className="font-black uppercase tracking-wider text-[10px]">Grátis</span>
-                </div>
+                ) : (
+                  <div className="flex justify-between items-center bg-green-50 px-3 py-2 rounded-xl text-green-600 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Zap size={14} className="fill-green-600" />
+                      <span className="font-bold">Entrega Digital</span>
+                    </div>
+                    <span className="font-black uppercase tracking-wider text-[10px]">Grátis</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center pt-4">
                   <span className="text-lg font-black text-gray-800 uppercase tracking-tighter">Total</span>
                   <span className="text-3xl font-black text-blue-500 tracking-tight">{formatCurrency(cartTotal)}</span>
@@ -346,6 +393,42 @@ export default function CheckoutClient() {
                       className="w-full px-6 py-4 bg-[#F8FAFF] border-2 border-transparent focus:border-blue-200 focus:bg-white rounded-[2rem] outline-none font-bold text-gray-700 transition-all text-lg"
                     />
                   </div>
+
+                  {needsAddress && (
+                    <fieldset className="space-y-4 rounded-[2rem] border border-orange-100 bg-orange-50/40 p-5">
+                      <legend className="px-2 text-xs font-black uppercase tracking-[0.2em] text-orange-500">Endereço de entrega</legend>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <label className="space-y-2 sm:col-span-1">
+                          <span className={labelClassName}>CEP</span>
+                          <input type="text" inputMode="numeric" autoComplete="postal-code" placeholder="00000-000" value={endereco.cep} onChange={(e) => void handleCepChange(e.target.value)} className={inputClassName} />
+                        </label>
+                        <label className="space-y-2 sm:col-span-2">
+                          <span className={labelClassName}>Rua</span>
+                          <input type="text" autoComplete="address-line1" value={endereco.rua} onChange={(e) => updateEndereco("rua", e.target.value)} className={inputClassName} />
+                        </label>
+                        <label className="space-y-2">
+                          <span className={labelClassName}>Número</span>
+                          <input type="text" value={endereco.numero} onChange={(e) => updateEndereco("numero", e.target.value)} className={inputClassName} />
+                        </label>
+                        <label className="space-y-2 sm:col-span-2">
+                          <span className={labelClassName}>Complemento</span>
+                          <input type="text" autoComplete="address-line2" placeholder="Opcional" value={endereco.complemento ?? ""} onChange={(e) => updateEndereco("complemento", e.target.value)} className={inputClassName} />
+                        </label>
+                        <label className="space-y-2">
+                          <span className={labelClassName}>Bairro</span>
+                          <input type="text" value={endereco.bairro} onChange={(e) => updateEndereco("bairro", e.target.value)} className={inputClassName} />
+                        </label>
+                        <label className="space-y-2">
+                          <span className={labelClassName}>Cidade</span>
+                          <input type="text" autoComplete="address-level2" value={endereco.cidade} onChange={(e) => updateEndereco("cidade", e.target.value)} className={inputClassName} />
+                        </label>
+                        <label className="space-y-2">
+                          <span className={labelClassName}>UF</span>
+                          <input type="text" autoComplete="address-level1" maxLength={2} placeholder="CE" value={endereco.uf} onChange={(e) => updateEndereco("uf", e.target.value.toUpperCase())} className={inputClassName} />
+                        </label>
+                      </div>
+                    </fieldset>
+                  )}
 
                   <button
                     onClick={handleCheckout}

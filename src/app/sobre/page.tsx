@@ -124,7 +124,7 @@ function SobreContent() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 lg:mt-16 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 lg:mt-16 relative z-10">
         <div className="grid lg:grid-cols-12 gap-8 lg:gap-16 items-start">
           
           {/* Perfil */}
@@ -259,7 +259,7 @@ function SobreContent() {
             </div>
           </motion.div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

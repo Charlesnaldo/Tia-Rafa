@@ -44,13 +44,13 @@ export default function ProdutoDetalhes({
   if (!produto && loaded) notFound();
   if (!produto) {
     return (
-      <main className="min-h-screen bg-[#FAFAFA] font-fredoka text-[#2D3748] pb-10 pt-10">
+      <div className="min-h-screen bg-[#FAFAFA] font-fredoka text-[#2D3748] pb-10 pt-10">
         <section className="max-w-4xl mx-auto px-6">
           <div className="rounded-3xl border border-gray-100 bg-white p-8 text-sm font-bold text-gray-500 shadow-sm">
             Carregando produto...
           </div>
         </section>
-      </main>
+      </div>
     );
   }
 
@@ -79,7 +79,7 @@ export default function ProdutoDetalhes({
   };
 
   return (
-    <main className="min-h-screen bg-[#FAFAFA] font-fredoka text-[#2D3748] pb-10 pt-5 md:pt-10">
+    <div className="min-h-screen bg-[#FAFAFA] font-fredoka text-[#2D3748] pb-10 pt-5 md:pt-10">
       <section className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-start">
 
         {/* Lado Esquerdo: Preview com Galeria Interativa */}
@@ -270,6 +270,6 @@ export default function ProdutoDetalhes({
           ))}
         </div>
       </section>
-    </main>
+    </div>
   );
 }

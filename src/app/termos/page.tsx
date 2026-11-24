@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import LegalPage from "@/components/LegalPage";
 import { contact } from "@/config/contact";
 
-export const metadata: Metadata = { title: "Termos de compra e uso | Tia Rafa" };
+export const metadata: Metadata = { title: "Termos de compra e uso" };
 
 export default function TermsPage() {
   return <LegalPage title="Termos de compra e uso">
@@ -15,7 +15,7 @@ export default function TermsPage() {
     </section>
     <section><h2>Compra, pagamento e entrega</h2>
       <p>Os preços e condições são os apresentados na oferta e no checkout. O processamento do pagamento ocorre pelo Mercado Pago, conforme o meio escolhido e a confirmação recebida pela loja. Forneça dados corretos, especialmente o e-mail de entrega.</p>
-      <p>Após a aprovação, o acesso digital é disponibilizado pelos canais informados na confirmação do pedido. Verifique também a pasta de spam e a área do aluno. Se o material não chegar ou houver falha no arquivo, informe o número do pedido ao atendimento. [PREENCHER: prazo de entrega após aprovação, duração do acesso e procedimento de reenvio].</p>
+      <p>Após a aprovação, o acesso digital é disponibilizado pelos canais informados na confirmação do pedido. Verifique também a pasta de spam. Se o material não chegar ou houver falha no arquivo, informe o número do pedido ao atendimento. [PREENCHER: prazo de entrega após aprovação, duração do acesso e procedimento de reenvio].</p>
     </section>
     <section><h2>Direito de arrependimento e problemas no pedido</h2>
       <p>Nas compras realizadas pela internet, é assegurado o direito de arrependimento nos termos do artigo 49 do Código de Defesa do Consumidor, no prazo legal de sete dias contados da assinatura ou do recebimento, conforme o caso. Solicite o cancelamento pelo atendimento, informando os dados necessários para localizar a compra.</p>

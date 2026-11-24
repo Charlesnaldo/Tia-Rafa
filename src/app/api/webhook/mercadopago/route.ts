@@ -7,6 +7,8 @@ import { persistApprovedSale } from "@/lib/supabase/sales";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { verifyMercadoPagoWebhook } from "@/lib/mercadopago-webhook";
 import { sendPaymentEmailOnce } from "@/lib/payment-email";
+import { formatShippingAddress, parseShippingAddress, type ShippingAddress } from "@/lib/shipping-address";
+import { contact } from "@/config/contact";
 
 // Force dynamic rendering - não gerar estaticamente
 export const dynamic = 'force-dynamic';
@@ -60,18 +62,20 @@ function parseCartItems(value: unknown): { id: string; quantity: number }[] {
   }
 }
 
-function parseAddress(value: unknown): { rua?: string; numero?: string } | null {
+function parseAddress(value: unknown): ShippingAddress | null {
   if (typeof value !== "string" || !value) return null;
   try {
-    const parsed = JSON.parse(value);
-    if (!parsed || typeof parsed !== "object") return null;
-    return {
-      rua: typeof (parsed as { rua?: unknown }).rua === "string" ? String((parsed as { rua?: string }).rua) : undefined,
-      numero: typeof (parsed as { numero?: unknown }).numero === "string" ? String((parsed as { numero?: string }).numero) : undefined,
-    };
+    const parsed = parseShippingAddress(JSON.parse(value));
+    return "address" in parsed ? parsed.address : null;
   } catch {
     return null;
   }
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (char) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] as string
+  ));
 }
 
 async function getDownloadLink(
@@ -103,9 +107,9 @@ async function getPurchasedProducts(idsProdutos: string[]) {
     const supabase = getSupabaseAdminClient();
     const { data, error } = await supabase
       .from("products")
-      .select("id, nome, tipo, material_path, is_active")
-      .in("id", idsProdutos)
-      .eq("is_active", true);
+      // No is_active filter: a paid product must be delivered even if it was deactivated after checkout.
+      .select("id, nome, tipo, material_path")
+      .in("id", idsProdutos);
     if (error) throw error;
 
     for (const row of data || []) {
@@ -236,9 +240,43 @@ export async function POST(request: Request) {
         }
 
         const purchasedProducts = await getPurchasedProducts(idsProdutos);
+        const missingProducts = idsProdutos.filter((produtoId) => !purchasedProducts.has(produtoId));
+        if (missingProducts.length > 0) {
+          // Throwing makes Mercado Pago retry; the log tells the owner which product is gone.
+          console.error(`Pagamento ${paymentData.id}: produtos nao encontrados para entrega:`, missingProducts);
+          throw new Error("Produto pago nao encontrado para entrega.");
+        }
+
+        const physicalProducts = idsProdutos
+          .map((produtoId) => purchasedProducts.get(produtoId))
+          .filter((produto): produto is PurchasedProduct => produto?.tipo === "fisico");
+        const resendClient = getResend();
+        if (physicalProducts.length > 0 && resendClient) {
+          const enderecoTexto = enderecoEntrega ? formatShippingAddress(enderecoEntrega) : "ENDERECO NAO INFORMADO - contate o cliente";
+          await sendPaymentEmailOnce(resendClient, String(paymentData.id), "loja:pedido-fisico", {
+            from: resendFrom,
+            to: contact.email,
+            subject: `📦 Novo pedido fisico pago (#${paymentData.id})`,
+            html: `
+              <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #f97316;">Novo pedido fisico para enviar</h2>
+                <p><strong>Pagamento:</strong> ${escapeHtml(String(paymentData.id))}</p>
+                <p><strong>Cliente:</strong> ${escapeHtml(String(nomeCliente || "Cliente"))} - ${escapeHtml(emailCliente)}${telefoneCliente ? ` - ${escapeHtml(String(telefoneCliente))}` : ""}</p>
+                <p><strong>Itens:</strong></p>
+                <ul>${physicalProducts.map((produto) => {
+                  const quantidade = cartItems.find((item) => item.id === produto.id)?.quantity ?? 1;
+                  return `<li>${escapeHtml(produto.nome)} x ${quantidade}</li>`;
+                }).join("")}</ul>
+                <p><strong>Entrega:</strong> ${escapeHtml(enderecoTexto)}</p>
+              </div>
+            `,
+          });
+        }
+
         for (const produtoId of idsProdutos) {
           const produto = purchasedProducts.get(produtoId);
           if (!produto) continue;
+          const nomeProduto = escapeHtml(produto.nome);
 
           if (produto.tipo === 'digital') {
             // ENVIAR E-MAIL COM O MATERIAL DIGITAL
@@ -255,12 +293,12 @@ export async function POST(request: Request) {
                 html: `
                   <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
                     <h2 style="color: #7c3aed;">Olá! Ficamos felizes com sua compra.</h2>
-                    <p>O seu material <strong>${produto.nome}</strong> já está disponível.</p>
+                    <p>O seu material <strong>${nomeProduto}</strong> já está disponível.</p>
                     ${attachment ? `<p>O arquivo foi enviado em anexo neste e-mail.</p>` : ""}
                     <div style="text-align: center; margin: 30px 0;">
-                      <a href="${downloadLink || '#'}" style="background: #7c3aed; color: white; padding: 16px 32px; border-radius: 12px; text-decoration: none; display: inline-block; font-weight: bold; font-size: 18px;">BAIXAR MEU MATERIAL</a>
+                      <a href="${escapeHtml(downloadLink || '#')}" style="background: #7c3aed; color: white; padding: 16px 32px; border-radius: 12px; text-decoration: none; display: inline-block; font-weight: bold; font-size: 18px;">BAIXAR MEU MATERIAL</a>
                     </div>
-                    <p style="font-size: 14px; color: #666;">Se o botão acima não funcionar, copie e cole este link no seu navegador: ${downloadLink || "Link indisponível no momento. Entre em contato com o suporte."}</p>
+                    <p style="font-size: 14px; color: #666;">Se o botão acima não funcionar, copie e cole este link no seu navegador: ${downloadLink ? escapeHtml(downloadLink) : "Link indisponível no momento. Entre em contato com o suporte."}</p>
                     <br/>
                     <hr style="border: none; border-top: 1px solid #eee;" />
                     <p style="font-size: 12px; color: #999;">Tia Rafa - Transformando a educação com amor.</p>
@@ -279,12 +317,12 @@ export async function POST(request: Request) {
                 html: `
                   <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
                     <h2 style="color: #f97316;">Oba! Seu pedido foi confirmado.</h2>
-                    <p>Estamos preparando o seu produto <strong>${produto.nome}</strong> com muito carinho.</p>
+                    <p>Estamos preparando o seu produto <strong>${nomeProduto}</strong> com muito carinho.</p>
                     <p>Em breve você receberá o código de rastreio por este e-mail.</p>
                     ${enderecoEntrega ? `
                     <div style="background: #fff7ed; padding: 20px; border-radius: 12px; border: 1px solid #fed7aa;">
                     <h4 style="margin-top: 0;">Dados de Entrega:</h4>
-                      <pre style="font-family: inherit; font-size: 14px; margin-bottom: 0;">${enderecoEntrega?.rua || ""}, ${enderecoEntrega?.numero || ""}</pre>
+                      <p style="font-size: 14px; margin-bottom: 0;">${escapeHtml(formatShippingAddress(enderecoEntrega))}</p>
                     </div>` : ''}
                     <br/>
                     <p style="font-size: 12px; color: #999;">Dúvidas? Entre em contato conosco pelo WhatsApp.</p>

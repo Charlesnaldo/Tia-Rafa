@@ -71,11 +71,12 @@ export async function persistApprovedSale(input: PersistApprovedSaleInput) {
   if (ids.length > 0) {
     const { data } = await supabase
       .from("products")
-      .select("id, nome, preco_cents, is_active")
+      .select("id, nome, preco_cents")
       .in("id", ids);
 
+    // Keep deactivated products: the order was paid and must show every item.
     for (const row of data || []) {
-      if (!row?.id || row?.is_active === false) continue;
+      if (!row?.id) continue;
       snapshots.set(row.id, {
         id: row.id,
         nome: row.nome || row.id,

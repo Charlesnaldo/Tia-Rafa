@@ -9,8 +9,7 @@ const depoimentos = [
     foto: "/testimonials/raniele.jpg",
   },
   {
-    // TODO(owner): confirm whether this customer's name is Alessandra.
-    nome: "Alessadra",
+    nome: "Alessandra",
     funcao: "Professora Ensino infantil",
     texto: "Comprei o kit Historia da Luva foi a melhor escolha. Meus alunos adoraram!",
     foto: "/testimonials/alessandra.jpg",
@@ -33,7 +32,7 @@ export default function Testimonials() {
             Quem usa, <span className="text-pink-500">ama e recomenda!</span>
           </h2>
           <p className="text-gray-500 text-lg font-medium">
-            Mais de <span className="text-purple-600 font-bold">5.000 professoras</span> já transformaram suas salas de aula.
+            Professoras de todo o Brasil já <span className="text-purple-600 font-bold">transformaram suas salas de aula</span>.
           </p>
         </div>
 
@@ -60,7 +59,7 @@ export default function Testimonials() {
               </p>
 
               <div className="flex items-center gap-4">
-                <div className="relative">
+                <div>
                   <Image
                     src={item.foto}
                     alt={`Foto de ${item.nome}, ${item.funcao.toLocaleLowerCase("pt-BR")}`}
@@ -70,9 +69,6 @@ export default function Testimonials() {
                     loading="lazy"
                     className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-sm"
                   />
-                  <div className="absolute -bottom-1 -right-1 bg-green-500 text-white rounded-full p-0.5 border-2 border-white">
-                    <CheckCircle size={12} />
-                  </div>
                 </div>
                 <div>
                   <h4 className="font-black text-gray-900 leading-none mb-1">

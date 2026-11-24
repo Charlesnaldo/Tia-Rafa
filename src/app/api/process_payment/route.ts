@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createPaymentOwner, hashPaymentOwner, setPaymentOwner } from "@/lib/payment-owner";
+import { parseShippingAddress, type ShippingAddress } from "@/lib/shipping-address";
 
 type PointOfInteraction = {
   type?: string;
@@ -18,6 +19,7 @@ type ProcessPaymentRequest = {
   cpfCliente?: string;
   telefoneCliente?: string;
   paymentMethod?: "pix" | "credit_card";
+  enderecoEntrega?: unknown;
 };
 
 type MercadoPagoCreatePaymentResponse = {
@@ -131,6 +133,16 @@ export async function POST(request: NextRequest) {
       idsProdutos.push(item.id);
     }
 
+    // The server decides whether shipping is needed; the client flag is only a UI hint.
+    let enderecoEntrega: ShippingAddress | null = null;
+    if (cartItems.some((item) => productSnapshots[item.id]?.tipo === "fisico")) {
+      const parsedAddress = parseShippingAddress(body.enderecoEntrega);
+      if ("error" in parsedAddress) {
+        return NextResponse.json({ error: parsedAddress.error, code: "ADDRESS_REQUIRED" }, { status: 400 });
+      }
+      enderecoEntrega = parsedAddress.address;
+    }
+
     const accessToken = process.env.MP_ACCESS_TOKEN;
     if (!accessToken) {
       return NextResponse.json({ error: "Configuracao do Mercado Pago invalida." }, { status: 500 });
@@ -152,7 +164,8 @@ export async function POST(request: NextRequest) {
       cpf_comprador: cpfLimpo,
       telefone_comprador: telefoneLimpo,
       id_produtos: JSON.stringify(idsProdutos),
-      cart_items: JSON.stringify(cartItems),
+      cart_items: JSON.stringify(cartItems.map((item) => ({ id: item.id, quantity: item.quantity }))),
+      ...(enderecoEntrega ? { endereco_entrega: JSON.stringify(enderecoEntrega) } : {}),
     };
     const baseUrl = process.env.NEXT_PUBLIC_URL?.trim();
     let notificationUrl: string | undefined;

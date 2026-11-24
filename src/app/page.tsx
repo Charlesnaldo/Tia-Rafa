@@ -5,6 +5,14 @@ import { ThreeDMarqueeDemo } from "@/components/ThreeDMarqueeDemo";
 import Testimonials from "@/components/Testimonials";
 import { getCatalogProducts } from "@/lib/products/catalog-server";
 import FeaturedMaterials from "@/components/FeaturedMaterials";
+import type { Metadata } from "next";
+import { baseOpenGraph } from "@/lib/site-metadata";
+
+// Canonical lives here, not in the root layout, so other pages do not inherit the home URL.
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+  openGraph: { ...baseOpenGraph, url: "/" },
+};
 
 export default async function Home({ searchParams }: {
   searchParams: Promise<{ busca?: string | string[] }>;

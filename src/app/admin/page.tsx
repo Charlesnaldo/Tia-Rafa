@@ -6,6 +6,18 @@ import { useRouter } from "next/navigation";
 import { LogOut, Mail, Phone, RefreshCcw, ShoppingCart, Users } from "lucide-react";
 import { formatCurrency, formatPaymentStatus } from "@/lib/utils";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { formatShippingAddress, parseShippingAddress } from "@/lib/shipping-address";
+
+// The webhook stores the Mercado Pago payment in orders.metadata; the address is a JSON string inside it.
+function readShippingAddress(value: unknown) {
+  if (typeof value !== "string" || !value) return null;
+  try {
+    const parsed = parseShippingAddress(JSON.parse(value));
+    return "address" in parsed ? formatShippingAddress(parsed.address) : null;
+  } catch {
+    return null;
+  }
+}
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +50,7 @@ type OrderRow = {
     telefone: string | null;
   }[];
   order_items: OrderItemRow[];
+  shipping_address: string | null;
 };
 
 export default function AdminPage() {
@@ -78,7 +91,7 @@ export default function AdminPage() {
     const [ordersResult, customersResult, orderItemsResult] = await Promise.all([
       supabase
         .from("orders")
-        .select("id, mp_payment_id, status, payment_method, total_amount, created_at, customers(nome, email, telefone), order_items(product_id, product_name, quantity, unit_price_cents, line_total_cents)")
+        .select("id, mp_payment_id, status, payment_method, total_amount, created_at, endereco_entrega:metadata->metadata->>endereco_entrega, customers(nome, email, telefone), order_items(product_id, product_name, quantity, unit_price_cents, line_total_cents)")
         .order("created_at", { ascending: false })
         .limit(50),
       supabase
@@ -115,6 +128,7 @@ export default function AdminPage() {
           payment_method: String(order.payment_method),
           total_amount: Number(order.total_amount || 0),
           created_at: String(order.created_at),
+          shipping_address: readShippingAddress((order as { endereco_entrega?: unknown }).endereco_entrega),
           customers: customers.map((customer) => ({
             nome: String((customer as { nome?: unknown }).nome || "Cliente"),
             email: String((customer as { email?: unknown }).email || ""),
@@ -316,6 +330,12 @@ export default function AdminPage() {
                     <span>MP: {order.mp_payment_id}</span>
                     <span className="font-black text-gray-800">{formatCurrency(Math.round(Number(order.total_amount) * 100))}</span>
                   </div>
+                  {order.shipping_address ? (
+                    <div className="mt-3 rounded-lg border border-orange-100 bg-orange-50 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orange-500">Entregar em</p>
+                      <p className="mt-1 text-xs font-semibold text-gray-700">{order.shipping_address}</p>
+                    </div>
+                  ) : null}
                   <div className="mt-4 rounded-lg border border-gray-100 bg-white p-3">
                     <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Itens comprados</p>
                     {order.order_items.length > 0 ? (

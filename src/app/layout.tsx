@@ -10,6 +10,8 @@ import Footer from "@/components/Footer";
 import WhatsAppFloatingButton from "@/components/WhatsAppFloatingButton";
 import { CartProvider } from "@/context/CartContext";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import { getSiteUrl } from "@/lib/site-url";
+import { baseOpenGraph, siteDescription, siteTitle } from "@/lib/site-metadata";
 
 const fredoka = Fredoka({
   subsets: ["latin"],
@@ -21,8 +23,14 @@ const fredoka = Fredoka({
 });
 
 export const metadata: Metadata = {
-  title: "Tia Rafa - Materiais Didáticos",
-  description: "Materiais pedagógicos com muito amor e cor!",
+  metadataBase: new URL(getSiteUrl()),
+  title: {
+    default: siteTitle,
+    template: "%s | Tia Rafa",
+  },
+  description: siteDescription,
+  openGraph: baseOpenGraph,
+  twitter: { card: "summary", title: siteTitle, description: siteDescription },
 };
 
 export default function RootLayout({

@@ -1,8 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+// Placeholder page: kept reachable but out of search results until it has content.
+export const metadata: Metadata = { title: "Área do Aluno", robots: { index: false } };
 
 export default function AreaDoAlunoPage() {
   return (
-    <main className="min-h-screen bg-[#FAFAFA] px-6 py-20 font-fredoka text-[#2D3748]">
+    <div className="min-h-screen bg-[#FAFAFA] px-6 py-20 font-fredoka text-[#2D3748]">
       <section className="mx-auto max-w-3xl rounded-3xl border border-gray-100 bg-white p-10 text-center shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-500">Area do Aluno</p>
         <h1 className="mt-3 text-4xl font-black text-gray-900">Em breve</h1>
@@ -16,6 +20,6 @@ export default function AreaDoAlunoPage() {
           Voltar para inicio
         </Link>
       </section>
-    </main>
+    </div>
   );
 }
