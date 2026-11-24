@@ -24,7 +24,7 @@ export default function CartPage() {
           <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-purple-100 text-purple-500">
             <XCircle size={52} />
           </div>
-          <h1 className="mb-2 text-3xl font-black text-gray-900">Seu carrinho esta vazio</h1>
+          <h1 className="mb-2 text-3xl font-black text-gray-900">Seu carrinho está vazio</h1>
           <p className="mb-8 max-w-md text-gray-600">
             Adicione seus materiais para continuar. Assim que finalizar, voce recebe tudo por e-mail.
           </p>

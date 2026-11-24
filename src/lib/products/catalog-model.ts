@@ -20,7 +20,7 @@ export function buildCatalogWithOverrides(products: PublishedProduct[]): Record<
     const primary = images[0] || normalizeImageUrl(product.imagem_url);
     return [product.id, {
       id: product.id, nome: product.nome || product.id,
-      descricao: product.descricao || "Material cadastrado no painel administrativo.",
+      descricao: product.descricao || "",
       preco: Number.isFinite(product.preco_cents) ? product.preco_cents : 0,
       tipo: product.tipo === "fisico" ? "fisico" : "digital",
       imagem: primary, imagens: images.length ? images : [primary],

@@ -16,7 +16,7 @@ export default function PrivacyPage() {
       <p>O serviço é destinado a responsáveis adultos e profissionais de educação. Evite enviar dados pessoais de crianças em mensagens ou pedidos.</p>
     </section>
     <section><h2>Prestadores e compartilhamento</h2>
-      <p>Utilizamos serviços de infraestrutura e banco de dados, pagamento e envio de e-mails para operar a loja. O projeto utiliza Supabase, Mercado Pago e Resend; confirme em [PREENCHER: lista de operadores e serviços realmente ativos]. Dados são compartilhados conforme a necessidade de cada serviço e suas obrigações.</p>
+      <p>Utilizamos serviços de infraestrutura e banco de dados, pagamento e envio de e-mails para operar a loja. Os serviços usados são: Vercel (hospedagem do site), Supabase (banco de dados), Mercado Pago (pagamentos), Resend (envio de e-mails) e Google Analytics (estatísticas de visita). Dados são compartilhados conforme a necessidade de cada serviço e suas obrigações.</p>
       <p>Ao acessar links para WhatsApp, Instagram ou outros serviços externos, suas interações também seguem as políticas dessas plataformas. [PREENCHER: países envolvidos e mecanismos aplicáveis às transferências internacionais].</p>
     </section>
     <section><h2>Armazenamento no navegador e análise de acesso</h2>

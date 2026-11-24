@@ -5,11 +5,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { 
-  GraduationCap, Heart, Star, BookOpen, 
+  GraduationCap, Star, BookOpen, 
   ArrowLeft, Sparkles, Award, CheckCircle2,
-  Instagram, Mail, Download, Users, BookText,
+  Instagram, Mail, Download, MessageCircle,
   LucideProps // Importação necessária para a tipagem
 } from "lucide-react";
+import { contact } from "@/config/contact";
 
 // Tipagem corrigida para aceitar className e outras props do Lucide
 interface FormationCard {
@@ -48,29 +49,35 @@ function SobreContent() {
   ];
 
   const stats: StatItem[] = [
-    { value: "2.5k+", label: "Alunos Atendidos", icon: Users },
-    { value: "150+", label: "Materiais Criados", icon: BookText },
-    { value: "98%", label: "Satisfação", icon: Heart },
+    // Only claims the owner can back up: the formations listed above and years of practice.
+    { value: String(formations.length), label: "Formações", icon: GraduationCap },
     { value: "15+", label: "Anos de Experiência", icon: Award },
   ];
 
   const socialLinks = [
+    {
+      href: contact.whatsappUrl,
+      label: `WhatsApp ${contact.whatsappDisplay}`,
+      icon: MessageCircle,
+      color: "bg-green-600",
+      textColor: "text-white"
+    },
     { 
-      href: "https://instagram.com", 
+      href: contact.instagramUrl,
       label: "Instagram", 
       icon: Instagram,
       color: "bg-gradient-to-r from-pink-500 to-purple-500",
       textColor: "text-white"
     },
     { 
-      href: "mailto:vendaso@tiarafaela.com.br", 
+      href: `mailto:${contact.email}`,
       label: "Email", 
       icon: Mail,
       color: "bg-white border border-blue-100",
       textColor: "text-blue-500"
     },
     { 
-      href: "#materiais", 
+      href: "/atividades",
       label: "Materiais Gratuitos", 
       icon: Download,
       color: "bg-gradient-to-r from-blue-400 to-blue-600",

@@ -276,6 +276,11 @@ export default function CatalogClient({ products: produtosArray, search = "" }: 
                         <h3 className="mb-3 min-h-11 text-[15px] font-black leading-tight text-gray-800 line-clamp-2 transition-colors group-hover:text-purple-700">
                           {produto.nome}
                         </h3>
+                        {produto.descricao ? (
+                          <p className="mb-3 text-xs font-medium leading-snug text-gray-500 line-clamp-2">
+                            {produto.descricao}
+                          </p>
+                        ) : null}
 
                         <div className="flex flex-col mt-auto">
                           <span className="text-xl font-semibold text-purple-950 sm:text-2xl">

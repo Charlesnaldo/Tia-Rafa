@@ -5,35 +5,19 @@ const AtividadesPage: React.FC = () => {
   const activities = [
     {
       id: 1,
-      title: "Alfabetizacao Inicial - Nivel 1",
-      description: "Folhas praticas para apresentar vogais, consoantes e primeiros encontros de letras.",
+      title: "Alfabetização Inicial - Nível 1",
+      description: "Folhas práticas para apresentar vogais, consoantes e primeiros encontros de letras.",
       downloadLink: "/materiais/alfabetiza%C3%A7%C3%A3o.pdf",
       image: "/img/boasvindas2.png",
-      category: "Alfabetizacao",
+      category: "Alfabetização",
     },
     {
       id: 2,
-      title: "Boas-vindas na Educacao Infantil",
-      description: "Material ludico para acolher a turma no inicio do ano com atividades de integracao.",
+      title: "Boas-vindas na Educação Infantil",
+      description: "Material lúdico para acolher a turma no início do ano com atividades de integração.",
       downloadLink: "/materiais/BoasVindas.pdf",
       image: "/img/boasvindas2.png",
-      category: "Educacao Infantil",
-    },
-    {
-      id: 3,
-      title: "Historia na Pascoa",
-      description: "Sequencia didatica com proposta de leitura, conversa guiada e producao criativa.",
-      downloadLink: "/img/historiapascoa.jpg",
-      image: "/img/historiapascoa.jpg",
-      category: "Datas Comemorativas",
-    },
-    {
-      id: 4,
-      title: "Brincadeiras do Sapo",
-      description: "Sugestoes de musicas, movimento e oralidade para turmas pequenas com foco em ritmo.",
-      downloadLink: "/testimonials/bocadosapo.jpg",
-      image: "/testimonials/bocadosapo.jpg",
-      category: "Musica e Movimento",
+      category: "Educação Infantil",
     },
   ];
 
@@ -51,7 +35,7 @@ const AtividadesPage: React.FC = () => {
             Atividades prontas para baixar e aplicar com sua turma
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-gray-600 md:text-base">
-            Materiais organizados para facilitar seu planejamento diario. Escolha a atividade, clique em baixar e use em sala de aula.
+            Materiais organizados para facilitar seu planejamento diário. Escolha a atividade, clique em baixar e use em sala de aula.
           </p>
 
           <div className="mt-7 grid grid-cols-2 gap-3 md:max-w-xl md:grid-cols-3">
@@ -61,11 +45,11 @@ const AtividadesPage: React.FC = () => {
             </div>
             <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-center">
               <p className="text-2xl font-black text-emerald-700">100%</p>
-              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-600">Gratis</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-600">Grátis</p>
             </div>
             <div className="col-span-2 rounded-2xl border border-purple-100 bg-purple-50 p-3 text-center md:col-span-1">
               <p className="text-2xl font-black text-purple-700">1 clique</p>
-              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-purple-600">Download rapido</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-purple-600">Download rápido</p>
             </div>
           </div>
         </section>
