@@ -259,6 +259,7 @@ export default function CatalogClient({ products: produtosArray, search = "" }: 
                         width={300}
                         height={300}
                         loading={produtoIndex < 2 ? "eager" : "lazy"}
+                        fetchPriority={produtoIndex < 2 ? "high" : "auto"}
                         sizes="(max-width: 767px) calc((100vw - 104px) / 2), (max-width: 1023px) calc((100vw - 150px) / 3), (max-width: 1279px) calc((100vw - 196px) / 4), (max-width: 1400px) calc((100vw - 242px) / 5), 232px"
                         quality={75}
                         className="h-full w-full object-contain p-2.5 transition-transform duration-500 group-hover:scale-105"

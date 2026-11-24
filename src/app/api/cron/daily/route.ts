@@ -15,6 +15,9 @@ export const maxDuration = 60;
 
 const HOUR = 60 * 60 * 1000;
 const BATCH = 50;
+// Proxy widths browsers actually request for cards, gallery and modal (see product-image-loader).
+const WARM_WIDTHS = [192, 256, 320, 384, 480, 640, 828, 1080, 1600];
+const WARM_CONCURRENCY = 8;
 
 // Vercel Cron sends "Authorization: Bearer $CRON_SECRET". Without the secret the route stays closed.
 function authorized(request: Request) {
@@ -128,13 +131,48 @@ async function sendFollowUps(now: number) {
   return { skipped: false, sent };
 }
 
+// Requests every product image through the public CDN so the cache never goes cold.
+// Images are cached 1h and served stale-while-revalidate for a day, so one pass a day
+// keeps every visitor on a cache hit. Stops starting new requests near the deadline.
+async function warmProductImages(deadline: number) {
+  const catalog = await getCatalogProducts().catch(() => []);
+  const paths = new Set<string>();
+  for (const produto of catalog) {
+    for (const src of [produto.imagem, ...(produto.imagens || [])]) {
+      if (!src?.startsWith("/api/product-image?")) continue;
+      const path = new URLSearchParams(src.slice(src.indexOf("?") + 1)).get("path");
+      if (path) paths.add(path);
+    }
+  }
+  const site = getSiteUrl();
+  const queue = [...paths].flatMap((path) => WARM_WIDTHS.map((width) =>
+    `${site}/api/product-image?${new URLSearchParams({ path, w: String(width) })}`));
+  let warmed = 0;
+  let skipped = 0;
+  const worker = async () => {
+    for (let url = queue.shift(); url; url = queue.shift()) {
+      if (Date.now() > deadline) {
+        skipped += 1;
+        continue;
+      }
+      const response = await fetch(url, { signal: AbortSignal.timeout(15000) }).catch(() => null);
+      if (response?.ok) warmed += 1;
+      await response?.arrayBuffer().catch(() => null);
+    }
+  };
+  await Promise.all(Array.from({ length: WARM_CONCURRENCY }, worker));
+  return { images: paths.size, warmed, skipped };
+}
+
 export async function GET(request: Request) {
   if (!authorized(request)) return NextResponse.json({ error: "Nao autorizado." }, { status: 401 });
   try {
     const now = Date.now();
     const pix = await sendPixReminders(now);
     const followUps = await sendFollowUps(now);
-    return NextResponse.json({ pix, followUps });
+    // Last and best-effort: a slow image never blocks the e-mails above.
+    const images = await warmProductImages(now + 45_000).catch(() => null);
+    return NextResponse.json({ pix, followUps, images });
   } catch (error) {
     console.error("Falha na rotina diaria:", error);
     return NextResponse.json({ error: "Falha na rotina diaria." }, { status: 500 });
