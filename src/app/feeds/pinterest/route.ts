@@ -16,9 +16,10 @@ const absolute = (site: string, src: string) => (src.startsWith("/") ? `${site}$
 // The feed asks the image proxy for a size Pinterest likes (1000px+ wide).
 const largeImage = (site: string, src: string) => {
   if (!src.startsWith("/api/product-image?")) return absolute(site, src);
-  const params = new URLSearchParams(src.slice(src.indexOf("?") + 1));
-  params.set("w", "1080");
-  return `${site}/api/product-image?${params}`;
+  const path = new URLSearchParams(src.slice(src.indexOf("?") + 1)).get("path") || "";
+  // Keep "/" unencoded: some crawlers (seen with Canva) re-encode "%2F" to "%252F" and get a 400.
+  const safePath = path.split("/").map(encodeURIComponent).join("/");
+  return `${site}/api/product-image?path=${safePath}&w=1080`;
 };
 
 export async function GET() {
