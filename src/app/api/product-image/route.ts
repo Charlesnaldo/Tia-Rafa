@@ -70,8 +70,11 @@ export async function GET(request: NextRequest) {
 
     return new Response(new Uint8Array(optimized), {
       headers: {
-        // Short, bounded caching: recheck active-product membership after at most a minute.
-        "Cache-Control": "public, max-age=60, s-maxage=60, must-revalidate",
+        // Image paths are immutable (timestamped uploads). Serve from the CDN for an hour, then keep
+        // answering instantly while revalidating in the background, so visitors never wait on a
+        // cold resize. A deactivated product's images stop being served about an hour later; paths
+        // that were never published are rejected before this point and their 404s are not cached.
+        "Cache-Control": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400",
         "Content-Type": "image/webp",
         "Content-Length": String(optimized.byteLength),
         "X-Content-Type-Options": "nosniff",

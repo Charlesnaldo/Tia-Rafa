@@ -171,7 +171,7 @@ test("image proxy rejects inactive products and unpublished paths before privile
   assert.equal(downloads, 0);
   const response = await GET(request("product/imagens/public.png"));
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get("cache-control"), "public, max-age=60, s-maxage=60, must-revalidate");
+  assert.equal(response.headers.get("cache-control"), "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400");
   assert.equal(response.headers.get("content-type"), "image/webp");
   const metadata = await sharp(Buffer.from(await response.arrayBuffer())).metadata();
   assert.equal(metadata.width, 64);
