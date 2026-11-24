@@ -22,6 +22,20 @@ export function trackEvent(name: string, params: Record<string, unknown> = {}) {
   window.gtag("event", name, params);
 }
 
+// Pinterest tag event; no-op until the tag is loaded (after cookie consent).
+function trackPin(name: string, params: Record<string, unknown> = {}) {
+  if (typeof window === "undefined" || typeof window.pintrk !== "function") return;
+  window.pintrk("track", name, params);
+}
+const toPin = (items: Item[]) => ({
+  currency: "BRL",
+  value: Number(valueOf(items).toFixed(2)),
+  order_quantity: items.reduce((total, item) => total + (item.quantity ?? 1), 0),
+  line_items: items.map((item) => ({
+    product_id: item.id, product_name: item.nome, product_price: item.preco / 100, product_quantity: item.quantity ?? 1,
+  })),
+});
+
 // eventId lets Meta deduplicate a browser event against the same event sent by the server.
 function trackMeta(name: string, params: Record<string, unknown>, eventId?: string) {
   if (typeof window === "undefined" || typeof window.fbq !== "function") return;
@@ -33,10 +47,12 @@ export const analytics = {
   viewItem: (item: Item) => {
     trackEvent("view_item", { currency: "BRL", value: valueOf([item]), items: toGaItems([item]) });
     trackMeta("ViewContent", toMeta([item]));
+    trackPin("pagevisit", toPin([item]));
   },
   addToCart: (item: Item) => {
     trackEvent("add_to_cart", { currency: "BRL", value: valueOf([item]), items: toGaItems([item]) });
     trackMeta("AddToCart", toMeta([item]));
+    trackPin("addtocart", toPin([item]));
   },
   beginCheckout: (items: Item[]) => {
     trackEvent("begin_checkout", { currency: "BRL", value: valueOf(items), items: toGaItems(items) });
@@ -58,10 +74,14 @@ export const analytics = {
       // Storage blocked: still report once for this page view.
     }
     trackEvent("purchase", { transaction_id: paymentId, currency: "BRL", ...(valueCents !== null ? { value: valueCents / 100 } : {}) });
-    if (valueCents !== null) trackMeta("Purchase", { currency: "BRL", value: valueCents / 100 }, `purchase_${paymentId}`);
+    if (valueCents !== null) {
+      trackMeta("Purchase", { currency: "BRL", value: valueCents / 100 }, `purchase_${paymentId}`);
+      trackPin("checkout", { currency: "BRL", value: valueCents / 100, order_id: paymentId, event_id: `purchase_${paymentId}` });
+    }
   },
   generateLead: (source: string) => {
     trackEvent("generate_lead", { lead_source: source });
     trackMeta("Lead", { content_name: source });
+    trackPin("lead", { lead_type: source });
   },
 };

@@ -35,7 +35,7 @@ export default function CookieConsent() {
       <p className="flex items-start gap-2 text-sm text-gray-700">
         <Cookie size={18} className="mt-0.5 shrink-0 text-purple-600" aria-hidden="true" />
         <span>
-          Usamos cookies para medir visitas e o resultado dos nossos anúncios (Google Analytics e Meta).
+          Usamos cookies para medir visitas e o resultado dos nossos anúncios (Google Analytics, Meta e Pinterest).
           O carrinho e o pagamento funcionam de qualquer forma.{" "}
           <Link href="/privacidade" className="font-semibold text-purple-700 underline">Saiba mais</Link>
         </span>
