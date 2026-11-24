@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import LegalPage from "@/components/LegalPage";
-import { contact } from "@/config/contact";
+import { contact, legalIdentity } from "@/config/contact";
 
 export const metadata: Metadata = { title: "Privacidade" };
 
 export default function PrivacyPage() {
-  return <LegalPage title="Política de privacidade">
+  return <LegalPage title="Política de privacidade" updatedAt="24 de novembro de 2026" draft>
     <section><h2>Quem é responsável pelos dados</h2>
-      <p>A loja Tia Rafa, em tiarafaela.com.br, é operada por [PREENCHER: nome ou razão social, CPF/CNPJ e endereço]. Essa pessoa ou empresa é responsável pelas decisões sobre o tratamento de dados pessoais descrito nesta política.</p>
+      <p>A loja Tia Rafa, em tiarafaela.com.br, é operada por pessoa física inscrita no {legalIdentity.documento}, com endereço na {legalIdentity.endereco}. Essa pessoa ou empresa é responsável pelas decisões sobre o tratamento de dados pessoais descrito nesta política.</p>
       <p>Para falar sobre seus dados, escreva para <a href={`mailto:${contact.email}`}>{contact.email}</a>. [PREENCHER: identificação e contato do encarregado, quando aplicável].</p>
     </section>
     <section><h2>Dados utilizados e finalidades</h2>

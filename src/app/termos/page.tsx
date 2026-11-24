@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import LegalPage from "@/components/LegalPage";
-import { contact } from "@/config/contact";
+import { contact, legalIdentity } from "@/config/contact";
 
 export const metadata: Metadata = { title: "Termos de compra e uso" };
 
 export default function TermsPage() {
-  return <LegalPage title="Termos de compra e uso">
+  return <LegalPage title="Termos de compra e uso" updatedAt="24 de novembro de 2026">
     <section><h2>Identificação e atendimento</h2>
-      <p>A loja Tia Rafa é operada por [PREENCHER: nome ou razão social, CPF/CNPJ, endereço e demais dados de identificação]. Para dúvidas, entrega, cancelamento ou problemas de acesso, entre em contato pelo e-mail <a href={`mailto:${contact.email}`}>{contact.email}</a> ou pelo <a href={contact.whatsappUrl}>WhatsApp {contact.whatsappDisplay}</a>.</p>
+      <p>A loja Tia Rafa é operada por pessoa física inscrita no {legalIdentity.documento}, com endereço na {legalIdentity.endereco}. Para dúvidas, entrega, cancelamento ou problemas de acesso, entre em contato pelo e-mail <a href={`mailto:${contact.email}`}>{contact.email}</a> ou pelo <a href={contact.whatsappUrl}>WhatsApp {contact.whatsappDisplay}</a>.</p>
     </section>
     <section><h2>Materiais e informações da oferta</h2>
       <p>A loja oferece materiais didáticos digitais, principalmente em PDF. Não há envio de material impresso quando o produto está identificado como digital. Caso haja item físico, prevalecem as informações específicas de entrega, frete e prazo exibidas na oferta.</p>
