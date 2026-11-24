@@ -34,6 +34,8 @@ export const metadata: Metadata = {
   description: siteDescription,
   openGraph: baseOpenGraph,
   twitter: { card: "summary", title: siteTitle, description: siteDescription },
+  // Pinterest site claim (public verification code, not a secret).
+  verification: { other: { "p:domain_verify": "56abbe9c9f7a1d4fdcf5f22987f9631d" } },
 };
 
 export default function RootLayout({

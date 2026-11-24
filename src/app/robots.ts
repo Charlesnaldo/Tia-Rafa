@@ -5,7 +5,8 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: "/",
+      // Product photos are served by an API route; Pinterest and Google must reach them.
+      allow: ["/", "/api/product-image"],
       disallow: ["/admin", "/api/", "/carrinho", "/checkout", "/sucesso"],
     },
     sitemap: `${getSiteUrl()}/sitemap.xml`,
