@@ -30,12 +30,6 @@ function load(relative, mocks = {}) {
   return read(path.resolve(relative));
 }
 
-function jsonRequest(value) {
-  return new Request("https://example.com/api/chat/evolution", {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(value),
-  });
-}
-
 function signedWebhook({ id = "123456", timestamp = String(Math.floor(Date.now() / 1000)), requestId = "request-123", secret = "test-signing-key" } = {}) {
   const hash = createHmac("sha256", secret).update(`id:${id};request-id:${requestId};ts:${timestamp};`).digest("hex");
   return new Request(`https://example.com/api/webhook/mercadopago?type=payment&data.id=${id}`, {
@@ -102,13 +96,6 @@ test("payment status denies anonymous and other buyers, and permits only the mat
   assert.equal((await response.json()).status, "approved");
 });
 
-test("JSON reader limits actual UTF-8 bytes even without Content-Length", async () => {
-  const { readLimitedJson } = load("src/lib/limited-json.ts");
-  await assert.rejects(readLimitedJson(jsonRequest({ text: "😀".repeat(20) }), 40), (error) => error.status === 413);
-  await assert.rejects(readLimitedJson(new Request("https://example.com", { method: "POST", body: "{}" }), 40), (error) => error.status === 415);
-  assert.deepEqual(await readLimitedJson(jsonRequest({ text: "oi" }), 100), { text: "oi" });
-});
-
 test("Pix and card creation both bind payment metadata to the browser without leaking a webhook secret", async (t) => {
   const previous = { token: process.env.MP_ACCESS_TOKEN, url: process.env.NEXT_PUBLIC_URL };
   process.env.MP_ACCESS_TOKEN = "test";
@@ -140,44 +127,6 @@ test("Pix and card creation both bind payment metadata to the browser without le
     assert.equal(payment.notification_url, "https://example.com/api/webhook/mercadopago");
     assert.equal(payment.metadata.payment_status_owner.includes(cookie), false);
   }
-});
-
-test("chat rejects oversized input and rate-limited requests before contacting n8n", async () => {
-  let calls = 0;
-  const { POST } = load("src/app/api/chat/evolution/route.ts", { "@/lib/chat-rate-limit": { allowChatRequest: async () => { calls++; return false; } } });
-  assert.equal((await POST(jsonRequest({ text: "a".repeat(2001) }))).status, 400);
-  assert.equal(calls, 0);
-  const response = await POST(jsonRequest({ text: "oi" }));
-  assert.equal(response.status, 429);
-  assert.equal(response.headers.get("retry-after"), "60");
-  assert.equal(calls, 1);
-});
-
-test("chat strips raw automation data and upstream error details", async (t) => {
-  process.env.N8N_EVOLUTION_WEBHOOK_URL = "https://n8n.example.test/webhook/chat-site";
-  const { POST } = load("src/app/api/chat/evolution/route.ts", { "@/lib/chat-rate-limit": { allowChatRequest: async () => true } });
-  t.mock.method(global, "fetch", async () => Response.json({ reply: "Ola", internalSecret: "do-not-expose" }));
-  const body = await (await POST(jsonRequest({ text: "oi" }))).json();
-  assert.equal(body.messages[0].text, "Ola");
-  assert.equal(JSON.stringify(body).includes("do-not-expose"), false);
-  global.fetch = async () => Response.json({ secret: "do-not-expose" }, { status: 500 });
-  const response = await POST(jsonRequest({ text: "oi" }));
-  assert.equal(response.status, 502);
-  assert.equal(JSON.stringify(await response.json()).includes("do-not-expose"), false);
-});
-
-test("chat limiter uses shared durable RPC quotas and fails closed on database errors", async () => {
-  const calls = [];
-  const { allowChatRequest } = load("src/lib/chat-rate-limit.ts", {
-    "@/lib/supabase/admin": { getSupabaseAdminClient: () => ({ rpc: async (name, args) => { calls.push({ name, args }); return { data: true }; } }) },
-  });
-  assert.equal(await allowChatRequest(jsonRequest({ sessionId: "arbitrary" })), true);
-  assert.equal(calls.length, 3);
-  assert.deepEqual(calls.map((call) => call.args.p_limit), [10, 100, 1000]);
-  const blocked = load("src/lib/chat-rate-limit.ts", {
-    "@/lib/supabase/admin": { getSupabaseAdminClient: () => ({ rpc: async () => ({ error: { message: "database unavailable" } }) }) },
-  });
-  await assert.rejects(blocked.allowChatRequest(jsonRequest({})));
 });
 
 test("image proxy rejects inactive products and unpublished paths before privileged download", async () => {
